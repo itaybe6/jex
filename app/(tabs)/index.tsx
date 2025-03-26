@@ -68,10 +68,11 @@ type Product = {
     clarity?: string;
     color?: string;
   };
-  user: {
+  profiles: {
     full_name: string;
     avatar_url: string | null;
   };
+  created_at: string;
 };
 
 type Request = {
@@ -80,7 +81,7 @@ type Request = {
   description: string;
   category: string;
   created_at: string;
-  user: {
+  profiles: {
     full_name: string;
     avatar_url: string;
   };
@@ -120,9 +121,11 @@ export default function HomeScreen() {
         .from('products')
         .select(`
           *,
-          user:user_id (
+          profiles!products_user_id_fkey (
+            id,
             full_name,
-            avatar_url
+            avatar_url,
+            phone
           )
         `)
         .order('created_at', { ascending: false });
@@ -152,9 +155,11 @@ export default function HomeScreen() {
         .from('requests')
         .select(`
           *,
-          user:user_id (
+          profiles!requests_user_id_fkey (
+            id,
             full_name,
-            avatar_url
+            avatar_url,
+            phone
           )
         `)
         .order('created_at', { ascending: false });
@@ -254,39 +259,43 @@ export default function HomeScreen() {
                 <Text style={styles.categoryTitle}>{category}</Text>
                 <View style={styles.itemsGrid}>
                   {items.map((item) => (
-                    <Link
+                    <TouchableOpacity
                       key={item.id}
-                      href={showRequests ? `/requests/${item.id}` : `/products/${item.id}`}
-                      asChild
+                      onPress={() => {
+                        const route = showRequests ? `/requests/${item.id}` : `/products/${item.id}`;
+                        router.push(route);
+                      }}
+                      style={styles.gridItem}
                     >
-                      <TouchableOpacity style={styles.itemCard}>
-                        {!showRequests && item.image_url && (
-                          <Image
-                            source={{ uri: item.image_url }}
-                            style={styles.itemImage}
-                          />
+                      {!showRequests && (
+                        <Image
+                          source={{ uri: item.image_url }}
+                          style={styles.gridImage}
+                          resizeMode="cover"
+                        />
+                      )}
+                      <View style={styles.gridItemOverlay}>
+                        <Text style={styles.gridItemTitle} numberOfLines={1}>{item.title}</Text>
+                        {!showRequests && (
+                          <Text style={styles.gridItemPrice}>${item.price.toLocaleString()}</Text>
                         )}
-                        <View style={styles.itemInfo}>
-                          <Text style={styles.itemTitle}>{item.title}</Text>
-                          {!showRequests && (
-                            <Text style={styles.itemPrice}>${item.price?.toLocaleString()}</Text>
-                          )}
-                          <View style={styles.userInfo}>
-                            <Image
-                              source={{ uri: item.user?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }}
-                              style={styles.userAvatar}
-                            />
-                            <Text style={styles.userName}>{item.user?.full_name}</Text>
-                          </View>
+                        <View style={styles.userInfo}>
+                          <Image
+                            source={{ uri: item.profiles?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }}
+                            style={styles.userAvatar}
+                          />
+                          <Text style={styles.userName}>{item.profiles?.full_name}</Text>
+                        </View>
+                        {showRequests && (
                           <Text style={styles.timeAgo}>
                             {formatDistanceToNow(new Date(item.created_at), {
                               addSuffix: true,
                               locale: he
                             })}
                           </Text>
-                        </View>
-                      </TouchableOpacity>
-                    </Link>
+                        )}
+                      </View>
+                    </TouchableOpacity>
                   ))}
                 </View>
               </View>
@@ -384,7 +393,7 @@ const styles = StyleSheet.create({
   itemsGrid: {
     paddingHorizontal: 16,
   },
-  itemCard: {
+  gridItem: {
     backgroundColor: '#fff',
     borderRadius: 12,
     marginBottom: 16,
@@ -397,7 +406,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  itemImage: {
+  gridImage: {
     width: '100%',
     height: undefined,
     aspectRatio: 1,
@@ -405,15 +414,15 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 12,
     resizeMode: 'cover'
   },
-  itemInfo: {
+  gridItemOverlay: {
     padding: 12,
   },
-  itemTitle: {
+  gridItemTitle: {
     fontSize: 16,
     fontFamily: 'Heebo-Medium',
     marginBottom: 4,
   },
-  itemPrice: {
+  gridItemPrice: {
     fontSize: 18,
     fontFamily: 'Heebo-Bold',
     color: '#6C5CE7',

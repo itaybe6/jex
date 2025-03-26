@@ -79,6 +79,14 @@ export default function RootLayout() {
                 headerTitle: 'Notifications',
               }}
             />
+            <Stack.Screen
+              name="products/[id]"
+              options={{
+                headerShown: true,
+                headerTitle: "Product Details",
+                headerBackTitle: "Back"
+              }}
+            />
           </>
         )}
       </Stack>
