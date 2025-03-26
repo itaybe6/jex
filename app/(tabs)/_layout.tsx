@@ -3,6 +3,7 @@ import { Home, User, Settings, Search, Plus } from 'lucide-react-native';
 import { View, TouchableOpacity, Text, Modal, StyleSheet } from 'react-native';
 import { useState } from 'react';
 import { router } from 'expo-router';
+import { TopHeader } from '@/components/TopHeader';
 
 function TabBarIcon({ Icon, focused }: { Icon: any, focused: boolean }) {
   return (
@@ -36,6 +37,7 @@ export default function TabLayout() {
     <>
       <Tabs
         screenOptions={{
+          header: () => <TopHeader />,
           tabBarActiveTintColor: '#007AFF',
           tabBarInactiveTintColor: '#666',
           tabBarStyle: {

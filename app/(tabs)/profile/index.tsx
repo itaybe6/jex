@@ -417,7 +417,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 10,
   },

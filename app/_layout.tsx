@@ -48,8 +48,7 @@ export default function RootLayout() {
   return (
     <>
       <Stack screenOptions={{ 
-        header: () => session ? <TopHeader /> : null,
-        headerShown: true
+        headerShown: false
       }}>
         {!session ? (
           // Show auth screens when not authenticated
@@ -62,7 +61,7 @@ export default function RootLayout() {
           <>
             <Stack.Screen 
               name="(tabs)"
-              options={{ headerShown: true }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen 
               name="user/[id]"
