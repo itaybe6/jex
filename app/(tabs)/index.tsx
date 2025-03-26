@@ -218,7 +218,7 @@ export default function HomeScreen() {
             onPress={() => setShowRequests(!showRequests)}
           >
             <Text style={styles.toggleButtonText}>
-              {showRequests ? 'הצג מוצרים' : 'הצג בקשות'}
+              {showRequests ? 'Show Products' : 'Show Requests'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
