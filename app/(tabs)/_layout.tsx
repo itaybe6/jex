@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Chrome as Home, User, Settings, Search, Plus } from 'lucide-react-native';
+import { Home, User, Settings, Search, Plus } from 'lucide-react-native';
 import { View, TouchableOpacity, Text, Modal, StyleSheet } from 'react-native';
 import { useState } from 'react';
 import { router } from 'expo-router';
@@ -36,31 +36,25 @@ export default function TabLayout() {
     <>
       <Tabs
         screenOptions={{
+          tabBarActiveTintColor: '#007AFF',
+          tabBarInactiveTintColor: '#666',
           tabBarStyle: {
+            borderTopWidth: 1,
+            borderTopColor: '#eee',
             backgroundColor: '#000',
-            borderTopWidth: 0,
-            elevation: 0,
-            height: 80,
-            paddingBottom: 20,
-            paddingTop: 10,
           },
-          tabBarShowLabel: true,
+          tabBarShowLabel: false,
           tabBarLabelStyle: {
-            color: '#fff',
+            fontFamily: 'Heebo-Medium',
             fontSize: 12,
-            fontFamily: 'Heebo-Regular'
           },
-          headerShown: false,
-          tabBarItemStyle: {
-            flexDirection: 'row',
-          }
         }}>
         <Tabs.Screen
           name="index"
           options={{
-            title: 'Home',
-            tabBarIcon: ({ focused }) => (
-              <TabBarIcon Icon={Home} focused={focused} />
+            title: '',
+            tabBarIcon: ({ color, size }) => (
+              <Home size={size} color={color} />
             ),
           }}
         />
@@ -78,13 +72,10 @@ export default function TabLayout() {
           options={{
             title: '',
             headerShown: false,
-            tabBarIcon: ({ focused }) => (
+            tabBarIcon: ({ color }) => (
               <TouchableOpacity
                 onPress={() => setShowAddMenu(true)}
-                style={[
-                  styles.addButton,
-                  focused && styles.addButtonFocused
-                ]}
+                style={styles.addButton}
               >
                 <Plus size={24} color="#fff" />
               </TouchableOpacity>
@@ -109,10 +100,8 @@ export default function TabLayout() {
         <Tabs.Screen
           name="profile"
           options={{
-            title: 'Profile',
-            tabBarIcon: ({ focused }) => (
-              <TabBarIcon Icon={User} focused={focused} />
-            ),
+            title: '',
+            tabBarIcon: ({ color }) => <User size={24} color={color} />,
           }}
         />
         <Tabs.Screen

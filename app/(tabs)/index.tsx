@@ -272,12 +272,10 @@ export default function HomeScreen() {
                             <Text style={styles.itemPrice}>${item.price?.toLocaleString()}</Text>
                           )}
                           <View style={styles.userInfo}>
-                            {item.user?.avatar_url && (
-                              <Image
-                                source={{ uri: item.user.avatar_url }}
-                                style={styles.userAvatar}
-                              />
-                            )}
+                            <Image
+                              source={{ uri: item.user?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }}
+                              style={styles.userAvatar}
+                            />
                             <Text style={styles.userName}>{item.user?.full_name}</Text>
                           </View>
                           <Text style={styles.timeAgo}>
@@ -401,9 +399,11 @@ const styles = StyleSheet.create({
   },
   itemImage: {
     width: '100%',
-    height: 200,
+    height: undefined,
+    aspectRatio: 1,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
+    resizeMode: 'cover'
   },
   itemInfo: {
     padding: 12,
@@ -423,17 +423,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
+    backgroundColor: '#f8f8f8',
+    padding: 8,
+    borderRadius: 8,
+    marginTop: 8
   },
   userAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     marginRight: 8,
+    backgroundColor: '#eee'
   },
   userName: {
     fontSize: 14,
     fontFamily: 'Heebo-Regular',
     color: '#666',
+    flex: 1
   },
   timeAgo: {
     fontSize: 12,
