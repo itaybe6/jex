@@ -215,96 +215,100 @@ export default function HomeScreen() {
   const hasItems = Object.values(filteredItems).some(items => items.length > 0);
 
   return (
-    <SafeAreaView edges={['top']} style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="light" />
-      <View style={styles.header}>
-        <Text style={styles.logo}>JEX</Text>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity
-            style={styles.showRequestsButton}
-            onPress={() => setShowRequests(!showRequests)}
-          >
-            <Text style={styles.showRequestsText}>
-              {showRequests ? 'Show Products' : 'Show Requests'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={() => setShowFilterModal(true)}
-          >
-            <Filter size={24} color="#fff" />
-          </TouchableOpacity>
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
+        <View style={styles.header}>
+          <Text style={styles.logo}>JEX</Text>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity
+              style={styles.showRequestsButton}
+              onPress={() => setShowRequests(!showRequests)}
+            >
+              <Text style={styles.showRequestsText}>
+                {showRequests ? 'Show Products' : 'Show Requests'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.filterButton}
+              onPress={() => setShowFilterModal(true)}
+            >
+              <Filter size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </SafeAreaView>
 
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>טוען...</Text>
-        </View>
-      ) : !hasItems ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>
-            {showRequests ? 'אין בקשות זמינות' : 'אין מוצרים זמינים'}
-          </Text>
-        </View>
-      ) : (
-        <ScrollView
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          style={styles.scrollView}
-        >
-          {Object.entries(filteredItems).map(([category, items]) => {
-            if (items.length === 0) return null;
-            return (
-              <View key={category} style={styles.categorySection}>
-                <Text style={styles.categoryTitle}>{category}</Text>
-                <View style={styles.itemsGrid}>
-                  {items.map((item) => (
-                    <TouchableOpacity
-                      key={item.id}
-                      onPress={() => {
-                        const route = showRequests ? `/requests/${item.id}` : `/products/${item.id}`;
-                        router.push(route);
-                      }}
-                      style={styles.gridItem}
-                    >
-                      {!showRequests && (
-                        <Image
-                          source={{ uri: item.image_url }}
-                          style={styles.gridImage}
-                          resizeMode="cover"
-                        />
-                      )}
-                      <View style={styles.gridItemOverlay}>
-                        <Text style={styles.gridItemTitle} numberOfLines={1}>{item.title}</Text>
+      <ScrollView style={styles.content}>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>טוען...</Text>
+          </View>
+        ) : !hasItems ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              {showRequests ? 'אין בקשות זמינות' : 'אין מוצרים זמינים'}
+            </Text>
+          </View>
+        ) : (
+          <ScrollView
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            style={styles.scrollView}
+          >
+            {Object.entries(filteredItems).map(([category, items]) => {
+              if (items.length === 0) return null;
+              return (
+                <View key={category} style={styles.categorySection}>
+                  <Text style={styles.categoryTitle}>{category}</Text>
+                  <View style={styles.itemsGrid}>
+                    {items.map((item) => (
+                      <TouchableOpacity
+                        key={item.id}
+                        onPress={() => {
+                          const route = showRequests ? `/requests/${item.id}` : `/products/${item.id}`;
+                          router.push(route);
+                        }}
+                        style={styles.gridItem}
+                      >
                         {!showRequests && (
-                          <Text style={styles.gridItemPrice}>${item.price.toLocaleString()}</Text>
-                        )}
-                        <View style={styles.userInfo}>
                           <Image
-                            source={{ uri: item.profiles?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }}
-                            style={styles.userAvatar}
+                            source={{ uri: item.image_url }}
+                            style={styles.gridImage}
+                            resizeMode="cover"
                           />
-                          <Text style={styles.userName}>{item.profiles?.full_name}</Text>
-                        </View>
-                        {showRequests && (
-                          <Text style={styles.timeAgo}>
-                            {formatDistanceToNow(new Date(item.created_at), {
-                              addSuffix: true,
-                              locale: he
-                            })}
-                          </Text>
                         )}
-                      </View>
-                    </TouchableOpacity>
-                  ))}
+                        <View style={styles.gridItemOverlay}>
+                          <Text style={styles.gridItemTitle} numberOfLines={1}>{item.title}</Text>
+                          {!showRequests && (
+                            <Text style={styles.gridItemPrice}>${item.price.toLocaleString()}</Text>
+                          )}
+                          <View style={styles.userInfo}>
+                            <Image
+                              source={{ uri: item.profiles?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }}
+                              style={styles.userAvatar}
+                            />
+                            <Text style={styles.userName}>{item.profiles?.full_name}</Text>
+                          </View>
+                          {showRequests && (
+                            <Text style={styles.timeAgo}>
+                              {formatDistanceToNow(new Date(item.created_at), {
+                                addSuffix: true,
+                                locale: he
+                              })}
+                            </Text>
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
-              </View>
-            );
-          })}
-        </ScrollView>
-      )}
+              );
+            })}
+          </ScrollView>
+        )}
+      </ScrollView>
 
       <FilterModal
         visible={showFilterModal}
@@ -318,7 +322,7 @@ export default function HomeScreen() {
         selectedDiamondClarity={selectedDiamondClarity}
         onSelectDiamondClarity={setSelectedDiamondClarity}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -327,12 +331,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
+  safeArea: {
+    backgroundColor: '#000',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 4,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
   },
@@ -380,6 +387,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Heebo-Regular',
     color: '#666',
+  },
+  content: {
+    flex: 1,
   },
   scrollView: {
     flex: 1,

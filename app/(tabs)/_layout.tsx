@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Home, User, Settings, Search, Plus } from 'lucide-react-native';
+import { Home, User, Search, Plus } from 'lucide-react-native';
 import { View, TouchableOpacity, Text, Modal, StyleSheet } from 'react-native';
 import { useState } from 'react';
 import { router } from 'expo-router';
@@ -26,12 +26,12 @@ export default function TabLayout() {
 
   const handleAddProduct = () => {
     setShowAddMenu(false);
-    router.push('/profile/add-product');
+    router.push('/(tabs)/profile/add-product');
   };
 
   const handleAddRequest = () => {
     setShowAddMenu(false);
-    router.push('/profile/add-request');
+    router.push('/(tabs)/profile/add-request');
   };
 
   return (
@@ -95,15 +95,6 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="settings"
-          options={{
-            title: 'Settings',
-            tabBarIcon: ({ focused }) => (
-              <TabBarIcon Icon={Settings} focused={focused} />
-            ),
-          }}
-        />
-        <Tabs.Screen
           name="profile"
           options={{
             title: '',
@@ -120,6 +111,12 @@ export default function TabLayout() {
         />
         <Tabs.Screen
           name="user/[id]"
+          options={{
+            href: null
+          }}
+        />
+        <Tabs.Screen
+          name="settings"
           options={{
             href: null
           }}

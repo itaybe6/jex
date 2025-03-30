@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bell } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { TouchableOpacity } from 'react-native';
@@ -11,22 +11,27 @@ export function TopHeader() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <View style={styles.container}>
       <StatusBar style="light" />
-      <View style={styles.header}>
-        <Text style={styles.logo}>JEX</Text>
-        <TouchableOpacity 
-          style={styles.notificationButton}
-          onPress={handleNotificationsPress}
-        >
-          <Bell size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
+        <View style={styles.header}>
+          <Text style={styles.logo}>JEX</Text>
+          <TouchableOpacity 
+            style={styles.notificationButton}
+            onPress={handleNotificationsPress}
+          >
+            <Bell size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    backgroundColor: '#000',
+  },
   safeArea: {
     backgroundColor: '#000',
   },
@@ -35,7 +40,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 4,
     backgroundColor: '#000',
   },
   logo: {
