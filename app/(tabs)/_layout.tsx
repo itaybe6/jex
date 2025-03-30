@@ -4,6 +4,7 @@ import { View, TouchableOpacity, Text, Modal, StyleSheet } from 'react-native';
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { TopHeader } from '@/components/TopHeader';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 function TabBarIcon({ Icon, focused }: { Icon: any, focused: boolean }) {
   return (
@@ -34,7 +35,7 @@ export default function TabLayout() {
   };
 
   return (
-    <>
+    <SafeAreaView style={styles.container}>
       <Tabs
         screenOptions={{
           header: () => <TopHeader />,
@@ -42,7 +43,10 @@ export default function TabLayout() {
           tabBarInactiveTintColor: '#666',
           tabBarStyle: {
             borderTopWidth: 1,
-            borderTopColor: '#eee',
+            borderTopColor: '#333',
+            height: 60,
+            paddingBottom: 8,
+            paddingTop: 8,
             backgroundColor: '#000',
           },
           tabBarShowLabel: false,
@@ -55,8 +59,8 @@ export default function TabLayout() {
           name="index"
           options={{
             title: '',
-            tabBarIcon: ({ color, size }) => (
-              <Home size={size} color={color} />
+            tabBarIcon: ({ focused }) => (
+              <TabBarIcon Icon={Home} focused={focused} />
             ),
           }}
         />
@@ -103,7 +107,9 @@ export default function TabLayout() {
           name="profile"
           options={{
             title: '',
-            tabBarIcon: ({ color }) => <User size={24} color={color} />,
+            tabBarIcon: ({ focused }) => (
+              <TabBarIcon Icon={User} focused={focused} />
+            ),
           }}
         />
         <Tabs.Screen
@@ -150,11 +156,15 @@ export default function TabLayout() {
           </View>
         </TouchableOpacity>
       </Modal>
-    </>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
   addButton: {
     backgroundColor: '#6C5CE7',
     width: 48,
@@ -171,9 +181,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-  },
-  addButtonFocused: {
-    backgroundColor: '#fff',
   },
   modalOverlay: {
     flex: 1,

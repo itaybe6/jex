@@ -12,6 +12,7 @@ import { Home, Package, User, Plus } from 'lucide-react-native';
 import { TouchableOpacity, Text, Modal, StyleSheet } from 'react-native';
 import { useState } from 'react';
 import { router } from 'expo-router';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -46,10 +47,16 @@ export default function RootLayout() {
   }
 
   return (
-    <>
-      <Stack screenOptions={{ 
-        headerShown: false
-      }}>
+    <SafeAreaProvider>
+      <StatusBar style="dark" />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: {
+            backgroundColor: '#fff',
+          },
+        }}
+      >
         {!session ? (
           // Show auth screens when not authenticated
           <Stack.Screen 
@@ -90,8 +97,7 @@ export default function RootLayout() {
           </>
         )}
       </Stack>
-      <StatusBar style="auto" />
-    </>
+    </SafeAreaProvider>
   );
 }
 

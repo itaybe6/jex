@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Alert, Modal, SafeAreaView } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Package, Search, Filter, X } from 'lucide-react-native';
@@ -8,6 +8,7 @@ import { RefreshControl } from 'react-native';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
 import FilterModal from '../../components/FilterModal';
+import { StatusBar } from 'expo-status-bar';
 
 const GRID_SPACING = 2;
 const NUM_COLUMNS = 3;
@@ -214,15 +215,16 @@ export default function HomeScreen() {
   const hasItems = Object.values(filteredItems).some(items => items.length > 0);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={['top']} style={styles.container}>
+      <StatusBar style="light" />
       <View style={styles.header}>
-        <Text style={styles.title}>JEX</Text>
+        <Text style={styles.logo}>JEX</Text>
         <View style={styles.headerButtons}>
           <TouchableOpacity
-            style={styles.toggleButton}
+            style={styles.showRequestsButton}
             onPress={() => setShowRequests(!showRequests)}
           >
-            <Text style={styles.toggleButtonText}>
+            <Text style={styles.showRequestsText}>
               {showRequests ? 'Show Products' : 'Show Requests'}
             </Text>
           </TouchableOpacity>
@@ -230,7 +232,7 @@ export default function HomeScreen() {
             style={styles.filterButton}
             onPress={() => setShowFilterModal(true)}
           >
-            <Filter size={24} color="#000" />
+            <Filter size={24} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
@@ -316,24 +318,25 @@ export default function HomeScreen() {
         selectedDiamondClarity={selectedDiamondClarity}
         onSelectDiamondClarity={setSelectedDiamondClarity}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#000',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#333',
   },
-  title: {
+  logo: {
     fontSize: 24,
     fontFamily: 'Heebo-Bold',
   },
@@ -342,13 +345,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  toggleButton: {
+  showRequestsButton: {
     backgroundColor: '#6C5CE7',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
   },
-  toggleButtonText: {
+  showRequestsText: {
     color: '#fff',
     fontFamily: 'Heebo-Medium',
     fontSize: 14,

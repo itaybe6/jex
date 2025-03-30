@@ -1,6 +1,9 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bell } from 'lucide-react-native';
 import { router } from 'expo-router';
+import { TouchableOpacity } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 
 export function TopHeader() {
   const handleNotificationsPress = () => {
@@ -8,32 +11,32 @@ export function TopHeader() {
   };
 
   return (
-    <View style={styles.header}>
-      <View style={styles.content}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <StatusBar style="light" />
+      <View style={styles.header}>
         <Text style={styles.logo}>JEX</Text>
         <TouchableOpacity 
           style={styles.notificationButton}
           onPress={handleNotificationsPress}
         >
-          <Bell size={24} color="#007AFF" />
+          <Bell size={24} color="#fff" />
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    backgroundColor: '#1a1a1a',
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
+  safeArea: {
+    backgroundColor: '#000',
   },
-  content: {
+  header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    height: 44,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#000',
   },
   logo: {
     fontSize: 24,
