@@ -61,43 +61,49 @@ const DIAMOND_COLORS = [
 type Product = {
   id: string;
   title: string;
-  price: number;
-  image_url: string;
-  category: string;
-  details?: {
-    size?: string;
-    clarity?: string;
-    color?: string;
-  };
-  profiles: {
-    full_name: string;
-    avatar_url: string | null;
-  };
-  created_at: string;
-};
-
-type Request = {
-  id: string;
-  title: string;
   description: string;
   category: string;
   created_at: string;
+  image_url: string;
+  price: number;
   profiles: {
     full_name: string;
     avatar_url: string;
   };
-  diamond_size?: string;
-  diamond_color?: string;
-  diamond_clarity?: string;
+  details?: {
+    weight?: string;
+    color?: string;
+    clarity?: string;
+    cut?: string;
+  };
+};
+
+type DiamondRequest = {
+  id: string;
+  user_id: string;
+  cut: string;
+  min_weight: number;
+  max_weight: number;
+  clarity: string;
+  color: string;
+  price: number | null;
+  status: string;
+  created_at: string;
+  expires_at: string;
+  profiles: {
+    full_name: string;
+    avatar_url: string;
+  };
 };
 
 type ProductsByCategory = {
   [key: string]: Product[];
 };
 
-type RequestsByCategory = {
-  [key: string]: Request[];
-};
+const ROUTES = {
+  REQUEST: '/(tabs)/profile/requests' as const,
+  PRODUCT: '/(tabs)/profile/products' as const,
+} as const;
 
 export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
@@ -108,8 +114,10 @@ export default function HomeScreen() {
   const [selectedDiamondColor, setSelectedDiamondColor] = useState<string | null>(null);
   const [selectedDiamondClarity, setSelectedDiamondClarity] = useState<string | null>(null);
   const [productsByCategory, setProductsByCategory] = useState<ProductsByCategory>({});
-  const [requestsByCategory, setRequestsByCategory] = useState<RequestsByCategory>({});
+  const [diamondRequests, setDiamondRequests] = useState<DiamondRequest[]>([]);
   const [showRequests, setShowRequests] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<DiamondRequest | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -125,8 +133,7 @@ export default function HomeScreen() {
           profiles!products_user_id_fkey (
             id,
             full_name,
-            avatar_url,
-            phone
+            avatar_url
           )
         `)
         .order('created_at', { ascending: false });
@@ -153,30 +160,20 @@ export default function HomeScreen() {
   const fetchRequests = async () => {
     try {
       const { data, error } = await supabase
-        .from('requests')
+        .from('diamond_requests')
         .select(`
           *,
-          profiles!requests_user_id_fkey (
+          profiles!diamond_requests_user_id_fkey (
             id,
             full_name,
-            avatar_url,
-            phone
+            avatar_url
           )
         `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Group requests by category
-      const grouped = (data || []).reduce<RequestsByCategory>((acc, request) => {
-        if (!acc[request.category]) {
-          acc[request.category] = [];
-        }
-        acc[request.category].push(request);
-        return acc;
-      }, {});
-
-      setRequestsByCategory(grouped);
+      setDiamondRequests(data || []);
     } catch (error) {
       console.error('Error fetching requests:', error);
     }
@@ -188,36 +185,207 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
-  const getFilteredItems = () => {
-    const items = showRequests ? requestsByCategory : productsByCategory;
-    let filteredItems = { ...items };
-
-    if (selectedCategory) {
-      filteredItems = {
-        [selectedCategory]: items[selectedCategory] || []
-      };
-    }
-
-    // Apply diamond filters if they are selected
-    Object.keys(filteredItems).forEach(category => {
-      filteredItems[category] = filteredItems[category].filter(item => {
-        const matchesSize = !selectedDiamondSize || item.details?.size === selectedDiamondSize;
-        const matchesColor = !selectedDiamondColor || item.details?.color === selectedDiamondColor;
-        const matchesClarity = !selectedDiamondClarity || item.details?.clarity === selectedDiamondClarity;
-        return matchesSize && matchesColor && matchesClarity;
-      });
-    });
-
-    return filteredItems;
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays === 1) return 'Yesterday';
+    if (diffInDays < 30) return `${diffInDays} days ago`;
+    const diffInMonths = Math.floor(diffInDays / 30);
+    if (diffInMonths === 1) return '1 month ago';
+    return `${diffInMonths} months ago`;
   };
 
-  const filteredItems = getFilteredItems();
-  const hasItems = Object.values(filteredItems).some(items => items.length > 0);
+  const renderProducts = () => {
+    if (loading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      );
+    }
+
+    if (Object.keys(productsByCategory).length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No products available</Text>
+        </View>
+      );
+    }
+
+    return Object.entries(productsByCategory).map(([category, products]) => (
+      <View key={category} style={styles.categorySection}>
+        <Text style={styles.categoryTitle}>{category}</Text>
+        <View style={styles.itemsGrid}>
+          {products.map((product) => (
+            <TouchableOpacity
+              key={product.id}
+              onPress={() => router.push(`/products/${product.id}`)}
+              style={styles.gridItem}
+            >
+              <Image source={{ uri: product.image_url }} style={styles.gridImage} />
+              <View style={styles.gridItemContent}>
+                <Text style={styles.gridItemTitle}>{product.title}</Text>
+                <Text style={styles.gridItemPrice}>${product.price.toLocaleString()}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    ));
+  };
+
+  const handleRequestPress = (requestId: string) => {
+    const request = diamondRequests.find(r => r.id === requestId);
+    if (!request) return;
+    
+    setSelectedRequest(request);
+    setShowDetailsModal(true);
+  };
+
+  const renderDetailsModal = () => {
+    if (!selectedRequest) return null;
+
+    return (
+      <Modal
+        visible={showDetailsModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowDetailsModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Request Details</Text>
+              <TouchableOpacity onPress={() => setShowDetailsModal(false)}>
+                <X size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              <View style={styles.userInfoModal}>
+                <Image 
+                  source={{ 
+                    uri: selectedRequest.profiles.avatar_url || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'
+                  }} 
+                  style={styles.avatarModal} 
+                />
+                <View>
+                  <Text style={styles.userNameModal}>{selectedRequest.profiles.full_name}</Text>
+                  <Text style={styles.timeAgoModal}>{formatTimeAgo(selectedRequest.created_at)}</Text>
+                </View>
+              </View>
+
+              <View style={styles.detailSection}>
+                <Text style={styles.detailTitle}>Diamond Specifications</Text>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Weight:</Text>
+                  <Text style={styles.detailValue}>
+                    {selectedRequest.min_weight}{selectedRequest.max_weight ? `-${selectedRequest.max_weight}` : ''} ct
+                  </Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Cut:</Text>
+                  <Text style={styles.detailValue}>{selectedRequest.cut}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Clarity:</Text>
+                  <Text style={styles.detailValue}>{selectedRequest.clarity}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Color:</Text>
+                  <Text style={styles.detailValue}>{selectedRequest.color}</Text>
+                </View>
+                {selectedRequest.price && (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Budget:</Text>
+                    <Text style={styles.detailValue}>${selectedRequest.price.toLocaleString()}</Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.detailSection}>
+                <Text style={styles.detailTitle}>Status</Text>
+                <View style={[styles.statusBadge, { backgroundColor: selectedRequest.status === 'active' ? '#4CAF50' : '#666' }]}>
+                  <Text style={styles.statusText}>{selectedRequest.status}</Text>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  const renderRequests = () => {
+    if (loading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      );
+    }
+
+    if (diamondRequests.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No requests available</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.requestsContainer}>
+        {diamondRequests.map((request) => (
+          <View key={request.id} style={styles.requestCard}>
+            <View style={styles.requestHeader}>
+              <View style={styles.userInfo}>
+                <Image 
+                  source={{ 
+                    uri: request.profiles.avatar_url || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'
+                  }} 
+                  style={styles.avatar} 
+                />
+                <View>
+                  <Text style={styles.userName}>{request.profiles.full_name}</Text>
+                  <Text style={styles.timeAgo}>{formatTimeAgo(request.created_at)}</Text>
+                </View>
+              </View>
+              {request.price && (
+                <Text style={styles.price}>${request.price.toLocaleString()}</Text>
+              )}
+            </View>
+            
+            <Text style={styles.requestTitle}>
+              Looking for {request.min_weight}{request.max_weight ? `-${request.max_weight}` : ''} ct Diamond
+            </Text>
+            
+            <View style={styles.specsList}>
+              <Text style={styles.specsItem}>{request.min_weight} carat</Text>
+              <Text style={styles.specsItem}>{request.clarity}</Text>
+              <Text style={styles.specsItem}>Color {request.color}</Text>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.respondButton}
+              onPress={() => handleRequestPress(request.id)}
+            >
+              <Text style={styles.respondButtonText}>Details</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <SafeAreaView edges={['top']} style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <Text style={styles.logo}>JEX</Text>
           <View style={styles.headerButtons}>
@@ -239,75 +407,13 @@ export default function HomeScreen() {
         </View>
       </SafeAreaView>
 
-      <ScrollView style={styles.content}>
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>טוען...</Text>
-          </View>
-        ) : !hasItems ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              {showRequests ? 'אין בקשות זמינות' : 'אין מוצרים זמינים'}
-            </Text>
-          </View>
-        ) : (
-          <ScrollView
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-            style={styles.scrollView}
-          >
-            {Object.entries(filteredItems).map(([category, items]) => {
-              if (items.length === 0) return null;
-              return (
-                <View key={category} style={styles.categorySection}>
-                  <Text style={styles.categoryTitle}>{category}</Text>
-                  <View style={styles.itemsGrid}>
-                    {items.map((item) => (
-                      <TouchableOpacity
-                        key={item.id}
-                        onPress={() => {
-                          const route = showRequests ? `/requests/${item.id}` : `/products/${item.id}`;
-                          router.push(route);
-                        }}
-                        style={styles.gridItem}
-                      >
-                        {!showRequests && (
-                          <Image
-                            source={{ uri: item.image_url }}
-                            style={styles.gridImage}
-                            resizeMode="cover"
-                          />
-                        )}
-                        <View style={styles.gridItemOverlay}>
-                          <Text style={styles.gridItemTitle} numberOfLines={1}>{item.title}</Text>
-                          {!showRequests && (
-                            <Text style={styles.gridItemPrice}>${item.price.toLocaleString()}</Text>
-                          )}
-                          <View style={styles.userInfo}>
-                            <Image
-                              source={{ uri: item.profiles?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }}
-                              style={styles.userAvatar}
-                            />
-                            <Text style={styles.userName}>{item.profiles?.full_name}</Text>
-                          </View>
-                          {showRequests && (
-                            <Text style={styles.timeAgo}>
-                              {formatDistanceToNow(new Date(item.created_at), {
-                                addSuffix: true,
-                                locale: he
-                              })}
-                            </Text>
-                          )}
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              );
-            })}
-          </ScrollView>
-        )}
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        style={styles.scrollView}
+      >
+        {showRequests ? renderRequests() : renderProducts()}
       </ScrollView>
 
       <FilterModal
@@ -322,6 +428,7 @@ export default function HomeScreen() {
         selectedDiamondClarity={selectedDiamondClarity}
         onSelectDiamondClarity={setSelectedDiamondClarity}
       />
+      {renderDetailsModal()}
     </View>
   );
 }
@@ -388,9 +495,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Heebo-Regular',
     color: '#666',
   },
-  content: {
-    flex: 1,
-  },
   scrollView: {
     flex: 1,
   },
@@ -427,7 +531,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 12,
     resizeMode: 'cover'
   },
-  gridItemOverlay: {
+  gridItemContent: {
     padding: 12,
   },
   gridItemTitle: {
@@ -467,5 +571,151 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Heebo-Regular',
     color: '#999',
+  },
+  requestsContainer: {
+    padding: 16,
+  },
+  requestCard: {
+    backgroundColor: '#111',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  requestHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  price: {
+    fontSize: 18,
+    color: '#6C5CE7',
+    fontFamily: 'Heebo-Bold',
+  },
+  requestTitle: {
+    fontSize: 18,
+    color: '#fff',
+    fontFamily: 'Heebo-Bold',
+    marginBottom: 12,
+  },
+  specsList: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  specsItem: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'Heebo-Regular',
+    backgroundColor: '#222',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  respondButton: {
+    backgroundColor: '#6C5CE7',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  respondButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Heebo-Medium',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#111',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontFamily: 'Heebo-Bold',
+    color: '#fff',
+  },
+  modalBody: {
+    padding: 16,
+  },
+  userInfoModal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#222',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  avatarModal: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 12,
+  },
+  userNameModal: {
+    fontSize: 16,
+    fontFamily: 'Heebo-Bold',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  timeAgoModal: {
+    fontSize: 14,
+    fontFamily: 'Heebo-Regular',
+    color: '#666',
+  },
+  detailSection: {
+    marginBottom: 24,
+  },
+  detailTitle: {
+    fontSize: 18,
+    fontFamily: 'Heebo-Bold',
+    color: '#fff',
+    marginBottom: 12,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  detailLabel: {
+    fontSize: 16,
+    fontFamily: 'Heebo-Regular',
+    color: '#666',
+  },
+  detailValue: {
+    fontSize: 16,
+    fontFamily: 'Heebo-Medium',
+    color: '#fff',
+  },
+  statusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  statusText: {
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: 'Heebo-Medium',
   },
 });
