@@ -79,6 +79,7 @@ type ColorGrade = typeof COLOR_GRADES[number];
 export default function AddProductScreen() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [formData, setFormData] = useState({
     title: '',
     price: '',
@@ -102,21 +103,20 @@ export default function AddProductScreen() {
 
   const pickImage = async () => {
     try {
-      // Request permissions first on iOS
       if (Platform.OS !== 'web') {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
           Alert.alert(
-            'נדרשת הרשאה',
-            'אנחנו צריכים הרשאה לגלריה כדי לאפשר לך להעלות תמונות',
-            [{ text: 'הבנתי' }]
+            'Permission Required',
+            'We need access to your gallery to upload images',
+            [{ text: 'OK' }]
           );
           return;
         }
       }
 
       let result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: 'images',
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -135,9 +135,9 @@ export default function AddProductScreen() {
     } catch (error) {
       console.error('Error picking image:', error);
       Alert.alert(
-        'שגיאה',
-        'אירעה שגיאה בבחירת התמונה. נסה שוב.',
-        [{ text: 'אישור' }]
+        'Error',
+        'An error occurred while selecting the image. Please try again.',
+        [{ text: 'OK' }]
       );
     }
   };
@@ -169,90 +169,120 @@ export default function AddProductScreen() {
 
   const handleSubmit = async () => {
     try {
-      if (!user) {
-        Alert.alert('שגיאה', 'יש להתחבר כדי להוסיף מוצר');
-        return;
-      }
-
-      const requiredFields = ['title', 'price', 'description', 'category'];
-      const missingFields = [];
-
-      for (const field of requiredFields) {
-        if (!formData[field]) {
-          missingFields.push(field);
-        }
-      }
-
-      if (formData.price && isNaN(parseFloat(formData.price))) {
-        Alert.alert('שגיאה', 'נא להזין מחיר תקין');
-        return;
-      }
-
-      if (isLooseDiamond) {
-        if (!formData.weight) missingFields.push('weight');
-        if (!formData.clarity) missingFields.push('clarity');
-        if (!formData.color) missingFields.push('color');
-        if (!formData.cut) missingFields.push('cut');
-      }
-
-      if (!imageUri) {
-        missingFields.push('image');
-      }
-
-      if (missingFields.length > 0) {
-        const fieldNames = {
-          title: 'שם המוצר',
-          price: 'מחיר',
-          description: 'תיאור',
-          category: 'סוג מוצר',
-          weight: 'משקל',
-          clarity: 'ניקיון',
-          color: 'צבע',
-          cut: 'חיתוך',
-          image: 'תמונה'
-        };
-        
-        const missingFieldsHebrew = missingFields.map(field => fieldNames[field]).join(', ');
-        Alert.alert('שגיאה', `נא למלא את כל שדות החובה: ${missingFieldsHebrew}`);
+      if (!user?.id) {
+        Alert.alert('Error', 'You must be logged in to add a product');
         return;
       }
 
       setLoading(true);
+      
+      // Reset errors
+      setErrors({});
+      
+      // Validate required fields
+      const requiredFields = ['title', 'price', 'description', 'category'] as const;
+      const missingFields: string[] = [];
+      const newErrors: Record<string, boolean> = {};
 
+      for (const field of requiredFields) {
+        if (!formData[field]) {
+          missingFields.push(field);
+          newErrors[field] = true;
+        }
+      }
+
+      // Validate price
+      if (formData.price && isNaN(parseFloat(formData.price))) {
+        newErrors.price = true;
+        Alert.alert('Error', 'Please enter a valid price');
+        setLoading(false);
+        setErrors(newErrors);
+        return;
+      }
+
+      // Check diamond fields if it's a loose diamond
+      if (formData.category === 'Loose Diamond') {
+        const diamondFields = ['weight', 'clarity', 'color', 'cut'] as const;
+        for (const field of diamondFields) {
+          if (!formData[field]) {
+            missingFields.push(field);
+            newErrors[field] = true;
+          }
+        }
+      }
+
+      // Check image
+      if (!imageUri) {
+        missingFields.push('image');
+        newErrors.image = true;
+      }
+
+      if (missingFields.length > 0) {
+        const fieldNames: Record<string, string> = {
+          title: 'Product Name',
+          price: 'Price',
+          description: 'Description',
+          category: 'Product Type',
+          weight: 'Weight',
+          clarity: 'Clarity',
+          color: 'Color',
+          cut: 'Cut',
+          image: 'Image'
+        };
+        
+        setErrors(newErrors);
+        Alert.alert(
+          'Missing Fields',
+          `Please fill in all required fields: ${missingFields.map(field => fieldNames[field]).join(', ')}`
+        );
+        setLoading(false);
+        return;
+      }
+
+      // Upload image first
       const imageUrl = await uploadImage();
-      if (!imageUrl) throw new Error('Failed to upload image');
+      if (!imageUrl) {
+        Alert.alert('Error', 'Failed to upload image. Please try again.');
+        setLoading(false);
+        return;
+      }
 
-      const { error } = await supabase.from('products').insert({
+      // Create the product
+      const productData = {
         title: formData.title,
         price: parseFloat(formData.price),
         description: formData.description,
         category: formData.category,
         image_url: imageUrl,
         user_id: user.id,
-        details: {
+        details: formData.category === 'Loose Diamond' ? {
           weight: formData.weight,
           clarity: formData.clarity,
           color: formData.color,
           cut: formData.cut,
-        },
-      });
+        } : null,
+        created_at: new Date().toISOString(),
+      };
 
-      if (error) throw error;
+      const { error } = await supabase
+        .from('products')
+        .insert(productData)
+        .select()
+        .single();
 
-      Alert.alert('הצלחה', 'המוצר נוסף בהצלחה', [
-        { 
-          text: 'אישור', 
-          onPress: () => {
-            // Navigate to profile tab and reset the navigation stack
-            router.replace('/(tabs)');
-            router.push('/(tabs)/profile');
-          }
-        }
-      ]);
+      if (error) {
+        console.error('Supabase error:', error);
+        Alert.alert('Error', 'Failed to create product. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      setLoading(false);
+      router.replace('/(tabs)');
+      
     } catch (error) {
-      console.error('Error creating product:', error);
-      Alert.alert('שגיאה', 'אירעה שגיאה בהוספת המוצר. נסה שוב מאוחר יותר.');
-    } finally {
+      console.error('Error in handleSubmit:', error);
+      Alert.alert('Error', 'An error occurred while adding the product. Please try again.');
       setLoading(false);
     }
   };
@@ -305,7 +335,7 @@ export default function AddProductScreen() {
                   styles.modalOptionText,
                   selected === option && styles.modalOptionTextSelected
                 ]}>
-                  {isWeight ? `${option} קראט` : option}
+                  {isWeight ? `${option} Carat` : option}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -337,112 +367,112 @@ export default function AddProductScreen() {
             onPress={pickImage}
           >
             <Camera size={32} color="#007AFF" />
-            <Text style={styles.uploadText}>העלה תמונה</Text>
-            <Text style={styles.uploadSubtext}>לחץ כאן לבחירת תמונה מהגלריה</Text>
+            <Text style={styles.uploadText}>Upload Image</Text>
+            <Text style={styles.uploadSubtext}>Tap here to select an image from gallery</Text>
           </TouchableOpacity>
         )}
       </View>
 
       <View style={styles.form}>
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>סוג מוצר</Text>
+          <Text style={styles.label}>Product Type</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setShowCategoryModal(true)}
           >
             <Text style={styles.selectButtonText}>
-              {formData.category || 'בחר סוג מוצר'}
+              {formData.category || 'Select product type'}
             </Text>
             <ChevronDown size={20} color="#666" />
           </TouchableOpacity>
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>שם המוצר</Text>
+          <Text style={styles.label}>Product Name</Text>
           <TextInput
             style={styles.input}
             value={formData.title}
             onChangeText={(text) => setFormData({ ...formData, title: text })}
-            placeholder={isLooseDiamond ? "לדוגמה: יהלום עגול 1 קראט" : "לדוגמה: טבעת יהלום סוליטר"}
-            textAlign="right"
+            placeholder={isLooseDiamond ? "Example: 1 Carat Round Diamond" : "Example: Solitaire Diamond Ring"}
+            textAlign="left"
           />
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>מחיר</Text>
+          <Text style={styles.label}>Price</Text>
           <TextInput
             style={styles.input}
             value={formData.price}
             onChangeText={(text) => setFormData({ ...formData, price: text })}
-            placeholder="הזן מחיר בדולרים"
+            placeholder="Enter price in USD"
             keyboardType="numeric"
-            textAlign="right"
+            textAlign="left"
           />
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>תיאור</Text>
+          <Text style={styles.label}>Description</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
             value={formData.description}
             onChangeText={(text) => setFormData({ ...formData, description: text })}
-            placeholder={isLooseDiamond ? "תאר את היהלום..." : "תאר את המוצר..."}
+            placeholder={isLooseDiamond ? "Describe the diamond..." : "Describe the product..."}
             multiline
             numberOfLines={4}
-            textAlign="right"
+            textAlign="left"
             textAlignVertical="top"
           />
         </View>
 
-        <Text style={styles.sectionTitle}>מפרט טכני</Text>
+        <Text style={styles.sectionTitle}>Technical Specifications</Text>
 
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, isLooseDiamond && styles.requiredField]}>משקל (קראט)</Text>
+          <Text style={[styles.label, isLooseDiamond && styles.requiredField]}>Weight (Carat)</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setShowWeightModal(true)}
           >
             <Text style={styles.selectButtonText}>
-              {formData.weight ? `${formData.weight} קראט` : 'בחר משקל'}
+              {formData.weight ? `${formData.weight} Carat` : 'Select weight'}
             </Text>
             <ChevronDown size={20} color="#666" />
           </TouchableOpacity>
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, isLooseDiamond && styles.requiredField]}>ניקיון</Text>
+          <Text style={[styles.label, isLooseDiamond && styles.requiredField]}>Clarity</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setShowClarityModal(true)}
           >
             <Text style={styles.selectButtonText}>
-              {formData.clarity || 'בחר דרגת ניקיון'}
+              {formData.clarity || 'Select clarity grade'}
             </Text>
             <ChevronDown size={20} color="#666" />
           </TouchableOpacity>
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, isLooseDiamond && styles.requiredField]}>צבע</Text>
+          <Text style={[styles.label, isLooseDiamond && styles.requiredField]}>Color</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setShowColorModal(true)}
           >
             <Text style={styles.selectButtonText}>
-              {formData.color || 'בחר דרגת צבע'}
+              {formData.color || 'Select color grade'}
             </Text>
             <ChevronDown size={20} color="#666" />
           </TouchableOpacity>
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, isLooseDiamond && styles.requiredField]}>חיתוך</Text>
+          <Text style={[styles.label, isLooseDiamond && styles.requiredField]}>Cut</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setShowCutModal(true)}
           >
             <Text style={styles.selectButtonText}>
-              {formData.cut || 'בחר סוג חיתוך'}
+              {formData.cut || 'Select cut type'}
             </Text>
             <ChevronDown size={20} color="#666" />
           </TouchableOpacity>
@@ -454,7 +484,7 @@ export default function AddProductScreen() {
           disabled={loading}
         >
           <Text style={styles.submitButtonText}>
-            {loading ? 'מוסיף מוצר...' : 'פרסם מוצר'}
+            {loading ? 'Adding product...' : 'Publish Product'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -462,7 +492,7 @@ export default function AddProductScreen() {
       <SelectionModal
         visible={showWeightModal}
         onClose={() => setShowWeightModal(false)}
-        title="בחר משקל"
+        title="Select Weight"
         options={WEIGHT_OPTIONS}
         onSelect={(value) => setFormData({ ...formData, weight: value })}
         selected={formData.weight}
@@ -472,7 +502,7 @@ export default function AddProductScreen() {
       <SelectionModal
         visible={showCutModal}
         onClose={() => setShowCutModal(false)}
-        title="בחר סוג חיתוך"
+        title="Select Cut Type"
         options={DIAMOND_CUTS}
         onSelect={(value) => setFormData({ ...formData, cut: value })}
         selected={formData.cut}
@@ -481,7 +511,7 @@ export default function AddProductScreen() {
       <SelectionModal
         visible={showClarityModal}
         onClose={() => setShowClarityModal(false)}
-        title="בחר דרגת ניקיון"
+        title="Select Clarity Grade"
         options={CLARITY_GRADES}
         onSelect={(value) => setFormData({ ...formData, clarity: value })}
         selected={formData.clarity}
@@ -490,7 +520,7 @@ export default function AddProductScreen() {
       <SelectionModal
         visible={showColorModal}
         onClose={() => setShowColorModal(false)}
-        title="בחר דרגת צבע"
+        title="Select Color Grade"
         options={COLOR_GRADES}
         onSelect={(value) => setFormData({ ...formData, color: value })}
         selected={formData.color}
@@ -499,7 +529,7 @@ export default function AddProductScreen() {
       <SelectionModal
         visible={showCategoryModal}
         onClose={() => setShowCategoryModal(false)}
-        title="בחר סוג מוצר"
+        title="Select Product Type"
         options={PRODUCT_TYPES}
         onSelect={(value) => setFormData({ ...formData, category: value })}
         selected={formData.category}
@@ -571,7 +601,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginBottom: 8,
-    textAlign: 'right',
+    textAlign: 'left',
     fontFamily: 'Heebo-Medium',
   },
   requiredField: {
@@ -596,7 +626,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Heebo-Regular',
     color: '#000',
-    textAlign: 'right',
+    textAlign: 'left',
   },
   textArea: {
     height: 100,
@@ -607,7 +637,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Heebo-Bold',
     marginBottom: 16,
     marginTop: 8,
-    textAlign: 'right',
+    textAlign: 'left',
   },
   submitButton: {
     backgroundColor: '#007AFF',
@@ -665,7 +695,7 @@ const styles = StyleSheet.create({
   modalOptionText: {
     fontSize: 16,
     fontFamily: 'Heebo-Regular',
-    textAlign: 'right',
+    textAlign: 'left',
   },
   modalOptionTextSelected: {
     color: '#fff',
