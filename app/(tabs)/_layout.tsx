@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+import { Tabs, usePathname } from 'expo-router';
 import { Home, User, Search, Plus } from 'lucide-react-native';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { TopHeader } from '@/components/TopHeader';
@@ -20,6 +20,8 @@ function TabBarIcon({ Icon, focused }: { Icon: any, focused: boolean }) {
 }
 
 export default function TabLayout() {
+  const pathname = usePathname();
+
   return (
     <SafeAreaView style={styles.container}>
       <Tabs
@@ -138,4 +140,5 @@ const styles = StyleSheet.create({
   addButtonFocused: {
     transform: [{ scale: 1.1 }],
   },
+  
 }); 

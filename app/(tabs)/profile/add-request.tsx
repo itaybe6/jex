@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Platform, Modal } from 'react-native';
 import { ChevronDown } from 'lucide-react-native';
 import { router } from 'expo-router';
@@ -58,46 +58,65 @@ const COLOR_GRADES = [
   'Z',
 ] as string[];
 
-const WEIGHT_OPTIONS = Array.from({ length: 46 }, (_, i) => (0.5 + i * 0.1).toFixed(1));
+const ALL_WEIGHT_OPTIONS = Array.from({ length: 46 }, (_, i) => (0.5 + i * 0.1).toFixed(1));
 
 type FormData = {
-  title: string;
-  description: string;
-  category: string;
-  weight: string;
+  cut: string;
+  min_weight: string;
+  max_weight: string;
   clarity: string;
   color: string;
-  cut: string;
-  budget: string;
+  status?: string;
+  price?: string;
 };
 
 export default function AddRequestScreen() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<FormData>({
-    title: '',
-    description: '',
-    category: 'Loose Diamond',
-    weight: '',
+    cut: '',
+    min_weight: '',
+    max_weight: '',
     clarity: '',
     color: '',
-    cut: '',
-    budget: '',
+    price: '',
   });
 
   const [showCutModal, setShowCutModal] = useState(false);
   const [showClarityModal, setShowClarityModal] = useState(false);
   const [showColorModal, setShowColorModal] = useState(false);
-  const [showWeightModal, setShowWeightModal] = useState(false);
+  const [showMinWeightModal, setShowMinWeightModal] = useState(false);
+  const [showMaxWeightModal, setShowMaxWeightModal] = useState(false);
+
+  const maxWeightOptions = useMemo(() => {
+    if (!formData.min_weight) return ALL_WEIGHT_OPTIONS;
+    
+    const minWeightIndex = ALL_WEIGHT_OPTIONS.indexOf(formData.min_weight);
+    if (minWeightIndex === -1) return ALL_WEIGHT_OPTIONS;
+    
+    return ALL_WEIGHT_OPTIONS.slice(minWeightIndex + 1);
+  }, [formData.min_weight]);
+
+  const handleMinWeightChange = (value: string) => {
+    setFormData(prev => {
+      const newFormData = { ...prev, min_weight: value };
+      
+      if (prev.max_weight && parseFloat(prev.max_weight) <= parseFloat(value)) {
+        newFormData.max_weight = '';
+      }
+      
+      return newFormData;
+    });
+  };
 
   const handleSubmit = async () => {
     try {
-      if (!user) {
+      if (!user?.id) {
         Alert.alert('שגיאה', 'יש להתחבר כדי להוסיף בקשה');
         return;
       }
 
-      const requiredFields = ['title', 'description', 'weight', 'clarity', 'color', 'cut'] as const;
+      const requiredFields = ['cut', 'min_weight', 'clarity', 'color'] as const;
       const missingFields = [];
 
       for (const field of requiredFields) {
@@ -115,39 +134,61 @@ export default function AddRequestScreen() {
         return;
       }
 
-      if (formData.budget && isNaN(parseFloat(formData.budget))) {
-        Alert.alert('שגיאה', 'נא להזין תקציב תקין');
+      if (formData.min_weight && isNaN(parseFloat(formData.min_weight))) {
+        Alert.alert('שגיאה', 'נא להזין משקל מינימלי תקין');
+        return;
+      }
+
+      if (formData.max_weight && isNaN(parseFloat(formData.max_weight))) {
+        Alert.alert('שגיאה', 'נא להזין משקל מקסימלי תקין');
+        return;
+      }
+
+      if (formData.price && isNaN(parseFloat(formData.price))) {
+        Alert.alert('שגיאה', 'נא להזין מחיר תקין');
         return;
       }
 
       setLoading(true);
 
-      const { error } = await supabase
-        .from('requests')
-        .insert({
-          user_id: user.id,
-          title: formData.title,
-          description: formData.description,
-          category: formData.category,
-          diamond_size: formData.weight,
-          diamond_clarity: formData.clarity,
-          diamond_color: formData.color,
-          diamond_cut: formData.cut,
-          budget: formData.budget ? parseFloat(formData.budget) : null,
-        });
+      const requestData = {
+        user_id: user.id,
+        cut: formData.cut,
+        min_weight: formData.min_weight ? parseFloat(formData.min_weight) : null,
+        max_weight: formData.max_weight ? parseFloat(formData.max_weight) : null,
+        clarity: formData.clarity,
+        color: formData.color,
+        price: formData.price ? parseFloat(formData.price) : null,
+        status: 'active',
+        created_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now
+      };
 
-      if (error) throw error;
+      console.log('Sending request data:', requestData);
+
+      const { data, error } = await supabase
+        .from('diamond_requests')
+        .insert(requestData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      console.log('Request added successfully:', data);
 
       Alert.alert(
         'הצלחה',
         'הבקשה נוספה בהצלחה',
         [{ text: 'אישור', onPress: () => router.back() }]
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding request:', error);
       Alert.alert(
         'שגיאה',
-        'אירעה שגיאה בהוספת הבקשה. נסה שוב.',
+        error?.message || 'אירעה שגיאה בהוספת הבקשה. נסה שוב.',
         [{ text: 'אישור' }]
       );
     } finally {
@@ -209,35 +250,45 @@ export default function AddRequestScreen() {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.form}>
-        <Text style={styles.label}>כותרת</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.title}
-          onChangeText={(text) => setFormData({ ...formData, title: text })}
-          placeholder="כותרת הבקשה"
-          placeholderTextColor="#666"
-        />
-
-        <Text style={styles.label}>תיאור</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          value={formData.description}
-          onChangeText={(text) => setFormData({ ...formData, description: text })}
-          placeholder="תיאור מפורט של הבקשה"
-          placeholderTextColor="#666"
-          multiline
-          numberOfLines={4}
-        />
-
-        <Text style={styles.label}>משקל (קראט)</Text>
+        <Text style={styles.label}>חיתוך</Text>
         <TouchableOpacity
           style={styles.selectButton}
-          onPress={() => setShowWeightModal(true)}
+          onPress={() => setShowCutModal(true)}
         >
           <Text style={styles.selectButtonText}>
-            {formData.weight || 'בחר משקל'}
+            {formData.cut || 'בחר חיתוך'}
           </Text>
           <ChevronDown size={20} color="#666" />
+        </TouchableOpacity>
+
+        <Text style={styles.label}>משקל מינימלי (קראט)</Text>
+        <TouchableOpacity
+          style={styles.selectButton}
+          onPress={() => setShowMinWeightModal(true)}
+        >
+          <Text style={styles.selectButtonText}>
+            {formData.min_weight || 'בחר משקל מינימלי'}
+          </Text>
+          <ChevronDown size={20} color="#666" />
+        </TouchableOpacity>
+
+        <Text style={styles.label}>משקל מקסימלי (קראט)</Text>
+        <TouchableOpacity
+          style={[
+            styles.selectButton,
+            !formData.min_weight && styles.selectButtonDisabled
+          ]}
+          onPress={() => formData.min_weight && setShowMaxWeightModal(true)}
+        >
+          <Text style={[
+            styles.selectButtonText,
+            !formData.min_weight && styles.selectButtonTextDisabled
+          ]}>
+            {!formData.min_weight 
+              ? 'יש לבחור משקל מינימלי תחילה'
+              : formData.max_weight || 'בחר משקל מקסימלי'}
+          </Text>
+          <ChevronDown size={20} color={formData.min_weight ? '#666' : '#444'} />
         </TouchableOpacity>
 
         <Text style={styles.label}>ניקיון</Text>
@@ -262,23 +313,12 @@ export default function AddRequestScreen() {
           <ChevronDown size={20} color="#666" />
         </TouchableOpacity>
 
-        <Text style={styles.label}>חיתוך</Text>
-        <TouchableOpacity
-          style={styles.selectButton}
-          onPress={() => setShowCutModal(true)}
-        >
-          <Text style={styles.selectButtonText}>
-            {formData.cut || 'בחר חיתוך'}
-          </Text>
-          <ChevronDown size={20} color="#666" />
-        </TouchableOpacity>
-
-        <Text style={styles.label}>תקציב (אופציונלי)</Text>
+        <Text style={styles.label}>מחיר מקסימלי (אופציונלי)</Text>
         <TextInput
           style={styles.input}
-          value={formData.budget}
-          onChangeText={(text) => setFormData({ ...formData, budget: text })}
-          placeholder="תקציב משוער"
+          value={formData.price}
+          onChangeText={(text) => setFormData({ ...formData, price: text })}
+          placeholder="מחיר מקסימלי"
           placeholderTextColor="#666"
           keyboardType="numeric"
         />
@@ -295,12 +335,30 @@ export default function AddRequestScreen() {
       </ScrollView>
 
       {renderModal(
-        showWeightModal,
-        () => setShowWeightModal(false),
-        'בחר משקל',
-        WEIGHT_OPTIONS,
-        (value) => setFormData({ ...formData, weight: value }),
-        formData.weight
+        showCutModal,
+        () => setShowCutModal(false),
+        'בחר חיתוך',
+        DIAMOND_CUTS,
+        (value) => setFormData({ ...formData, cut: value }),
+        formData.cut
+      )}
+
+      {renderModal(
+        showMinWeightModal,
+        () => setShowMinWeightModal(false),
+        'בחר משקל מינימלי',
+        ALL_WEIGHT_OPTIONS,
+        handleMinWeightChange,
+        formData.min_weight
+      )}
+
+      {renderModal(
+        showMaxWeightModal,
+        () => setShowMaxWeightModal(false),
+        'בחר משקל מקסימלי',
+        maxWeightOptions,
+        (value) => setFormData({ ...formData, max_weight: value }),
+        formData.max_weight
       )}
 
       {renderModal(
@@ -319,15 +377,6 @@ export default function AddRequestScreen() {
         COLOR_GRADES,
         (value) => setFormData({ ...formData, color: value }),
         formData.color
-      )}
-
-      {renderModal(
-        showCutModal,
-        () => setShowCutModal(false),
-        'בחר חיתוך',
-        DIAMOND_CUTS,
-        (value) => setFormData({ ...formData, cut: value }),
-        formData.cut
       )}
     </View>
   );
@@ -357,10 +406,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 16,
     textAlign: 'right',
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
   },
   selectButton: {
     backgroundColor: '#111',
@@ -431,5 +476,11 @@ const styles = StyleSheet.create({
   },
   modalOptionTextSelected: {
     color: '#fff',
+  },
+  selectButtonDisabled: {
+    opacity: 0.5,
+  },
+  selectButtonTextDisabled: {
+    color: '#444',
   },
 }); 
