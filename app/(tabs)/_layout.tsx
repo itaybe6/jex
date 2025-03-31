@@ -1,8 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Home, User, Search, Plus } from 'lucide-react-native';
-import { View, TouchableOpacity, Text, Modal, StyleSheet } from 'react-native';
-import { useState } from 'react';
-import { router } from 'expo-router';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { TopHeader } from '@/components/TopHeader';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -22,18 +20,6 @@ function TabBarIcon({ Icon, focused }: { Icon: any, focused: boolean }) {
 }
 
 export default function TabLayout() {
-  const [showAddMenu, setShowAddMenu] = useState(false);
-
-  const handleAddProduct = () => {
-    setShowAddMenu(false);
-    router.push('/(tabs)/profile/add-product');
-  };
-
-  const handleAddRequest = () => {
-    setShowAddMenu(false);
-    router.push('/(tabs)/profile/add-request');
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <Tabs
@@ -78,20 +64,16 @@ export default function TabLayout() {
           options={{
             title: '',
             headerShown: false,
-            tabBarIcon: ({ color }) => (
-              <TouchableOpacity
-                onPress={() => setShowAddMenu(true)}
-                style={styles.addButton}
-              >
-                <Plus size={24} color="#fff" />
-              </TouchableOpacity>
+            href: '/(tabs)/add',
+            tabBarIcon: ({ focused }) => (
+              <View style={styles.addButtonContainer}>
+                <TouchableOpacity
+                  style={[styles.addButton, focused && styles.addButtonFocused]}
+                >
+                  <Plus size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
             ),
-          }}
-          listeners={{
-            tabPress: (e) => {
-              e.preventDefault();
-              setShowAddMenu(true);
-            },
           }}
         />
         <Tabs.Screen
@@ -122,37 +104,6 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
-
-      <Modal
-        visible={showAddMenu}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowAddMenu(false)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowAddMenu(false)}
-        >
-          <View style={styles.menuContainer}>
-            <TouchableOpacity 
-              style={styles.menuItem}
-              onPress={handleAddProduct}
-            >
-              <Plus size={24} color="#333" />
-              <Text style={styles.menuText}>Add Product</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity 
-              style={styles.menuItem}
-              onPress={handleAddRequest}
-            >
-              <Plus size={24} color="#333" />
-              <Text style={styles.menuText}>Add Request</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -161,6 +112,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  addButtonContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addButton: {
     backgroundColor: '#6C5CE7',
@@ -179,30 +135,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  menuContainer: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    gap: 12,
-  },
-  menuText: {
-    fontSize: 16,
-    fontFamily: 'Heebo-Medium',
-    color: '#333',
-  },
-  menuDivider: {
-    height: 1,
-    backgroundColor: '#eee',
+  addButtonFocused: {
+    transform: [{ scale: 1.1 }],
   },
 }); 
