@@ -16,17 +16,14 @@ const screenWidth = Dimensions.get('window').width;
 const ITEM_WIDTH = (screenWidth - 40 - (GRID_SPACING * (NUM_COLUMNS - 1))) / NUM_COLUMNS;
 
 const PRODUCT_CATEGORIES = [
-  'All',
-  'Loose Diamond',
-  'Ring',
-  'Necklace',
-  'Bracelet',
+  'Rings',
+  'Necklaces',
   'Earrings',
-  'Pendant',
+  'Bracelets',
+  'Loose Diamonds',
 ] as const;
 
 const DIAMOND_SIZES = [
-  'All',
   '0.3-0.5',
   '0.5-1.0',
   '1.0-2.0',
@@ -34,28 +31,22 @@ const DIAMOND_SIZES = [
   '3.0+',
 ] as const;
 
-const DIAMOND_CLARITY = [
-  'All',
-  'FL',
-  'IF',
-  'VVS1',
-  'VVS2',
-  'VS1',
-  'VS2',
-  'SI1',
-  'SI2',
-] as const;
-
 const DIAMOND_COLORS = [
-  'All',
   'D',
   'E',
   'F',
   'G',
   'H',
   'I',
-  'J',
-  'K',
+] as const;
+
+const DIAMOND_CLARITY = [
+  'FL',
+  'IF',
+  'VVS1',
+  'VVS2',
+  'VS1',
+  'VS2',
 ] as const;
 
 type Product = {
@@ -200,6 +191,87 @@ export default function HomeScreen() {
     return `${diffInMonths} months ago`;
   };
 
+  const getFilteredProducts = () => {
+    let filteredProducts = { ...productsByCategory };
+
+    if (selectedCategory) {
+      // Convert category names to match the database
+      const dbCategory = selectedCategory === 'Loose Diamonds' ? 'Loose Diamond' : 
+                        selectedCategory.slice(0, -1); // Remove 's' from plural
+      filteredProducts = {
+        [dbCategory]: productsByCategory[dbCategory] || []
+      };
+    }
+
+    if (selectedDiamondSize) {
+      Object.keys(filteredProducts).forEach(category => {
+        filteredProducts[category] = filteredProducts[category].filter(product => {
+          if (!product.details?.weight) return false;
+          const weight = parseFloat(product.details.weight);
+          if (selectedDiamondSize === '3.0+') {
+            return weight >= 3.0;
+          }
+          const [min, max] = selectedDiamondSize.split('-').map(parseFloat);
+          return weight >= min && weight <= max;
+        });
+      });
+    }
+
+    if (selectedDiamondColor) {
+      Object.keys(filteredProducts).forEach(category => {
+        filteredProducts[category] = filteredProducts[category].filter(product => 
+          product.details?.color === selectedDiamondColor
+        );
+      });
+    }
+
+    if (selectedDiamondClarity) {
+      Object.keys(filteredProducts).forEach(category => {
+        filteredProducts[category] = filteredProducts[category].filter(product => 
+          product.details?.clarity === selectedDiamondClarity
+        );
+      });
+    }
+
+    // Remove empty categories
+    Object.keys(filteredProducts).forEach(category => {
+      if (filteredProducts[category].length === 0) {
+        delete filteredProducts[category];
+      }
+    });
+
+    return filteredProducts;
+  };
+
+  const getFilteredRequests = () => {
+    let filtered = [...diamondRequests];
+
+    if (selectedDiamondSize) {
+      filtered = filtered.filter(request => {
+        if (selectedDiamondSize === '3.0+') {
+          return request.min_weight >= 3.0;
+        }
+        const [min, max] = selectedDiamondSize.split('-').map(parseFloat);
+        return request.min_weight >= min && 
+               (request.max_weight ? request.max_weight <= max : request.min_weight <= max);
+      });
+    }
+
+    if (selectedDiamondColor) {
+      filtered = filtered.filter(request => 
+        request.color === selectedDiamondColor
+      );
+    }
+
+    if (selectedDiamondClarity) {
+      filtered = filtered.filter(request => 
+        request.clarity === selectedDiamondClarity
+      );
+    }
+
+    return filtered;
+  };
+
   const renderProducts = () => {
     if (loading) {
       return (
@@ -209,15 +281,17 @@ export default function HomeScreen() {
       );
     }
 
-    if (Object.keys(productsByCategory).length === 0) {
+    const filteredProducts = getFilteredProducts();
+
+    if (Object.keys(filteredProducts).length === 0) {
       return (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No products available</Text>
+          <Text style={styles.emptyText}>No products match your filters</Text>
         </View>
       );
     }
 
-    return Object.entries(productsByCategory).map(([category, products]) => (
+    return Object.entries(filteredProducts).map(([category, products]) => (
       <View key={category} style={styles.categorySection}>
         <Text style={styles.categoryTitle}>{category}</Text>
         <View style={styles.itemsGrid}>
@@ -330,17 +404,19 @@ export default function HomeScreen() {
       );
     }
 
-    if (diamondRequests.length === 0) {
+    const filteredRequests = getFilteredRequests();
+
+    if (filteredRequests.length === 0) {
       return (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No requests available</Text>
+          <Text style={styles.emptyText}>No requests match your filters</Text>
         </View>
       );
     }
 
     return (
       <View style={styles.requestsContainer}>
-        {diamondRequests.map((request) => (
+        {filteredRequests.map((request) => (
           <View key={request.id} style={styles.requestCard}>
             <View style={styles.requestHeader}>
               <View style={styles.userInfo}>
