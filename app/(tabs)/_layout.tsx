@@ -1,4 +1,4 @@
-import { Tabs, usePathname } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { Home, User, Search, Plus } from 'lucide-react-native';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { TopHeader } from '@/components/TopHeader';
@@ -20,36 +20,40 @@ function TabBarIcon({ Icon, focused }: { Icon: any, focused: boolean }) {
 }
 
 export default function TabLayout() {
-  const pathname = usePathname();
-
   return (
     <SafeAreaView style={styles.container}>
       <Tabs
         screenOptions={{
           header: () => <TopHeader />,
-          tabBarActiveTintColor: '#007AFF',
-          tabBarInactiveTintColor: '#666',
           tabBarStyle: {
+            backgroundColor: '#121212',
+            borderTopColor: '#2a2a2a',
             borderTopWidth: 1,
-            borderTopColor: '#333',
             height: 60,
             paddingBottom: 8,
             paddingTop: 8,
-            backgroundColor: '#000',
           },
-          tabBarShowLabel: false,
+          tabBarActiveTintColor: '#6C5CE7',
+          tabBarInactiveTintColor: '#888',
           tabBarLabelStyle: {
             fontFamily: 'Heebo-Medium',
-            fontSize: 12,
           },
-        }}>
+          headerStyle: {
+            backgroundColor: '#121212',
+          },
+          headerShadowVisible: false,
+          headerTitleStyle: {
+            fontFamily: 'Heebo-Bold',
+            color: '#fff',
+          },
+          headerTintColor: '#fff',
+        }}
+      >
         <Tabs.Screen
           name="index"
           options={{
-            title: '',
-            tabBarIcon: ({ focused }) => (
-              <TabBarIcon Icon={Home} focused={focused} />
-            ),
+            title: 'Home',
+            tabBarIcon: ({ color }) => <Home size={24} color={color} />,
           }}
         />
         <Tabs.Screen
@@ -64,27 +68,16 @@ export default function TabLayout() {
         <Tabs.Screen
           name="add"
           options={{
-            title: '',
+            title: 'Add',
             headerShown: false,
-            href: '/(tabs)/add',
-            tabBarIcon: ({ focused }) => (
-              <View style={styles.addButtonContainer}>
-                <TouchableOpacity
-                  style={[styles.addButton, focused && styles.addButtonFocused]}
-                >
-                  <Plus size={24} color="#fff" />
-                </TouchableOpacity>
-              </View>
-            ),
+            tabBarIcon: ({ color }) => <Plus size={24} color={color} />,
           }}
         />
         <Tabs.Screen
           name="profile"
           options={{
-            title: '',
-            tabBarIcon: ({ focused }) => (
-              <TabBarIcon Icon={User} focused={focused} />
-            ),
+            title: 'Profile',
+            tabBarIcon: ({ color }) => <User size={24} color={color} />,
           }}
         />
         <Tabs.Screen

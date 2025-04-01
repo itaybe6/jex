@@ -1,34 +1,54 @@
 import { Stack } from 'expo-router';
+import { StyleSheet } from 'react-native';
 
 export default function ProfileLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen 
-        name="product/[id]" 
+    <Stack
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: '#121212',
+        },
+        headerShadowVisible: false,
+        headerTitleStyle: {
+          fontFamily: 'Heebo-Bold',
+          color: '#fff',
+        },
+        headerTintColor: '#fff',
+        contentStyle: {
+          backgroundColor: '#121212',
+        },
+      }}
+    >
+      <Stack.Screen
+        name="index"
         options={{
-          presentation: 'modal',
-          headerShown: true,
-          headerTitle: 'פרטי מוצר',
-          headerBackTitle: 'חזרה',
+          title: 'Profile',
         }}
       />
-      <Stack.Screen 
-        name="add-product" 
+      <Stack.Screen
+        name="add-product"
         options={{
+          title: 'Add Product',
           presentation: 'modal',
-          headerShown: true,
-          headerTitle: 'הוספת מוצר',
-          headerBackTitle: 'חזרה',
         }}
       />
-      <Stack.Screen 
-        name="edit" 
+      <Stack.Screen
+        name="add-request"
         options={{
+          title: 'Add Request',
           presentation: 'modal',
-          headerShown: true,
-          headerTitle: 'עריכת פרופיל',
-          headerBackTitle: 'חזרה',
+        }}
+      />
+      <Stack.Screen
+        name="products/[id]"
+        options={{
+          title: 'Product Details',
+        }}
+      />
+      <Stack.Screen
+        name="requests/[id]"
+        options={{
+          title: 'Request Details',
         }}
       />
     </Stack>
