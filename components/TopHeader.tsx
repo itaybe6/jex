@@ -5,7 +5,7 @@ import { Link } from 'expo-router';
 export function TopHeader() {
   return (
     <View style={styles.header}>
-      <Text style={styles.logo}>JEX</Text>
+      <Text style={styles.logo}>Brilliant</Text>
       <Link href="/notifications" asChild>
         <TouchableOpacity style={styles.iconButton}>
           <Bell size={24} color="#fff" />

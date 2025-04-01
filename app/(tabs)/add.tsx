@@ -1,52 +1,64 @@
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
 import { router } from 'expo-router';
 import { Package, Search } from 'lucide-react-native';
+import { TopHeader } from '../../components/TopHeader';
 
 export default function AddScreen() {
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Add New</Text>
-      </View>
+    <View style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <TopHeader />
+      </SafeAreaView>
       
-      <View style={styles.optionsContainer}>
-        <TouchableOpacity 
-          style={styles.option}
-          onPress={() => router.push('/(tabs)/profile/add-product')}
-        >
-          <Package size={32} color="#6C5CE7" />
-          <Text style={styles.optionTitle}>Add Product</Text>
-          <Text style={styles.optionDescription}>Add a diamond or jewelry for sale</Text>
-        </TouchableOpacity>
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Add New</Text>
+        </View>
+        
+        <View style={styles.optionsContainer}>
+          <TouchableOpacity 
+            style={styles.option}
+            onPress={() => router.push('/(tabs)/profile/add-product')}
+          >
+            <Package size={32} color="#6C5CE7" />
+            <Text style={styles.optionTitle}>Add Product</Text>
+            <Text style={styles.optionDescription}>Add a diamond or jewelry for sale</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.option}
-          onPress={() => router.push('/(tabs)/profile/add-request')}
-        >
-          <Search size={32} color="#6C5CE7" />
-          <Text style={styles.optionTitle}>Add Request</Text>
-          <Text style={styles.optionDescription}>Post a request for a specific diamond or jewelry</Text>
-        </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.option}
+            onPress={() => router.push('/(tabs)/profile/add-request')}
+          >
+            <Search size={32} color="#6C5CE7" />
+            <Text style={styles.optionTitle}>Add Request</Text>
+            <Text style={styles.optionDescription}>Post a request for a specific diamond or jewelry</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#121212',
+  },
+  safeArea: {
+    backgroundColor: '#121212',
+  },
+  content: {
+    flex: 1,
   },
   header: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: '#2a2a2a',
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontFamily: 'Heebo-Bold',
     color: '#fff',
-    textAlign: 'right',
   },
   optionsContainer: {
     flex: 1,
@@ -54,21 +66,22 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   option: {
-    backgroundColor: '#111',
-    borderRadius: 12,
-    padding: 20,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 16,
+    padding: 24,
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
   optionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Heebo-Bold',
     color: '#fff',
     textAlign: 'center',
   },
   optionDescription: {
     fontSize: 14,
-    color: '#999',
+    fontFamily: 'Heebo-Regular',
+    color: '#888',
     textAlign: 'center',
   },
 }); 

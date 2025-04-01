@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "jex-mobile",
-    "slug": "jex-mobile",
+    "name": "Brilliant",
+    "slug": "brilliant",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",

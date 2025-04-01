@@ -546,7 +546,6 @@ export default function HomeScreen() {
       <StatusBar style="light" />
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <Text style={styles.logo}>JEX</Text>
           <View style={styles.headerButtons}>
             <View style={styles.tabButtons}>
               <TouchableOpacity
@@ -555,12 +554,12 @@ export default function HomeScreen() {
               >
                 <Text style={[styles.tabButtonText, !showRequests && styles.tabButtonTextActive]}>For You</Text>
               </TouchableOpacity>
-              <TouchableOpacity
+            <TouchableOpacity
                 style={[styles.tabButton, showRequests && styles.tabButtonActive]}
                 onPress={() => setShowRequests(true)}
-              >
+            >
                 <Text style={[styles.tabButtonText, showRequests && styles.tabButtonTextActive]}>Requests</Text>
-              </TouchableOpacity>
+            </TouchableOpacity>
             </View>
             <TouchableOpacity
               style={styles.filterButton}
@@ -572,16 +571,16 @@ export default function HomeScreen() {
         </View>
       </SafeAreaView>
 
-      <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        style={styles.scrollView}
-      >
+          <ScrollView
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            style={styles.scrollView}
+          >
         {!showRequests && renderTopSellers()}
         {showRequests ? renderRequests() : renderProducts()}
       </ScrollView>
-      
+
       <FilterModal
         visible={showFilterModal}
         onClose={() => setShowFilterModal(false)}
@@ -611,19 +610,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     paddingVertical: 12,
     backgroundColor: '#121212',
   },
-  logo: {
-    fontSize: 24,
-    fontFamily: 'Heebo-Bold',
-    color: '#fff',
-  },
   headerButtons: {
+    flex: 1,
     flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
   },
   tabButtons: {
     flexDirection: 'row',
@@ -651,6 +646,8 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
     backgroundColor: '#2a2a2a',
+    position: 'absolute',
+    right: 8,
   },
   loadingContainer: {
     flex: 1,
