@@ -6,7 +6,7 @@ export default function AddScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>הוסף חדש</Text>
+        <Text style={styles.title}>Add New</Text>
       </View>
       
       <View style={styles.optionsContainer}>
@@ -15,8 +15,8 @@ export default function AddScreen() {
           onPress={() => router.push('/(tabs)/profile/add-product')}
         >
           <Package size={32} color="#6C5CE7" />
-          <Text style={styles.optionTitle}>הוסף מוצר</Text>
-          <Text style={styles.optionDescription}>הוסף יהלום או תכשיט למכירה</Text>
+          <Text style={styles.optionTitle}>Add Product</Text>
+          <Text style={styles.optionDescription}>Add a diamond or jewelry for sale</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -24,8 +24,8 @@ export default function AddScreen() {
           onPress={() => router.push('/(tabs)/profile/add-request')}
         >
           <Search size={32} color="#6C5CE7" />
-          <Text style={styles.optionTitle}>הוסף בקשה</Text>
-          <Text style={styles.optionDescription}>פרסם בקשה ליהלום או תכשיט ספציפי</Text>
+          <Text style={styles.optionTitle}>Add Request</Text>
+          <Text style={styles.optionDescription}>Post a request for a specific diamond or jewelry</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

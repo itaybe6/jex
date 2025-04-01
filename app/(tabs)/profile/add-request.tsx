@@ -112,7 +112,7 @@ export default function AddRequestScreen() {
   const handleSubmit = async () => {
     try {
       if (!user?.id) {
-        Alert.alert('שגיאה', 'יש להתחבר כדי להוסיף בקשה');
+        Alert.alert('Error', 'You must be logged in to add a request');
         return;
       }
 
@@ -127,25 +127,25 @@ export default function AddRequestScreen() {
 
       if (missingFields.length > 0) {
         Alert.alert(
-          'שדות חסרים',
-          `נא למלא את השדות הבאים: ${missingFields.join(', ')}`,
-          [{ text: 'אישור' }]
+          'Missing Fields',
+          `Please fill in the following fields: ${missingFields.join(', ')}`,
+          [{ text: 'OK' }]
         );
         return;
       }
 
       if (formData.min_weight && isNaN(parseFloat(formData.min_weight))) {
-        Alert.alert('שגיאה', 'נא להזין משקל מינימלי תקין');
+        Alert.alert('Error', 'Please enter a valid minimum weight');
         return;
       }
 
       if (formData.max_weight && isNaN(parseFloat(formData.max_weight))) {
-        Alert.alert('שגיאה', 'נא להזין משקל מקסימלי תקין');
+        Alert.alert('Error', 'Please enter a valid maximum weight');
         return;
       }
 
       if (formData.price && isNaN(parseFloat(formData.price))) {
-        Alert.alert('שגיאה', 'נא להזין מחיר תקין');
+        Alert.alert('Error', 'Please enter a valid price');
         return;
       }
 
@@ -180,16 +180,16 @@ export default function AddRequestScreen() {
       console.log('Request added successfully:', data);
 
       Alert.alert(
-        'הצלחה',
-        'הבקשה נוספה בהצלחה',
-        [{ text: 'אישור', onPress: () => router.back() }]
+        'Success',
+        'Request added successfully',
+        [{ text: 'OK', onPress: () => router.back() }]
       );
     } catch (error: any) {
       console.error('Error adding request:', error);
       Alert.alert(
-        'שגיאה',
-        error?.message || 'אירעה שגיאה בהוספת הבקשה. נסה שוב.',
-        [{ text: 'אישור' }]
+        'Error',
+        error?.message || 'An error occurred while adding the request. Please try again.',
+        [{ text: 'OK' }]
       );
     } finally {
       setLoading(false);
@@ -250,29 +250,29 @@ export default function AddRequestScreen() {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.form}>
-        <Text style={styles.label}>חיתוך</Text>
+        <Text style={styles.label}>Cut</Text>
         <TouchableOpacity
           style={styles.selectButton}
           onPress={() => setShowCutModal(true)}
         >
           <Text style={styles.selectButtonText}>
-            {formData.cut || 'בחר חיתוך'}
+            {formData.cut || 'Select cut'}
           </Text>
           <ChevronDown size={20} color="#666" />
         </TouchableOpacity>
 
-        <Text style={styles.label}>משקל מינימלי (קראט)</Text>
+        <Text style={styles.label}>Minimum Weight (Carat)</Text>
         <TouchableOpacity
           style={styles.selectButton}
           onPress={() => setShowMinWeightModal(true)}
         >
           <Text style={styles.selectButtonText}>
-            {formData.min_weight || 'בחר משקל מינימלי'}
+            {formData.min_weight || 'Select minimum weight'}
           </Text>
           <ChevronDown size={20} color="#666" />
         </TouchableOpacity>
 
-        <Text style={styles.label}>משקל מקסימלי (קראט)</Text>
+        <Text style={styles.label}>Maximum Weight (Carat)</Text>
         <TouchableOpacity
           style={[
             styles.selectButton,
@@ -285,40 +285,40 @@ export default function AddRequestScreen() {
             !formData.min_weight && styles.selectButtonTextDisabled
           ]}>
             {!formData.min_weight 
-              ? 'יש לבחור משקל מינימלי תחילה'
-              : formData.max_weight || 'בחר משקל מקסימלי'}
+              ? 'Please select minimum weight first'
+              : formData.max_weight || 'Select maximum weight'}
           </Text>
           <ChevronDown size={20} color={formData.min_weight ? '#666' : '#444'} />
         </TouchableOpacity>
 
-        <Text style={styles.label}>ניקיון</Text>
+        <Text style={styles.label}>Clarity</Text>
         <TouchableOpacity
           style={styles.selectButton}
           onPress={() => setShowClarityModal(true)}
         >
           <Text style={styles.selectButtonText}>
-            {formData.clarity || 'בחר ניקיון'}
+            {formData.clarity || 'Select clarity'}
           </Text>
           <ChevronDown size={20} color="#666" />
         </TouchableOpacity>
 
-        <Text style={styles.label}>צבע</Text>
+        <Text style={styles.label}>Color</Text>
         <TouchableOpacity
           style={styles.selectButton}
           onPress={() => setShowColorModal(true)}
         >
           <Text style={styles.selectButtonText}>
-            {formData.color || 'בחר צבע'}
+            {formData.color || 'Select color'}
           </Text>
           <ChevronDown size={20} color="#666" />
         </TouchableOpacity>
 
-        <Text style={styles.label}>מחיר מקסימלי (אופציונלי)</Text>
+        <Text style={styles.label}>Maximum Price (Optional)</Text>
         <TextInput
           style={styles.input}
           value={formData.price}
           onChangeText={(text) => setFormData({ ...formData, price: text })}
-          placeholder="מחיר מקסימלי"
+          placeholder="Maximum price"
           placeholderTextColor="#666"
           keyboardType="numeric"
         />
@@ -329,7 +329,7 @@ export default function AddRequestScreen() {
           disabled={loading}
         >
           <Text style={styles.submitButtonText}>
-            {loading ? 'מוסיף...' : 'הוסף בקשה'}
+            {loading ? 'Adding...' : 'Add Request'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -337,7 +337,7 @@ export default function AddRequestScreen() {
       {renderModal(
         showCutModal,
         () => setShowCutModal(false),
-        'בחר חיתוך',
+        'Select Cut',
         DIAMOND_CUTS,
         (value) => setFormData({ ...formData, cut: value }),
         formData.cut
@@ -346,7 +346,7 @@ export default function AddRequestScreen() {
       {renderModal(
         showMinWeightModal,
         () => setShowMinWeightModal(false),
-        'בחר משקל מינימלי',
+        'Select Minimum Weight',
         ALL_WEIGHT_OPTIONS,
         handleMinWeightChange,
         formData.min_weight
@@ -355,7 +355,7 @@ export default function AddRequestScreen() {
       {renderModal(
         showMaxWeightModal,
         () => setShowMaxWeightModal(false),
-        'בחר משקל מקסימלי',
+        'Select Maximum Weight',
         maxWeightOptions,
         (value) => setFormData({ ...formData, max_weight: value }),
         formData.max_weight
@@ -364,7 +364,7 @@ export default function AddRequestScreen() {
       {renderModal(
         showClarityModal,
         () => setShowClarityModal(false),
-        'בחר ניקיון',
+        'Select Clarity',
         CLARITY_GRADES,
         (value) => setFormData({ ...formData, clarity: value }),
         formData.clarity
@@ -373,7 +373,7 @@ export default function AddRequestScreen() {
       {renderModal(
         showColorModal,
         () => setShowColorModal(false),
-        'בחר צבע',
+        'Select Color',
         COLOR_GRADES,
         (value) => setFormData({ ...formData, color: value }),
         formData.color
