@@ -286,15 +286,13 @@ export default function SignIn() {
   }
 
   return (
-    <ScrollView 
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.header}>
-        <Diamond size={48} color="#007AFF" />
-        <Text style={styles.title}>JEX</Text>
-        <Text style={styles.subtitle}>Diamond Trading Platform</Text>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <View style={styles.logoContainer}>
+        <Image
+          source={require('../../assets/images/logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
       </View>
 
       <View style={styles.form}>
@@ -438,11 +436,27 @@ export default function SignIn() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#121212',
   },
   contentContainer: {
-    padding: 20,
-    paddingTop: Platform.OS === 'web' ? 40 : 60,
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 48,
+    paddingBottom: 24,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 48,
+    backgroundColor: '#001861',
+    width: 160,
+    height: 160,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignSelf: 'center',
+  },
+  logo: {
+    width: 120,
+    height: 120,
   },
   header: {
     alignItems: 'center',

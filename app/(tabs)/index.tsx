@@ -91,6 +91,13 @@ type ProductsByCategory = {
   [key: string]: Product[];
 };
 
+type Profile = {
+  id: string;
+  full_name: string;
+  avatar_url: string | null;
+  trust_count: number;
+};
+
 const ROUTES = {
   REQUEST: '/(tabs)/profile/requests' as const,
   PRODUCT: '/(tabs)/profile/products' as const,
@@ -109,10 +116,12 @@ export default function HomeScreen() {
   const [showRequests, setShowRequests] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<DiamondRequest | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [topSellers, setTopSellers] = useState<Profile[]>([]);
 
   useEffect(() => {
     fetchProducts();
     fetchRequests();
+    fetchTopSellers();
   }, []);
 
   const fetchProducts = async () => {
@@ -167,6 +176,21 @@ export default function HomeScreen() {
       setDiamondRequests(data || []);
     } catch (error) {
       console.error('Error fetching requests:', error);
+    }
+  };
+
+  const fetchTopSellers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url, trust_count')
+        .order('trust_count', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      setTopSellers(data || []);
+    } catch (error) {
+      console.error('Error fetching top sellers:', error);
     }
   };
 
@@ -483,6 +507,40 @@ export default function HomeScreen() {
     );
   };
 
+  const renderTopSellers = () => (
+    <View style={styles.topSellersSection}>
+      <Text style={styles.topSellersTitle}>Top Sellers</Text>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.topSellersList}
+      >
+        {topSellers.map((seller) => (
+          <TouchableOpacity
+            key={seller.id}
+            style={styles.topSellerItem}
+            onPress={() => router.push(`/user/${seller.id}`)}
+          >
+            <View style={styles.topSellerImageContainer}>
+              <Image
+                source={{ 
+                  uri: seller.avatar_url || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'
+                }}
+                style={styles.topSellerImage}
+              />
+              <View style={styles.trustBadge}>
+                <Text style={styles.trustCount}>{seller.trust_count}</Text>
+              </View>
+            </View>
+            <Text style={styles.topSellerName} numberOfLines={1}>
+              {seller.full_name}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
@@ -497,12 +555,12 @@ export default function HomeScreen() {
               >
                 <Text style={[styles.tabButtonText, !showRequests && styles.tabButtonTextActive]}>For You</Text>
               </TouchableOpacity>
-            <TouchableOpacity
+              <TouchableOpacity
                 style={[styles.tabButton, showRequests && styles.tabButtonActive]}
                 onPress={() => setShowRequests(true)}
-            >
+              >
                 <Text style={[styles.tabButtonText, showRequests && styles.tabButtonTextActive]}>Requests</Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
             </View>
             <TouchableOpacity
               style={styles.filterButton}
@@ -514,15 +572,16 @@ export default function HomeScreen() {
         </View>
       </SafeAreaView>
 
-          <ScrollView
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-            style={styles.scrollView}
-          >
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        style={styles.scrollView}
+      >
+        {!showRequests && renderTopSellers()}
         {showRequests ? renderRequests() : renderProducts()}
       </ScrollView>
-
+      
       <FilterModal
         visible={showFilterModal}
         onClose={() => setShowFilterModal(false)}
@@ -865,5 +924,61 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontFamily: 'Heebo-Medium',
+  },
+  topSellersSection: {
+    paddingTop: 16,
+    paddingBottom: 24,
+    backgroundColor: '#121212',
+  },
+  topSellersTitle: {
+    fontSize: 18,
+    fontFamily: 'Heebo-Bold',
+    color: '#fff',
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  topSellersList: {
+    paddingHorizontal: 16,
+    gap: 16,
+  },
+  topSellerItem: {
+    alignItems: 'center',
+    width: 72,
+  },
+  topSellerImageContainer: {
+    position: 'relative',
+    marginBottom: 8,
+  },
+  topSellerImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#2a2a2a',
+    borderWidth: 2,
+    borderColor: '#6C5CE7',
+  },
+  trustBadge: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    backgroundColor: '#6C5CE7',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#121212',
+  },
+  trustCount: {
+    color: '#fff',
+    fontSize: 12,
+    fontFamily: 'Heebo-Bold',
+  },
+  topSellerName: {
+    color: '#fff',
+    fontSize: 12,
+    fontFamily: 'Heebo-Medium',
+    textAlign: 'center',
   },
 });

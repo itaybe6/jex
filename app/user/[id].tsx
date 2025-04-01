@@ -256,17 +256,17 @@ export default function UserProfileScreen() {
   const renderProductItem = (product: Product) => (
     <TouchableOpacity 
       key={product.id}
-      style={styles.gridItem}
+      style={styles.productItem}
       onPress={() => handleProductPress(product.id)}
     >
       <Image 
         source={{ uri: product.image_url }} 
-        style={styles.gridImage}
+        style={styles.productImage}
         resizeMode="cover"
       />
-      <View style={styles.gridItemOverlay}>
-        <Text style={styles.gridItemTitle} numberOfLines={1}>{product.title}</Text>
-        <Text style={styles.gridItemPrice}>${product.price.toLocaleString()}</Text>
+      <View style={styles.productDetails}>
+        <Text style={styles.productTitle} numberOfLines={1}>{product.title}</Text>
+        <Text style={styles.productPrice}>${product.price.toLocaleString()}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -274,7 +274,7 @@ export default function UserProfileScreen() {
   const renderCategorySection = (category: string, products: Product[]) => (
     <View key={category} style={styles.categorySection}>
       <Text style={styles.categoryTitle}>{category}</Text>
-      <View style={styles.gridContainer}>
+      <View style={styles.productsGrid}>
         {products.map(product => renderProductItem(product))}
       </View>
     </View>
@@ -287,24 +287,24 @@ export default function UserProfileScreen() {
       transparent={true}
       onRequestClose={() => setShowTrustMarks(false)}
     >
-      <View style={styles.modalOverlay}>
+      <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Trusted By</Text>
             <TouchableOpacity 
               onPress={() => setShowTrustMarks(false)}
-              style={styles.modalCloseButton}
+              style={styles.closeButton}
             >
-              <X size={24} color="#000" />
+              <X size={24} color="#fff" />
             </TouchableOpacity>
           </View>
 
           {loadingTrustMarks ? (
-            <View style={styles.modalLoadingContainer}>
-              <Text style={styles.modalLoadingText}>Loading...</Text>
+            <View style={styles.trustMarksList}>
+              <Text style={styles.loadingText}>Loading...</Text>
             </View>
           ) : trustMarks.length > 0 ? (
-            <ScrollView style={styles.modalBody}>
+            <ScrollView style={styles.trustMarksList}>
               {trustMarks.map(mark => (
                 <TouchableOpacity
                   key={mark.id}
@@ -327,8 +327,8 @@ export default function UserProfileScreen() {
               ))}
             </ScrollView>
           ) : (
-            <View style={styles.modalEmptyContainer}>
-              <Text style={styles.modalEmptyText}>No trust marks yet</Text>
+            <View style={styles.trustMarksList}>
+              <Text style={styles.emptyText}>No trust marks yet</Text>
             </View>
           )}
         </View>
@@ -374,7 +374,7 @@ export default function UserProfileScreen() {
               style={styles.websiteButton}
               onPress={handleWebsitePress}
             >
-              <LinkIcon size={16} color="#007AFF" />
+              <LinkIcon size={16} color="#6C5CE7" />
               <Text style={styles.websiteText}>{profile.website}</Text>
             </TouchableOpacity>
           ) : null}
@@ -391,7 +391,7 @@ export default function UserProfileScreen() {
               onPress={handleTrustMark}
               disabled={trustLoading}
             >
-              <Shield size={16} color={hasTrusted ? '#fff' : '#007AFF'} />
+              <Shield size={16} color={hasTrusted ? '#fff' : '#6C5CE7'} />
               <Text style={[
                 styles.trustButtonText,
                 hasTrusted && styles.trustButtonTextActive
@@ -459,15 +459,17 @@ export default function UserProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#121212',
   },
   loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#121212',
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
+    color: '#888',
     fontFamily: 'Heebo-Regular',
   },
   profileSection: {
@@ -475,24 +477,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 4,
+    backgroundColor: '#121212',
   },
   profileImageContainer: {
     marginBottom: 12,
+    backgroundColor: '#2a2a2a',
+    padding: 4,
+    borderRadius: 64,
   },
   profileImage: {
     width: 120,
     height: 120,
     borderRadius: 60,
+    backgroundColor: '#2a2a2a',
   },
   userName: {
     fontSize: 24,
     fontFamily: 'Heebo-Bold',
     marginBottom: 2,
     textAlign: 'center',
+    color: '#fff',
   },
   userTitle: {
     fontSize: 16,
-    color: '#666',
+    color: '#888',
     fontFamily: 'Heebo-Regular',
     marginBottom: 6,
     textAlign: 'center',
@@ -503,9 +511,9 @@ const styles = StyleSheet.create({
   },
   bio: {
     fontSize: 14,
-    color: '#666',
+    color: '#888',
     textAlign: 'center',
-    lineHeight: 14,
+    lineHeight: 20,
     fontFamily: 'Heebo-Regular',
     paddingHorizontal: 20,
     alignSelf: 'flex-start',
@@ -516,13 +524,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#f5f5f5',
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 16,
+    backgroundColor: '#2a2a2a',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
   },
   websiteText: {
-    color: '#007AFF',
+    color: '#6C5CE7',
     fontSize: 14,
     fontFamily: 'Heebo-Regular',
   },
@@ -538,10 +546,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: '#f0f9ff',
+    backgroundColor: '#2a2a2a',
   },
   trustButtonActive: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#6C5CE7',
   },
   trustButtonDisabled: {
     opacity: 0.6,
@@ -549,7 +557,7 @@ const styles = StyleSheet.create({
   trustButtonText: {
     fontSize: 14,
     fontFamily: 'Heebo-Medium',
-    color: '#007AFF',
+    color: '#6C5CE7',
   },
   trustButtonTextActive: {
     color: '#fff',
@@ -561,7 +569,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: '#E8F8F0',
+    backgroundColor: '#2a2a2a',
   },
   whatsappButtonText: {
     fontSize: 14,
@@ -572,8 +580,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     width: '100%',
-    marginBottom: 0,
-    paddingVertical: 2,
+    marginVertical: 24,
+    paddingVertical: 16,
+    backgroundColor: '#1a1a1a',
   },
   statItem: {
     alignItems: 'center',
@@ -582,39 +591,39 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 20,
     fontFamily: 'Heebo-Bold',
-    color: '#007AFF',
+    color: '#6C5CE7',
   },
   statNumberClickable: {
     textDecorationLine: 'underline',
   },
   statLabel: {
     fontSize: 14,
-    color: '#666',
+    color: '#888',
     fontFamily: 'Heebo-Regular',
   },
   statLabelClickable: {
-    color: '#007AFF',
+    color: '#6C5CE7',
   },
   catalogSection: {
     paddingHorizontal: 20,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
+    backgroundColor: '#121212',
   },
   catalogTitle: {
     fontSize: 20,
     fontFamily: 'Heebo-Bold',
-    marginBottom: 20,
+    marginBottom: 16,
+    color: '#fff',
   },
   emptyContainer: {
-    padding: 40,
+    padding: 24,
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#1a1a1a',
     borderRadius: 12,
   },
   emptyText: {
-    fontSize: 18,
-    fontFamily: 'Heebo-Bold',
+    fontSize: 16,
+    color: '#888',
+    fontFamily: 'Heebo-Regular',
   },
   categoriesContainer: {
     gap: 24,
@@ -625,50 +634,46 @@ const styles = StyleSheet.create({
   categoryTitle: {
     fontSize: 18,
     fontFamily: 'Heebo-Bold',
-    color: '#333',
+    color: '#fff',
   },
-  gridContainer: {
+  productsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: GRID_SPACING,
   },
-  gridItem: {
+  productItem: {
     width: ITEM_WIDTH,
-    height: ITEM_WIDTH,
-    marginBottom: GRID_SPACING,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    overflow: 'hidden',
   },
-  gridImage: {
+  productImage: {
     width: '100%',
-    height: '100%',
-    borderRadius: 8,
+    height: undefined,
+    aspectRatio: 1,
+    backgroundColor: '#2a2a2a',
   },
-  gridItemOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+  productDetails: {
     padding: 8,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
   },
-  gridItemTitle: {
-    color: '#fff',
-    fontSize: 12,
+  productTitle: {
+    fontSize: 14,
     fontFamily: 'Heebo-Medium',
-  },
-  gridItemPrice: {
     color: '#fff',
-    fontSize: 12,
-    fontFamily: 'Heebo-Bold',
+    marginBottom: 4,
   },
-  modalOverlay: {
+  productPrice: {
+    fontSize: 14,
+    fontFamily: 'Heebo-Bold',
+    color: '#6C5CE7',
+  },
+  modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: '#1a1a1a',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '80%',
@@ -679,48 +684,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#2a2a2a',
   },
   modalTitle: {
     fontSize: 20,
     fontFamily: 'Heebo-Bold',
+    color: '#fff',
   },
-  modalCloseButton: {
-    padding: 4,
+  closeButton: {
+    padding: 8,
   },
-  modalBody: {
+  trustMarksList: {
     padding: 20,
-  },
-  modalLoadingContainer: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  modalLoadingText: {
-    fontSize: 16,
-    color: '#666',
-    fontFamily: 'Heebo-Regular',
-  },
-  modalEmptyContainer: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  modalEmptyText: {
-    fontSize: 16,
-    color: '#666',
-    fontFamily: 'Heebo-Regular',
   },
   trustMarkItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    gap: 12,
+    marginBottom: 16,
+    backgroundColor: '#2a2a2a',
+    padding: 12,
+    borderRadius: 12,
   },
   trustMarkAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#1a1a1a',
   },
   trustMarkInfo: {
     flex: 1,
@@ -728,11 +718,17 @@ const styles = StyleSheet.create({
   trustMarkName: {
     fontSize: 16,
     fontFamily: 'Heebo-Medium',
+    color: '#fff',
     marginBottom: 2,
   },
   trustMarkTitle: {
     fontSize: 14,
-    color: '#666',
     fontFamily: 'Heebo-Regular',
+    color: '#888',
+  },
+  trustMarkDate: {
+    fontSize: 12,
+    fontFamily: 'Heebo-Regular',
+    color: '#888',
   },
 });
