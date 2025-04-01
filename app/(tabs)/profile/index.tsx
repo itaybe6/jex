@@ -53,6 +53,7 @@ export default function ProfileScreen() {
   const [showTrustMarks, setShowTrustMarks] = useState(false);
   const [trustMarks, setTrustMarks] = useState<TrustMark[]>([]);
   const [loadingTrustMarks, setLoadingTrustMarks] = useState(false);
+  const [showAllCategories, setShowAllCategories] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (user) {
@@ -128,7 +129,11 @@ export default function ProfileScreen() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTrustMarks(data || []);
+      setTrustMarks(data.map((trustMark: any) => ({
+        id: trustMark.id,
+        created_at: trustMark.created_at,
+        truster: trustMark.truster,
+      })) || []);
     } catch (error) {
       console.error('Error fetching trust marks:', error);
     } finally {
@@ -188,15 +193,24 @@ export default function ProfileScreen() {
   );
 
   const renderCategorySection = (category: string, products: Product[]) => {
+    const showAll = showAllCategories[category] || false;
+    const productsToShow = showAll ? products : products.slice(0, 3);
+
     // Calculate rows based on the number of products
-    const rows = Math.ceil(products.length / NUM_COLUMNS);
-    const productsToRender = [...products];
+    const rows = Math.ceil(productsToShow.length / NUM_COLUMNS);
+    const productsToRender = [...productsToShow];
 
     // Pad the array with null values to maintain grid structure
-    const remainder = products.length % NUM_COLUMNS;
+    const remainder = productsToShow.length % NUM_COLUMNS;
     if (remainder !== 0) {
       for (let i = 0; i < NUM_COLUMNS - remainder; i++) {
-        productsToRender.push(null);
+        productsToRender.push({
+          id: '',
+          title: '',
+          price: 0,
+          image_url: '',
+          category: '',
+        });
       }
     }
 
@@ -214,13 +228,18 @@ export default function ProfileScreen() {
               {productsToRender
                 .slice(rowIndex * NUM_COLUMNS, (rowIndex + 1) * NUM_COLUMNS)
                 .map((product, colIndex) => (
-                  <View key={colIndex} style={styles.gridItemContainer}>
-                    {product && renderProductItem(product)}
+                  <View key={colIndex} style={styles.gridItem}>
+                    {product.id ? renderProductItem(product) : null}
                   </View>
                 ))}
             </View>
           ))}
         </View>
+        {products.length > 3 && !showAll && (
+          <TouchableOpacity onPress={() => setShowAllCategories(prev => ({ ...prev, [category]: true }))} style={styles.showMoreButton}>
+            <Text style={styles.showMoreText}>Show More</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -240,7 +259,7 @@ export default function ProfileScreen() {
               onPress={() => setShowTrustMarks(false)}
               style={styles.modalCloseButton}
             >
-              <X size={24} color="#000" />
+              <X size={24} color="#fff" />
             </TouchableOpacity>
           </View>
 
@@ -301,7 +320,7 @@ export default function ProfileScreen() {
           style={styles.settingsButton}
           onPress={handleSettingsPress}
         >
-          <Settings size={24} color="#333" />
+          <Settings size={24} color="#fff" />
         </TouchableOpacity>
       </View>
       
@@ -335,7 +354,7 @@ export default function ProfileScreen() {
               style={styles.websiteButton}
               onPress={handleWebsitePress}
             >
-              <LinkIcon size={16} color="#007AFF" />
+              <LinkIcon size={16} color="#fff" />
               <Text style={styles.websiteText}>{profile.website}</Text>
             </TouchableOpacity>
           ) : null}
@@ -373,7 +392,7 @@ export default function ProfileScreen() {
             style={styles.addButton}
             onPress={handleAddProduct}
           >
-            <Plus size={24} color="#007AFF" />
+            <Plus size={24} color="#fff" />
             <Text style={styles.addButtonText}>Add Product</Text>
           </TouchableOpacity>
         </View>
@@ -403,7 +422,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#1a1a1a',
   },
   loadingContainer: {
     justifyContent: 'center',
@@ -411,20 +430,22 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
+    color: '#fff',
     fontFamily: 'Heebo-Regular',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     paddingHorizontal: 20,
-    paddingBottom: 10,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2a2a2a',
   },
   settingsButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#2a2a2a',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -445,12 +466,12 @@ const styles = StyleSheet.create({
   editButton: {
     paddingVertical: 6,
     paddingHorizontal: 16,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#2a2a2a',
     borderRadius: 20,
     marginBottom: 12,
   },
   editButtonText: {
-    color: '#007AFF',
+    color: '#fff',
     fontSize: 14,
     fontFamily: 'Heebo-Medium',
   },
@@ -459,10 +480,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Heebo-Bold',
     marginBottom: 2,
     textAlign: 'center',
+    color: '#fff',
   },
   userTitle: {
     fontSize: 16,
-    color: '#666',
+    color: '#888',
     fontFamily: 'Heebo-Regular',
     marginBottom: 6,
     textAlign: 'center',
@@ -473,7 +495,7 @@ const styles = StyleSheet.create({
   },
   bio: {
     fontSize: 14,
-    color: '#666',
+    color: '#888',
     textAlign: 'center',
     lineHeight: 14,
     fontFamily: 'Heebo-Regular',
@@ -486,13 +508,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#2a2a2a',
     paddingVertical: 4,
     paddingHorizontal: 12,
     borderRadius: 16,
   },
   websiteText: {
-    color: '#007AFF',
+    color: '#fff',
     fontSize: 14,
     fontFamily: 'Heebo-Regular',
   },
@@ -510,24 +532,24 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 20,
     fontFamily: 'Heebo-Bold',
-    color: '#007AFF',
+    color: '#6C5CE7',
   },
   statLabel: {
     fontSize: 14,
-    color: '#666',
+    color: '#888',
     fontFamily: 'Heebo-Regular',
   },
   statNumberClickable: {
     textDecorationLine: 'underline',
-    color: '#007AFF',
+    color: '#6C5CE7',
   },
   statLabelClickable: {
-    color: '#007AFF',
+    color: '#6C5CE7',
   },
   catalogSection: {
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: '#2a2a2a',
   },
   catalogHeader: {
     flexDirection: 'row',
@@ -539,18 +561,19 @@ const styles = StyleSheet.create({
   catalogTitle: {
     fontSize: 24,
     fontFamily: 'Heebo-Bold',
+    color: '#fff',
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#f0f9ff',
+    backgroundColor: '#2a2a2a',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
   },
   addButtonText: {
-    color: '#007AFF',
+    color: '#fff',
     fontSize: 16,
     fontFamily: 'Heebo-Medium',
   },
@@ -569,91 +592,70 @@ const styles = StyleSheet.create({
   categoryTitle: {
     fontSize: 20,
     fontFamily: 'Heebo-Bold',
-    color: '#333',
+    color: '#fff',
   },
   categoryCount: {
     fontSize: 14,
     fontFamily: 'Heebo-Regular',
-    color: '#666',
+    color: '#888',
   },
   categoryDivider: {
     height: 1,
-    backgroundColor: '#eee',
+    backgroundColor: '#2a2a2a',
     marginTop: 24,
   },
   gridContainer: {
     width: '100%',
   },
-  gridRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    marginBottom: GRID_SPACING,
-  },
-  gridItemContainer: {
-    width: ITEM_WIDTH,
-    marginRight: GRID_SPACING,
-  },
   gridItem: {
-    width: '100%',
+    width: ITEM_WIDTH,
     height: ITEM_WIDTH,
-    borderRadius: 12,
+    marginBottom: GRID_SPACING,
+    backgroundColor: '#2a2a2a',
+    borderRadius: 8,
     overflow: 'hidden',
-    backgroundColor: '#f5f5f5',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   gridImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 12,
   },
   gridItemOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    padding: 12,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
-    backdropFilter: 'blur(10px)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 8,
   },
   gridItemTitle: {
-    color: '#fff',
     fontSize: 14,
-    fontFamily: 'Heebo-Medium',
-    marginBottom: 4,
+    fontFamily: 'Heebo-Bold',
+    color: '#fff',
   },
   gridItemPrice: {
+    fontSize: 12,
+    fontFamily: 'Heebo-Regular',
     color: '#fff',
-    fontSize: 16,
-    fontFamily: 'Heebo-Bold',
   },
   emptyContainer: {
     margin: 20,
     padding: 40,
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#2a2a2a',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: '#444',
     borderStyle: 'dashed',
   },
   emptyText: {
     fontSize: 18,
     fontFamily: 'Heebo-Bold',
     marginBottom: 8,
-    color: '#333',
+    color: '#fff',
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#666',
+    color: '#888',
     fontFamily: 'Heebo-Regular',
     textAlign: 'center',
   },
@@ -663,7 +665,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: '#1a1a1a',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '80%',
@@ -674,11 +676,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#2a2a2a',
   },
   modalTitle: {
     fontSize: 20,
     fontFamily: 'Heebo-Bold',
+    color: '#fff',
   },
   modalCloseButton: {
     padding: 4,
@@ -692,7 +695,7 @@ const styles = StyleSheet.create({
   },
   modalLoadingText: {
     fontSize: 16,
-    color: '#666',
+    color: '#888',
     fontFamily: 'Heebo-Regular',
   },
   modalEmptyContainer: {
@@ -701,7 +704,7 @@ const styles = StyleSheet.create({
   },
   modalEmptyText: {
     fontSize: 16,
-    color: '#666',
+    color: '#888',
     fontFamily: 'Heebo-Regular',
   },
   trustMarkItem: {
@@ -709,7 +712,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#2a2a2a',
   },
   trustMarkAvatar: {
     width: 50,
@@ -724,10 +727,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Heebo-Medium',
     marginBottom: 2,
+    color: '#fff',
   },
   trustMarkTitle: {
     fontSize: 14,
-    color: '#666',
+    color: '#888',
     fontFamily: 'Heebo-Regular',
+  },
+  showMoreButton: {
+    alignItems: 'center',
+    paddingVertical: 10,
+    backgroundColor: '#2a2a2a',
+    borderRadius: 8,
+    marginVertical: 10,
+  },
+  showMoreText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Heebo-Medium',
+  },
+  gridRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: GRID_SPACING,
   },
 });
