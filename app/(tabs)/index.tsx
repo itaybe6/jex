@@ -179,16 +179,20 @@ export default function HomeScreen() {
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 24) return `${diffInHours} hours ago`;
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays === 1) return 'Yesterday';
-    if (diffInDays < 30) return `${diffInDays} days ago`;
-    const diffInMonths = Math.floor(diffInDays / 30);
-    if (diffInMonths === 1) return '1 month ago';
-    return `${diffInMonths} months ago`;
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) {
+      return 'Just now';
+    } else if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60);
+      return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
+    } else if (diffInSeconds < 86400) {
+      const hours = Math.floor(diffInSeconds / 3600);
+      return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+    } else {
+      const days = Math.floor(diffInSeconds / 86400);
+      return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+    }
   };
 
   const getFilteredProducts = () => {
@@ -298,13 +302,34 @@ export default function HomeScreen() {
           {products.map((product) => (
             <TouchableOpacity
               key={product.id}
-              onPress={() => router.push(`/products/${product.id}`)}
               style={styles.gridItem}
+              onPress={() => router.push(`/products/${product.id}`)}
             >
-              <Image source={{ uri: product.image_url }} style={styles.gridImage} />
+              <View style={styles.userInfoContainer}>
+                <Image 
+                  source={{ 
+                    uri: product.profiles.avatar_url || 'https://www.gravatar.com/avatar/default?d=mp' 
+                  }} 
+                  style={styles.userAvatarSmall} 
+                />
+                <Text style={styles.userNameSmall} numberOfLines={1}>
+                  {product.profiles.full_name}
+                </Text>
+              </View>
+              <Image
+                source={{ uri: product.image_url }}
+                style={styles.gridItemImage}
+              />
               <View style={styles.gridItemContent}>
-                <Text style={styles.gridItemTitle}>{product.title}</Text>
-                <Text style={styles.gridItemPrice}>${product.price.toLocaleString()}</Text>
+                <Text style={styles.gridItemTitle} numberOfLines={2}>
+                  {product.title}
+                </Text>
+                <Text style={styles.gridItemPrice}>
+                  ${product.price.toLocaleString()}
+                </Text>
+                <Text style={styles.gridItemTime}>
+                  {formatTimeAgo(product.created_at)}
+                </Text>
               </View>
             </TouchableOpacity>
           ))}
@@ -483,12 +508,12 @@ export default function HomeScreen() {
         </View>
       </SafeAreaView>
 
-      <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        style={styles.scrollView}
-      >
+          <ScrollView
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            style={styles.scrollView}
+          >
         {showRequests ? renderRequests() : renderProducts()}
       </ScrollView>
 
@@ -512,10 +537,10 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#121212',
   },
   safeArea: {
-    backgroundColor: '#000',
+    backgroundColor: '#121212',
   },
   header: {
     flexDirection: 'row',
@@ -524,11 +549,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 4,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: '#2a2a2a',
+    backgroundColor: '#1a1a1a',
   },
   logo: {
     fontSize: 24,
     fontFamily: 'Heebo-Bold',
+    color: '#fff',
   },
   headerButtons: {
     flexDirection: 'row',
@@ -549,110 +576,144 @@ const styles = StyleSheet.create({
   filterButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#2a2a2a',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#121212',
   },
   loadingText: {
     fontSize: 16,
     fontFamily: 'Heebo-Regular',
-    color: '#666',
+    color: '#fff',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#121212',
   },
   emptyText: {
     fontSize: 16,
     fontFamily: 'Heebo-Regular',
-    color: '#666',
+    color: '#fff',
   },
   scrollView: {
     flex: 1,
+    backgroundColor: '#121212',
   },
   categorySection: {
     marginBottom: 24,
   },
   categoryTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontFamily: 'Heebo-Bold',
     marginHorizontal: 16,
+    marginTop: 16,
     marginBottom: 12,
+    color: '#fff',
   },
   itemsGrid: {
     paddingHorizontal: 16,
+    paddingTop: 8,
   },
   gridItem: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginBottom: 16,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 16,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.25,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 5,
+    overflow: 'hidden',
   },
-  gridImage: {
+  gridItemImage: {
     width: '100%',
     height: undefined,
     aspectRatio: 1,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    resizeMode: 'cover'
+    resizeMode: 'cover',
   },
   gridItemContent: {
     padding: 12,
+    backgroundColor: '#1a1a1a',
+  },
+  userInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#1a1a1a',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2a2a2a',
+  },
+  userAvatarSmall: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    marginRight: 8,
+    backgroundColor: '#2a2a2a',
+    borderWidth: 1,
+    borderColor: '#2a2a2a',
+  },
+  userNameSmall: {
+    fontSize: 13,
+    fontFamily: 'Heebo-Medium',
+    color: '#fff',
   },
   gridItemTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: 'Heebo-Medium',
-    marginBottom: 4,
+    color: '#fff',
+    marginBottom: 6,
+    lineHeight: 20,
   },
   gridItemPrice: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: 'Heebo-Bold',
     color: '#6C5CE7',
-    marginBottom: 8,
+    marginBottom: 6,
+  },
+  gridItemTime: {
+    fontSize: 12,
+    color: '#888',
+    fontFamily: 'Heebo-Regular',
   },
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#1a1a1a',
     padding: 8,
     borderRadius: 8,
-    marginTop: 8
   },
-  userAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginRight: 8,
-    backgroundColor: '#eee'
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+    backgroundColor: '#2a2a2a',
   },
   userName: {
     fontSize: 14,
-    fontFamily: 'Heebo-Regular',
-    color: '#666',
-    flex: 1
+    fontFamily: 'Heebo-Medium',
+    color: '#fff',
+    marginBottom: 2,
   },
   timeAgo: {
     fontSize: 12,
     fontFamily: 'Heebo-Regular',
-    color: '#999',
+    color: '#888',
   },
   requestsContainer: {
     padding: 16,
   },
   requestCard: {
-    backgroundColor: '#111',
+    backgroundColor: '#1a1a1a',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -662,11 +723,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 12,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
   },
   price: {
     fontSize: 18,
@@ -681,14 +737,15 @@ const styles = StyleSheet.create({
   },
   specsList: {
     flexDirection: 'row',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 8,
     marginBottom: 16,
   },
   specsItem: {
     fontSize: 14,
-    color: '#666',
+    color: '#fff',
     fontFamily: 'Heebo-Regular',
-    backgroundColor: '#222',
+    backgroundColor: '#2a2a2a',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
