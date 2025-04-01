@@ -1,8 +1,17 @@
+import React from 'react';
 import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch } from 'react-native';
 import { LogOut, Bell, Lock, Shield, CircleHelp as HelpCircle, Info } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
+
+type SettingItemProps = {
+  icon: JSX.Element;
+  title: string;
+  value?: boolean | string;
+  onPress: () => void;
+  showArrow?: boolean;
+};
 
 export default function SettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -17,7 +26,7 @@ export default function SettingsScreen() {
     }
   };
 
-  const SettingItem = ({ icon, title, value, onPress, showArrow = true }) => (
+  const SettingItem = ({ icon, title, value, onPress, showArrow = true }: SettingItemProps) => (
     <TouchableOpacity style={styles.settingItem} onPress={onPress}>
       <View style={styles.settingContent}>
         {icon}
@@ -100,7 +109,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#1a1a1a',
   },
   header: {
     height: 60,
@@ -110,6 +119,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontFamily: 'Heebo-Bold',
+    color: '#fff',
   },
   section: {
     paddingTop: 24,
@@ -118,7 +128,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontFamily: 'Heebo-Bold',
-    color: '#666',
+    color: '#fff',
     marginBottom: 12,
   },
   settingItem: {
@@ -127,7 +137,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#2a2a2a',
   },
   settingContent: {
     flexDirection: 'row',
@@ -137,6 +147,7 @@ const styles = StyleSheet.create({
   settingTitle: {
     fontSize: 16,
     fontFamily: 'Heebo-Regular',
+    color: '#fff',
   },
   settingValue: {
     flexDirection: 'row',
@@ -146,11 +157,11 @@ const styles = StyleSheet.create({
   settingValueText: {
     fontSize: 14,
     fontFamily: 'Heebo-Regular',
-    color: '#666',
+    color: '#fff',
   },
   arrow: {
     fontSize: 20,
-    color: '#666',
+    color: '#fff',
   },
   signOutButton: {
     flexDirection: 'row',

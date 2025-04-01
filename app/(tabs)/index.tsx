@@ -490,14 +490,20 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <Text style={styles.logo}>JEX</Text>
           <View style={styles.headerButtons}>
+            <View style={styles.tabButtons}>
+              <TouchableOpacity
+                style={[styles.tabButton, !showRequests && styles.tabButtonActive]}
+                onPress={() => setShowRequests(false)}
+              >
+                <Text style={[styles.tabButtonText, !showRequests && styles.tabButtonTextActive]}>For You</Text>
+              </TouchableOpacity>
             <TouchableOpacity
-              style={styles.showRequestsButton}
-              onPress={() => setShowRequests(!showRequests)}
+                style={[styles.tabButton, showRequests && styles.tabButtonActive]}
+                onPress={() => setShowRequests(true)}
             >
-              <Text style={styles.showRequestsText}>
-                {showRequests ? 'Show Products' : 'Show Requests'}
-              </Text>
+                <Text style={[styles.tabButtonText, showRequests && styles.tabButtonTextActive]}>Requests</Text>
             </TouchableOpacity>
+            </View>
             <TouchableOpacity
               style={styles.filterButton}
               onPress={() => setShowFilterModal(true)}
@@ -547,10 +553,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2a2a2a',
-    backgroundColor: '#1a1a1a',
+    paddingVertical: 12,
+    backgroundColor: '#121212',
   },
   logo: {
     fontSize: 24,
@@ -562,16 +566,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  showRequestsButton: {
-    backgroundColor: '#6C5CE7',
+  tabButtons: {
+    flexDirection: 'row',
+    backgroundColor: '#1a1a1a',
+    borderRadius: 100,
+    padding: 4,
+  },
+  tabButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 100,
   },
-  showRequestsText: {
-    color: '#fff',
+  tabButtonActive: {
+    backgroundColor: '#fff',
+  },
+  tabButtonText: {
+    color: '#888',
     fontFamily: 'Heebo-Medium',
     fontSize: 14,
+  },
+  tabButtonTextActive: {
+    color: '#000',
   },
   filterButton: {
     padding: 8,

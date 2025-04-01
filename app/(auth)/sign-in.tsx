@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput, ScrollView, Platform, ActivityIndicator, Animated } from 'react-native';
 import { router } from 'expo-router';
@@ -437,7 +438,7 @@ export default function SignIn() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#1a1a1a',
   },
   contentContainer: {
     padding: 20,
@@ -451,7 +452,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Heebo-Bold',
     fontSize: 32,
     marginTop: 16,
-    color: '#000',
+    color: '#fff',
   },
   subtitle: {
     fontFamily: 'Heebo-Regular',
@@ -463,39 +464,33 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   errorContainer: {
-    backgroundColor: '#ffebee',
+    backgroundColor: '#2a2a2a',
     padding: 16,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#ff6b6b',
   },
   errorText: {
-    color: '#c62828',
+    color: '#ff6b6b',
     fontSize: 14,
-    fontFamily: 'Heebo-Medium',
+    fontFamily: 'Heebo-Regular',
     flex: 1,
   },
   input: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#2a2a2a',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
     fontFamily: 'Heebo-Regular',
     borderWidth: 2,
     borderColor: 'transparent',
+    color: '#fff',
   },
   inputError: {
-    borderColor: '#ffcdd2',
-    backgroundColor: '#fff',
+    borderColor: '#ff6b6b',
   },
   button: {
     borderRadius: 12,
@@ -503,9 +498,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: 52,
     justifyContent: 'center',
+    backgroundColor: '#6C5CE7',
   },
   primaryButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#6C5CE7',
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -513,7 +509,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 16,
-    fontFamily: 'Heebo-Medium',
+    fontFamily: 'Heebo-Bold',
   },
   divider: {
     flexDirection: 'row',
@@ -523,22 +519,22 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#eee',
+    backgroundColor: '#2a2a2a',
   },
   dividerText: {
     marginHorizontal: 16,
-    color: '#666',
+    color: '#888',
     fontFamily: 'Heebo-Regular',
   },
   googleButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#2a2a2a',
     borderRadius: 12,
     padding: 16,
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#eee',
+    borderColor: '#444',
     minHeight: 52,
   },
   googleIcon: {
@@ -547,7 +543,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   googleButtonText: {
-    color: '#333',
+    color: '#fff',
     fontSize: 16,
     fontFamily: 'Heebo-Medium',
   },
@@ -556,12 +552,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   switchModeText: {
-    color: '#007AFF',
+    color: '#6C5CE7',
     fontSize: 14,
     fontFamily: 'Heebo-Medium',
   },
   termsText: {
-    color: '#666',
+    color: '#888',
     fontSize: 14,
     fontFamily: 'Heebo-Regular',
     textAlign: 'center',

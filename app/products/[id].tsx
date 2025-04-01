@@ -94,7 +94,7 @@ export default function ProductScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-          <ArrowLeft size={24} color="#000" />
+          <ArrowLeft size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{product.title}</Text>
       </View>
@@ -164,14 +164,15 @@ export default function ProductScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#121212',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#2a2a2a',
+    backgroundColor: '#121212',
   },
   backButton: {
     marginRight: 16,
@@ -180,19 +181,22 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: 'Heebo-Bold',
     flex: 1,
+    color: '#fff',
   },
   content: {
     flex: 1,
+    backgroundColor: '#121212',
   },
   image: {
     width: '100%',
     height: undefined,
     aspectRatio: 1,
     resizeMode: 'contain',
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#1a1a1a',
   },
   detailsContainer: {
     padding: 16,
+    backgroundColor: '#121212',
   },
   price: {
     fontSize: 24,
@@ -203,14 +207,14 @@ const styles = StyleSheet.create({
   category: {
     fontSize: 16,
     fontFamily: 'Heebo-Medium',
-    color: '#666',
+    color: '#888',
     marginBottom: 16,
   },
   specsContainer: {
-    backgroundColor: '#f8f8f8',
-    padding: 16,
+    backgroundColor: '#1a1a1a',
     borderRadius: 12,
-    marginBottom: 16,
+    padding: 16,
+    marginBottom: 24,
   },
   specItem: {
     flexDirection: 'row',
@@ -219,19 +223,19 @@ const styles = StyleSheet.create({
   },
   specLabel: {
     fontSize: 14,
-    fontFamily: 'Heebo-Medium',
-    color: '#666',
+    fontFamily: 'Heebo-Regular',
+    color: '#888',
   },
   specValue: {
     fontSize: 14,
-    fontFamily: 'Heebo-Bold',
-    color: '#000',
+    fontFamily: 'Heebo-Medium',
+    color: '#fff',
   },
   sellerContainer: {
-    backgroundColor: '#f8f8f8',
-    padding: 12,
+    backgroundColor: '#1a1a1a',
     borderRadius: 12,
-    marginBottom: 16,
+    padding: 16,
+    marginBottom: 24,
   },
   sellerContent: {
     flexDirection: 'row',
@@ -242,60 +246,67 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     marginRight: 12,
+    backgroundColor: '#2a2a2a',
   },
   sellerInfo: {
     flex: 1,
   },
   sellerName: {
     fontSize: 16,
-    fontFamily: 'Heebo-Bold',
-    color: '#6C5CE7',
+    fontFamily: 'Heebo-Medium',
+    color: '#fff',
   },
   descriptionContainer: {
-    marginTop: 8,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
   },
   descriptionTitle: {
     fontSize: 18,
     fontFamily: 'Heebo-Bold',
+    color: '#fff',
     marginBottom: 8,
   },
   description: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'Heebo-Regular',
-    color: '#333',
-    lineHeight: 24,
+    color: '#fff',
+    lineHeight: 20,
   },
   contactButton: {
+    backgroundColor: '#6C5CE7',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#25D366', // WhatsApp green color
     padding: 16,
     gap: 8,
   },
   contactButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontFamily: 'Heebo-Bold',
+    fontFamily: 'Heebo-Medium',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#121212',
   },
   loadingText: {
     fontSize: 16,
     fontFamily: 'Heebo-Regular',
-    color: '#666',
+    color: '#fff',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#121212',
   },
   errorText: {
     fontSize: 16,
     fontFamily: 'Heebo-Regular',
-    color: '#666',
+    color: '#fff',
   },
 }); 
