@@ -46,18 +46,17 @@ export default function FilterModal({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>סינון</Text>
-            <TouchableOpacity onPress={onClose}>
-              <X size={24} color="#000" />
+      <View style={styles.overlay}>
+        <View style={styles.modalContainer}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Filter Options</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <X size={24} color="#fff" />
             </TouchableOpacity>
           </View>
-
           <ScrollView style={styles.modalBody}>
             <View style={styles.filterSection}>
-              <Text style={styles.filterTitle}>קטגוריה</Text>
+              <Text style={styles.filterTitle}>Category</Text>
               <View style={styles.filterOptions}>
                 {CATEGORIES.map((category) => (
                   <TouchableOpacity
@@ -82,7 +81,7 @@ export default function FilterModal({
             </View>
 
             <View style={styles.filterSection}>
-              <Text style={styles.filterTitle}>גודל יהלום (קראט)</Text>
+              <Text style={styles.filterTitle}>Diamond Size (Carat)</Text>
               <View style={styles.filterOptions}>
                 {DIAMOND_SIZES.map((size) => (
                   <TouchableOpacity
@@ -107,7 +106,7 @@ export default function FilterModal({
             </View>
 
             <View style={styles.filterSection}>
-              <Text style={styles.filterTitle}>צבע יהלום</Text>
+              <Text style={styles.filterTitle}>Diamond Color</Text>
               <View style={styles.filterOptions}>
                 {DIAMOND_COLORS.map((color) => (
                   <TouchableOpacity
@@ -132,7 +131,7 @@ export default function FilterModal({
             </View>
 
             <View style={styles.filterSection}>
-              <Text style={styles.filterTitle}>ניקיון יהלום</Text>
+              <Text style={styles.filterTitle}>Diamond Clarity</Text>
               <View style={styles.filterOptions}>
                 {DIAMOND_CLARITY.map((clarity) => (
                   <TouchableOpacity
@@ -159,7 +158,7 @@ export default function FilterModal({
 
           <View style={styles.modalFooter}>
             <TouchableOpacity style={styles.resetButton} onPress={resetFilters}>
-              <Text style={styles.resetButtonText}>נקה הכל</Text>
+              <Text style={styles.resetButtonText}>Reset All</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -169,31 +168,44 @@ export default function FilterModal({
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
+  overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '80%',
+  modalContainer: {
+    width: '90%',
+    backgroundColor: '#1a1a1a',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  modalHeader: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    marginBottom: 16,
   },
-  modalTitle: {
+  title: {
     fontSize: 20,
     fontFamily: 'Heebo-Bold',
+    color: '#fff',
+  },
+  closeButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#2a2a2a',
   },
   modalBody: {
-    padding: 20,
+    paddingBottom: 20,
   },
   filterSection: {
     marginBottom: 24,
@@ -201,6 +213,7 @@ const styles = StyleSheet.create({
   filterTitle: {
     fontSize: 16,
     fontFamily: 'Heebo-Bold',
+    color: '#fff',
     marginBottom: 12,
   },
   filterOptions: {
@@ -212,7 +225,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#2a2a2a',
   },
   filterOptionSelected: {
     backgroundColor: '#6C5CE7',
@@ -220,25 +233,25 @@ const styles = StyleSheet.create({
   filterOptionText: {
     fontSize: 14,
     fontFamily: 'Heebo-Medium',
-    color: '#666',
+    color: '#fff',
   },
   filterOptionTextSelected: {
     color: '#fff',
   },
   modalFooter: {
-    padding: 20,
+    paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: '#2a2a2a',
   },
   resetButton: {
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#2a2a2a',
   },
   resetButtonText: {
     fontSize: 16,
     fontFamily: 'Heebo-Medium',
-    color: '#666',
+    color: '#fff',
   },
 }); 

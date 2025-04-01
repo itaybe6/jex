@@ -162,7 +162,7 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#1a1a1a',
   },
   header: {
     flexDirection: 'row',
@@ -171,11 +171,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e1e1e1',
+    borderBottomColor: '#2a2a2a',
   },
   headerTitle: {
     fontSize: 24,
     fontFamily: 'Heebo-Bold',
+    color: '#fff',
   },
   settingsButton: {
     padding: 8,
@@ -187,11 +188,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e1e1e1',
-    backgroundColor: '#fff',
+    borderBottomColor: '#2a2a2a',
+    backgroundColor: '#2a2a2a',
   },
   unreadCard: {
-    backgroundColor: '#f0f9ff',
+    backgroundColor: '#6C5CE7',
   },
   notificationImage: {
     width: 60,
@@ -205,29 +206,33 @@ const styles = StyleSheet.create({
   notificationTitle: {
     fontSize: 16,
     fontFamily: 'Heebo-Bold',
-    marginBottom: 4,
+    color: '#fff',
   },
   notificationDescription: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
+    fontFamily: 'Heebo-Regular',
+    color: '#fff',
   },
   notificationTime: {
     fontSize: 12,
-    color: '#999',
+    fontFamily: 'Heebo-Regular',
+    color: '#888',
   },
   emptyState: {
-    padding: 24,
     alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
   },
   emptyStateTitle: {
     fontSize: 18,
     fontFamily: 'Heebo-Bold',
-    marginBottom: 8,
+    color: '#fff',
   },
   emptyStateDescription: {
     fontSize: 14,
-    color: '#666',
+    fontFamily: 'Heebo-Regular',
+    color: '#888',
     textAlign: 'center',
+    marginHorizontal: 20,
   },
 });

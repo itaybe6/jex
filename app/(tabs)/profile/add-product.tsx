@@ -541,13 +541,13 @@ export default function AddProductScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#1a1a1a',
   },
   imageSection: {
     padding: 20,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#2a2a2a',
   },
   imageContainer: {
     position: 'relative',
@@ -571,12 +571,12 @@ const styles = StyleSheet.create({
   uploadButton: {
     width: '100%',
     height: 200,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#2a2a2a',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#ddd',
+    borderColor: '#444',
     borderStyle: 'dashed',
   },
   uploadText: {
@@ -608,14 +608,15 @@ const styles = StyleSheet.create({
     color: '#007AFF',
   },
   input: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#2a2a2a',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
     fontFamily: 'Heebo-Regular',
+    color: '#fff',
   },
   selectButton: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#2a2a2a',
     borderRadius: 8,
     padding: 12,
     flexDirection: 'row',
@@ -625,7 +626,7 @@ const styles = StyleSheet.create({
   selectButtonText: {
     fontSize: 16,
     fontFamily: 'Heebo-Regular',
-    color: '#000',
+    color: '#fff',
     textAlign: 'left',
   },
   textArea: {
@@ -638,9 +639,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     marginTop: 8,
     textAlign: 'left',
+    color: '#fff',
   },
   submitButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#6C5CE7',
     paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -660,7 +662,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: '#1a1a1a',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '80%',
@@ -671,11 +673,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#2a2a2a',
   },
   modalTitle: {
     fontSize: 18,
     fontFamily: 'Heebo-Bold',
+    color: '#fff',
   },
   modalCloseButton: {
     padding: 4,
@@ -696,6 +699,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Heebo-Regular',
     textAlign: 'left',
+    color: '#fff',
   },
   modalOptionTextSelected: {
     color: '#fff',

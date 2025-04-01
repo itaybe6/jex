@@ -1,59 +1,39 @@
-import { View, Text, StyleSheet } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Bell } from 'lucide-react-native';
-import { router } from 'expo-router';
-import { TouchableOpacity } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import { Link } from 'expo-router';
 
 export function TopHeader() {
-  const handleNotificationsPress = () => {
-    router.push('/notifications');
-  };
-
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
-      <SafeAreaView edges={['top']} style={styles.safeArea}>
-        <View style={styles.header}>
-          <Text style={styles.logo}>JEX</Text>
-          <TouchableOpacity 
-            style={styles.notificationButton}
-            onPress={handleNotificationsPress}
-          >
-            <Bell size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+    <View style={styles.header}>
+      <Text style={styles.logo}>JEX</Text>
+      <Link href="/notifications" asChild>
+        <TouchableOpacity style={styles.iconButton}>
+          <Bell size={24} color="#fff" />
+        </TouchableOpacity>
+      </Link>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#000',
-  },
-  safeArea: {
-    backgroundColor: '#000',
-  },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 4,
-    backgroundColor: '#000',
+    paddingVertical: 12,
+    backgroundColor: '#121212',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2a2a2a',
   },
   logo: {
     fontSize: 24,
     fontFamily: 'Heebo-Bold',
     color: '#fff',
   },
-  notificationButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#333',
-    justifyContent: 'center',
-    alignItems: 'center',
+  iconButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#2a2a2a',
   },
 });

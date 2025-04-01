@@ -130,24 +130,24 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#1a1a1a',
   },
   header: {
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#2a2a2a',
   },
   headerTitle: {
     fontSize: 28,
     fontFamily: 'Heebo-Bold',
     marginBottom: 16,
-    color: '#000',
+    color: '#fff',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#2a2a2a',
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 48,
@@ -160,6 +160,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Heebo-Regular',
     paddingVertical: 8,
+    color: '#fff',
   },
   clearButton: {
     padding: 4,
@@ -177,7 +178,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#2a2a2a',
   },
   avatar: {
     width: 50,
@@ -192,43 +193,41 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Heebo-Medium',
     marginBottom: 2,
+    color: '#fff',
   },
   profileTitle: {
     fontSize: 14,
-    color: '#666',
+    color: '#888',
     fontFamily: 'Heebo-Regular',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
   },
   emptyText: {
     fontSize: 18,
     fontFamily: 'Heebo-Bold',
-    marginBottom: 8,
+    color: '#fff',
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#666',
     fontFamily: 'Heebo-Regular',
+    color: '#888',
   },
   initialContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
   },
   initialText: {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: 'Heebo-Bold',
-    marginTop: 16,
-    marginBottom: 8,
+    color: '#fff',
   },
   initialSubtext: {
     fontSize: 14,
-    color: '#666',
     fontFamily: 'Heebo-Regular',
+    color: '#888',
   },
 });
