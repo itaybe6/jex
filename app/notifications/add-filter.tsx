@@ -120,7 +120,7 @@ export default function AddFilterScreen() {
           onPress={() => router.back()}
           style={styles.backButton}
         >
-          <ArrowLeft size={24} color="#000" />
+          <ArrowLeft size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add Notification Filter</Text>
       </View>
@@ -164,9 +164,11 @@ export default function AddFilterScreen() {
               selectedValue={filter.cut}
               onValueChange={(value) => setFilter(prev => ({ ...prev, cut: value }))}
               style={styles.picker}
+              dropdownIconColor="#888"
+              itemStyle={{ color: '#888', backgroundColor: '#1a1a1a' }}
             >
               {DIAMOND_CUTS.map((cut) => (
-                <Picker.Item key={cut} label={cut} value={cut} />
+                <Picker.Item key={cut} label={cut} value={cut} color="#888" />
               ))}
             </Picker>
           </View>
@@ -179,6 +181,7 @@ export default function AddFilterScreen() {
             value={filter.weight}
             onChangeText={(value) => setFilter(prev => ({ ...prev, weight: value }))}
             placeholder="Enter weight in carats"
+            placeholderTextColor="#666"
             keyboardType="decimal-pad"
           />
         </View>
@@ -190,9 +193,11 @@ export default function AddFilterScreen() {
               selectedValue={filter.clarity}
               onValueChange={(value) => setFilter(prev => ({ ...prev, clarity: value }))}
               style={styles.picker}
+              dropdownIconColor="#888"
+              itemStyle={{ color: '#888', backgroundColor: '#1a1a1a' }}
             >
               {CLARITY_GRADES.map((clarity) => (
-                <Picker.Item key={clarity} label={clarity} value={clarity} />
+                <Picker.Item key={clarity} label={clarity} value={clarity} color="#888" />
               ))}
             </Picker>
           </View>
@@ -205,9 +210,11 @@ export default function AddFilterScreen() {
               selectedValue={filter.color}
               onValueChange={(value) => setFilter(prev => ({ ...prev, color: value }))}
               style={styles.picker}
+              dropdownIconColor="#888"
+              itemStyle={{ color: '#888', backgroundColor: '#1a1a1a' }}
             >
               {COLOR_GRADES.map((color) => (
-                <Picker.Item key={color} label={color} value={color} />
+                <Picker.Item key={color} label={color} value={color} color="#888" />
               ))}
             </Picker>
           </View>
@@ -226,31 +233,42 @@ export default function AddFilterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#121212',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
+    paddingTop: 60,
     borderBottomWidth: 1,
-    borderBottomColor: '#e1e1e1',
+    borderBottomColor: '#2a2a2a',
+    backgroundColor: '#121212',
   },
   backButton: {
     marginRight: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#2a2a2a',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 20,
     fontFamily: 'Heebo-Bold',
+    color: '#fff',
   },
   content: {
     flex: 1,
     padding: 16,
+    backgroundColor: '#121212',
   },
   sectionTitle: {
     fontSize: 18,
     fontFamily: 'Heebo-Bold',
     marginBottom: 16,
     marginTop: 24,
+    color: '#fff',
   },
   notificationTypes: {
     flexDirection: 'row',
@@ -262,17 +280,18 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e1e1e1',
+    borderColor: '#2a2a2a',
     alignItems: 'center',
+    backgroundColor: '#2a2a2a',
   },
   typeButtonActive: {
-    backgroundColor: '#007AFF15',
+    backgroundColor: '#007AFF20',
     borderColor: '#007AFF',
   },
   typeButtonText: {
     fontSize: 14,
     fontFamily: 'Heebo-Medium',
-    color: '#666',
+    color: '#888',
     textAlign: 'center',
   },
   typeButtonTextActive: {
@@ -285,29 +304,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Heebo-Medium',
     marginBottom: 8,
-    color: '#333',
+    color: '#fff',
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: '#e1e1e1',
+    borderColor: '#2a2a2a',
     borderRadius: 12,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#1a1a1a',
   },
   picker: {
     height: 50,
+    color: '#888',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#e1e1e1',
+    borderColor: '#2a2a2a',
     borderRadius: 12,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#1a1a1a',
+    color: '#888',
+    fontFamily: 'Heebo-Regular',
   },
   footer: {
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#e1e1e1',
+    borderTopColor: '#2a2a2a',
+    backgroundColor: '#121212',
   },
   saveButton: {
     backgroundColor: '#007AFF',
