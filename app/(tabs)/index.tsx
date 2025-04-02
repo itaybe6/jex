@@ -327,7 +327,10 @@ export default function HomeScreen() {
             <TouchableOpacity
               key={product.id}
               style={styles.gridItem}
-              onPress={() => router.push(`/products/${product.id}`)}
+              onPress={() => router.push({
+                pathname: "/products/[id]",
+                params: { id: product.id }
+              })}
             >
               <View style={styles.userInfoContainer}>
                 <Image 

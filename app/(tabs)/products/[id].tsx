@@ -67,7 +67,7 @@ export default function ProductScreen() {
       const phoneNumber = product.profiles.phone.startsWith('0') 
         ? '972' + product.profiles.phone.substring(1) 
         : product.profiles.phone;
-      const message = `היי, אני מעוניין במוצר "${product.title}" שפרסמת ב-Brilliant`;
+      const message = `היי, אני מעוניין במוצר "${product.title}" שפרסמת ב-JEX`;
       const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
       Linking.openURL(whatsappUrl);
     }
@@ -95,13 +95,14 @@ export default function ProductScreen() {
 
   return (
     <View style={styles.container}>
-      <TopHeader />
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-          <ArrowLeft size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{product.title}</Text>
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+            <ArrowLeft size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{product.title}</Text>
+        </View>
+      </SafeAreaView>
 
       <ScrollView style={styles.content}>
         <Image source={{ uri: product.image_url }} style={styles.image} />
@@ -174,6 +175,9 @@ export default function ProductScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#121212',
+  },
+  safeArea: {
     backgroundColor: '#121212',
   },
   header: {
