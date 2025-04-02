@@ -339,6 +339,9 @@ export default function HomeScreen() {
                 <Text style={styles.userNameSmall} numberOfLines={1}>
                   {product.profiles.full_name}
                 </Text>
+                <Text style={styles.gridItemTime}>
+                  {formatTimeAgo(product.created_at)}
+                </Text>
               </View>
               <Image
                 source={{ uri: product.image_url }}
@@ -348,12 +351,16 @@ export default function HomeScreen() {
                 <Text style={styles.gridItemTitle} numberOfLines={2}>
                   {product.title}
                 </Text>
-                <Text style={styles.gridItemPrice}>
-                  ${product.price.toLocaleString()}
-                </Text>
-                <Text style={styles.gridItemTime}>
-                  {formatTimeAgo(product.created_at)}
-                </Text>
+                <View style={styles.productDetailsRow}>
+                  {product.details?.weight && (
+                    <Text style={styles.gridItemWeight}>
+                      {product.details.weight} ct
+                    </Text>
+                  )}
+                  <Text style={styles.gridItemPrice}>
+                    ${product.price.toLocaleString()}
+                  </Text>
+                </View>
               </View>
             </TouchableOpacity>
           ))}
@@ -721,6 +728,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     borderBottomWidth: 1,
     borderBottomColor: '#2a2a2a',
+    justifyContent: 'space-between',
   },
   userAvatarSmall: {
     width: 28,
@@ -743,16 +751,27 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     lineHeight: 20,
   },
-  gridItemPrice: {
-    fontSize: 16,
-    fontFamily: 'Heebo-Bold',
-    color: '#6C5CE7',
-    marginBottom: 6,
-  },
   gridItemTime: {
     fontSize: 12,
     color: '#888',
     fontFamily: 'Heebo-Regular',
+    marginLeft: 'auto',
+  },
+  productDetailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  gridItemWeight: {
+    fontSize: 14,
+    fontFamily: 'Heebo-Regular',
+    color: '#888',
+  },
+  gridItemPrice: {
+    fontSize: 16,
+    fontFamily: 'Heebo-Bold',
+    color: '#6C5CE7',
   },
   userInfo: {
     flexDirection: 'row',
