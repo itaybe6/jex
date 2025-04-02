@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { ChevronRight } from 'lucide-react-native';
@@ -195,14 +195,6 @@ export default function ProductScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      <TouchableOpacity 
-        style={styles.backButton}
-        onPress={handleBackToSeller}
-      >
-        <ChevronRight size={24} color="#007AFF" />
-        <Text style={styles.backButtonText}>חזור לפרופיל המוכר</Text>
-      </TouchableOpacity>
-
       <Image source={{ uri: product.image_url }} style={styles.image} />
       
       <View style={styles.content}>
@@ -236,34 +228,33 @@ export default function ProductScreen() {
   );
 }
 
+// Add navigation options to hide the header
+ProductScreen.getNavigation = () => {
+  return (
+    <Stack.Screen
+      options={{
+        headerShown: false
+      }}
+    />
+  );
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#007AFF',
-    marginLeft: 8,
-    fontFamily: 'Heebo-Medium',
+    backgroundColor: '#1a1a1a',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#1a1a1a',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#1a1a1a',
     padding: 20,
   },
   errorText: {
@@ -275,10 +266,11 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: 300,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#2a2a2a',
   },
   content: {
     padding: 20,
+    backgroundColor: '#1a1a1a',
   },
   header: {
     marginBottom: 16,
@@ -288,6 +280,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Heebo-Bold',
     marginBottom: 8,
     textAlign: 'right',
+    color: '#fff',
   },
   price: {
     fontSize: 20,
@@ -300,24 +293,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     marginBottom: 16,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#2a2a2a',
     padding: 8,
     borderRadius: 8,
   },
   categoryLabel: {
     fontSize: 14,
-    color: '#666',
+    color: '#888',
     fontFamily: 'Heebo-Regular',
     marginLeft: 8,
   },
   categoryValue: {
     fontSize: 14,
-    color: '#333',
+    color: '#fff',
     fontFamily: 'Heebo-Medium',
   },
   description: {
     fontSize: 16,
-    color: '#666',
+    color: '#888',
     lineHeight: 24,
     marginBottom: 24,
     textAlign: 'right',
@@ -331,6 +324,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Heebo-Bold',
     marginBottom: 16,
     textAlign: 'right',
+    color: '#fff',
   },
   detailsGrid: {
     flexDirection: 'row-reverse',
@@ -339,20 +333,20 @@ const styles = StyleSheet.create({
   },
   detailItem: {
     width: '45%',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#2a2a2a',
     padding: 12,
     borderRadius: 8,
     alignItems: 'flex-end',
   },
   detailLabel: {
     fontSize: 14,
-    color: '#666',
+    color: '#888',
     marginBottom: 4,
     fontFamily: 'Heebo-Regular',
   },
   detailValue: {
     fontSize: 16,
-    color: '#333',
+    color: '#fff',
     fontFamily: 'Heebo-Medium',
   },
   soldButton: {
