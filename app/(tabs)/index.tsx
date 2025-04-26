@@ -311,6 +311,67 @@ export default function HomeScreen() {
 
     const filteredProducts = getFilteredProducts();
 
+    // If no filter is selected, show all products in a single list by date
+    const allProducts = Object.values(filteredProducts).flat();
+    if (!selectedCategory && !selectedDiamondSize && !selectedDiamondColor && !selectedDiamondClarity) {
+      if (allProducts.length === 0) {
+        return (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No products found</Text>
+          </View>
+        );
+      }
+      // Sort by created_at descending
+      const sortedProducts = allProducts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      return (
+        <View style={styles.itemsGrid}>
+          {sortedProducts.map((product) => (
+            <TouchableOpacity
+              key={product.id}
+              style={styles.gridItem}
+              onPress={() => router.push({
+                pathname: "/products/[id]",
+                params: { id: product.id }
+              })}
+            >
+              <View style={styles.userInfoContainer}>
+                <Image 
+                  source={{ 
+                    uri: product.profiles.avatar_url || 'https://www.gravatar.com/avatar/default?d=mp' 
+                  }} 
+                  style={styles.userAvatarSmall} 
+                />
+                <Text style={styles.userNameSmall} numberOfLines={1}>
+                  {product.profiles.full_name}
+                </Text>
+                <Text style={styles.gridItemTime}>
+                  {formatTimeAgo(product.created_at)}
+                </Text>
+              </View>
+              <Image
+                source={{ uri: product.image_url }}
+                style={styles.gridItemImage}
+              />
+              <Text style={styles.gridItemTitle} numberOfLines={2}>
+                {product.title}
+              </Text>
+              <View style={styles.productDetailsRow}>
+                {product.details?.weight && (
+                  <Text style={styles.gridItemWeight}>
+                    {product.details.weight} ct
+                  </Text>
+                )}
+                <Text style={styles.gridItemPrice}>
+                  ${product.price.toLocaleString()}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      );
+    }
+
+    // Otherwise, show grouped by category as before
     if (Object.keys(filteredProducts).length === 0) {
       return (
         <View style={styles.emptyContainer}>
@@ -318,7 +379,6 @@ export default function HomeScreen() {
         </View>
       );
     }
-
     return Object.entries(filteredProducts).map(([category, products]) => (
       <View key={category} style={styles.categorySection}>
         <Text style={styles.categoryTitle}>{category}</Text>
@@ -350,20 +410,18 @@ export default function HomeScreen() {
                 source={{ uri: product.image_url }}
                 style={styles.gridItemImage}
               />
-              <View style={styles.gridItemContent}>
-                <Text style={styles.gridItemTitle} numberOfLines={2}>
-                  {product.title}
-                </Text>
-                <View style={styles.productDetailsRow}>
-                  {product.details?.weight && (
-                    <Text style={styles.gridItemWeight}>
-                      {product.details.weight} ct
-                    </Text>
-                  )}
-                  <Text style={styles.gridItemPrice}>
-                    ${product.price.toLocaleString()}
+              <Text style={styles.gridItemTitle} numberOfLines={2}>
+                {product.title}
+              </Text>
+              <View style={styles.productDetailsRow}>
+                {product.details?.weight && (
+                  <Text style={styles.gridItemWeight}>
+                    {product.details.weight} ct
                   </Text>
-                </View>
+                )}
+                <Text style={styles.gridItemPrice}>
+                  ${product.price.toLocaleString()}
+                </Text>
               </View>
             </TouchableOpacity>
           ))}

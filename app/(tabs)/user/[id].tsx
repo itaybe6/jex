@@ -305,11 +305,11 @@ export default function UserProfileScreen() {
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{profile?.trust_count || 0}</Text>
-            <Text style={styles.statLabel}>אמון</Text>
+            <Text style={styles.statLabel}>Trust</Text>
           </View>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{profile?.sold_count || 0}</Text>
-            <Text style={styles.statLabel}>מכירות</Text>
+            <Text style={styles.statLabel}>Sales</Text>
           </View>
         </View>
 
@@ -322,7 +322,7 @@ export default function UserProfileScreen() {
             >
               <Shield size={20} color={hasTrusted ? '#fff' : '#007AFF'} />
               <Text style={[styles.actionButtonText, hasTrusted && styles.actionButtonTextActive]}>
-                {hasTrusted ? 'סומן כאמין' : 'סמן כאמין'}
+                {hasTrusted ? 'Trusted' : 'Mark as Trusted'}
               </Text>
             </TouchableOpacity>
           )}
@@ -342,7 +342,7 @@ export default function UserProfileScreen() {
           {profile?.website && (
             <TouchableOpacity style={styles.actionButton} onPress={handleWebsitePress}>
               <LinkIcon size={20} color="#007AFF" />
-              <Text style={styles.actionButtonText}>אתר</Text>
+              <Text style={styles.actionButtonText}>Website</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -426,15 +426,16 @@ export default function UserProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#121212',
   },
   loadingContainer: {
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#121212',
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
+    color: '#fff',
     fontFamily: 'Heebo-Regular',
   },
   header: {
@@ -442,6 +443,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 4,
+    backgroundColor: '#121212',
   },
   avatar: {
     width: 120,
@@ -454,10 +456,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Heebo-Bold',
     marginBottom: 2,
     textAlign: 'center',
+    color: '#fff',
   },
   title: {
     fontSize: 16,
-    color: '#666',
+    color: '#aaa',
     fontFamily: 'Heebo-Regular',
     marginBottom: 6,
     textAlign: 'center',
@@ -476,35 +479,35 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontFamily: 'Heebo-Bold',
-    color: '#666',
+    color: '#6C5CE7',
   },
   statLabel: {
     fontSize: 14,
-    color: '#666',
+    color: '#aaa',
     fontFamily: 'Heebo-Regular',
   },
   actionsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
     width: '100%',
     marginTop: 12,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
     paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     borderRadius: 20,
-    backgroundColor: '#f0f9ff',
+    backgroundColor: '#2a2a2a',
   },
   actionButtonActive: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#6C5CE7',
   },
   actionButtonText: {
     fontSize: 14,
     fontFamily: 'Heebo-Medium',
-    color: '#007AFF',
+    color: '#6C5CE7',
   },
   actionButtonTextActive: {
     color: '#fff',
@@ -513,22 +516,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: '#2a2a2a',
+    backgroundColor: '#121212',
   },
   catalogTitle: {
     fontSize: 20,
     fontFamily: 'Heebo-Bold',
     marginBottom: 20,
+    color: '#fff',
   },
   emptyContainer: {
     padding: 40,
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#1a1a1a',
     borderRadius: 12,
   },
   emptyText: {
     fontSize: 18,
     fontFamily: 'Heebo-Bold',
+    color: '#fff',
   },
   categoriesContainer: {
     gap: 24,
@@ -539,7 +545,7 @@ const styles = StyleSheet.create({
   categoryTitle: {
     fontSize: 18,
     fontFamily: 'Heebo-Bold',
-    color: '#333',
+    color: '#fff',
   },
   gridContainer: {
     flexDirection: 'row',
@@ -589,7 +595,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: '#1a1a1a',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '80%',
@@ -600,11 +606,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#2a2a2a',
   },
   modalTitle: {
     fontSize: 20,
     fontFamily: 'Heebo-Bold',
+    color: '#fff',
   },
   modalCloseButton: {
     padding: 4,
@@ -618,7 +625,7 @@ const styles = StyleSheet.create({
   },
   modalLoadingText: {
     fontSize: 16,
-    color: '#666',
+    color: '#fff',
     fontFamily: 'Heebo-Regular',
   },
   modalEmptyContainer: {
@@ -627,7 +634,7 @@ const styles = StyleSheet.create({
   },
   modalEmptyText: {
     fontSize: 16,
-    color: '#666',
+    color: '#fff',
     fontFamily: 'Heebo-Regular',
   },
   trustMarkItem: {
@@ -635,7 +642,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#2a2a2a',
   },
   trustMarkAvatar: {
     width: 50,
@@ -650,15 +657,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Heebo-Medium',
     marginBottom: 2,
+    color: '#fff',
   },
   trustMarkTitle: {
     fontSize: 14,
-    color: '#666',
+    color: '#aaa',
     fontFamily: 'Heebo-Regular',
   },
   defaultAvatar: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#222',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  bio: {
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: 'Heebo-Regular',
+    marginTop: 12,
+    textAlign: 'center',
   },
 });
