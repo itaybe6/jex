@@ -212,27 +212,37 @@ export default function NotificationSettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#121212',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e1e1e1',
+    borderBottomColor: '#2a2a2a',
+    backgroundColor: '#121212',
   },
   backButton: {
     marginRight: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#2a2a2a',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 20,
     fontFamily: 'Heebo-Bold',
+    color: '#fff',
   },
   content: {
     flex: 1,
+    backgroundColor: '#121212',
   },
   section: {
     padding: 16,
+    backgroundColor: '#121212',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -243,12 +253,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontFamily: 'Heebo-Bold',
+    color: '#fff',
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#6C5CE7',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -259,7 +270,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   filterCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#1a1a1a',
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
@@ -272,7 +283,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: '#222',
   },
   filterCardHeader: {
     flexDirection: 'row',
@@ -281,19 +292,19 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   filterBadge: {
-    backgroundColor: '#007AFF15',
+    backgroundColor: '#6C5CE720',
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
   },
   filterBadgeText: {
-    color: '#007AFF',
+    color: '#6C5CE7',
     fontSize: 14,
     fontFamily: 'Heebo-Medium',
   },
   removeFilterButton: {
     padding: 8,
-    backgroundColor: '#fff',
+    backgroundColor: '#2a2a2a',
     borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: {
@@ -313,7 +324,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   specBadge: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#222',
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 6,
@@ -321,34 +332,34 @@ const styles = StyleSheet.create({
   },
   specLabel: {
     fontSize: 12,
-    color: '#666',
+    color: '#aaa',
     fontFamily: 'Heebo-Medium',
     textAlign: 'center',
   },
   specValue: {
     fontSize: 14,
-    color: '#000',
+    color: '#fff',
     fontFamily: 'Heebo-Medium',
     flex: 1,
   },
   noFiltersContainer: {
     padding: 32,
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#1a1a1a',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: '#222',
     borderStyle: 'dashed',
   },
   noFiltersText: {
     fontSize: 18,
     fontFamily: 'Heebo-Bold',
     marginBottom: 8,
-    color: '#333',
+    color: '#fff',
   },
   noFiltersSubtext: {
     fontSize: 14,
-    color: '#666',
+    color: '#aaa',
     fontFamily: 'Heebo-Regular',
     textAlign: 'center',
   },
