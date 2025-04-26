@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Modal } from 'react-native';
-import { Settings, Plus, Link as LinkIcon, X } from 'lucide-react-native';
+import { Settings, Plus, Link as LinkIcon, X, ChevronRight } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { AvatarGroup } from '@/components/AvatarGroup';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { FlatList } from 'react-native';
 
 const GRID_SPACING = 8; // Increased spacing between items
 const NUM_COLUMNS = 3;
@@ -45,6 +47,12 @@ type ProductsByCategory = {
   [key: string]: Product[];
 };
 
+type Category = {
+  id: string;
+  name: string;
+  products: Product[];
+};
+
 export default function ProfileScreen() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -54,6 +62,8 @@ export default function ProfileScreen() {
   const [trustMarks, setTrustMarks] = useState<TrustMark[]>([]);
   const [loadingTrustMarks, setLoadingTrustMarks] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState<Record<string, boolean>>({});
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (user) {
@@ -172,6 +182,58 @@ export default function ProfileScreen() {
 
   const handleSettingsPress = () => {
     router.push('/(tabs)/settings');
+  };
+
+  const fetchUserProducts = async () => {
+    if (!user) return;
+
+    const { data: userProducts, error } = await supabase
+      .from('products')
+      .select(`
+        id,
+        name,
+        price,
+        images,
+        category_id,
+        profiles (
+          id,
+          full_name
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching products:', error);
+      return;
+    }
+
+    // Group products by category
+    const { data: categoriesData } = await supabase
+      .from('categories')
+      .select('*')
+      .order('name');
+
+    if (categoriesData) {
+      const groupedProducts = categoriesData.map(category => ({
+        ...category,
+        products: userProducts?.filter(product => product.category_id === category.id) || []
+      }));
+
+      setCategories(groupedProducts);
+    }
+  };
+
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
   };
 
   const renderProductItem = (product: Product) => (
@@ -314,8 +376,9 @@ export default function ProfileScreen() {
   );
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <Text style={styles.title}> </Text>
         <TouchableOpacity 
           style={styles.settingsButton}
           onPress={handleSettingsPress}
@@ -324,98 +387,135 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
       
-      <View style={styles.profileSection}>
-        <View style={styles.profileImageContainer}>
-          <Image
-            source={{ 
-              uri: profile.avatar_url || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=800&auto=format&fit=crop&q=60'
-            }}
-            style={styles.profileImage}
-          />
-        </View>
+      <ScrollView style={styles.content}>
+        <View style={styles.profileSection}>
+          <View style={styles.profileImageContainer}>
+            <Image
+              source={{ 
+                uri: profile.avatar_url || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=800&auto=format&fit=crop&q=60'
+              }}
+              style={styles.profileImage}
+            />
+          </View>
 
-        <TouchableOpacity 
-          style={styles.editButton}
-          onPress={handleEditProfile}
-        >
-          <Text style={styles.editButtonText}>Edit Profile</Text>
-        </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.editButton}
+            onPress={handleEditProfile}
+          >
+            <Text style={styles.editButtonText}>Edit Profile</Text>
+          </TouchableOpacity>
 
-        <Text style={styles.userName}>{profile.full_name}</Text>
-        {profile.title ? <Text style={styles.userTitle}>{profile.title}</Text> : null}
-        
-        <View style={styles.bioWebsiteContainer}>
-          {profile.bio ? (
-            <Text style={styles.bio}>{profile.bio}</Text>
-          ) : null}
+          <Text style={styles.userName}>{profile.full_name}</Text>
+          {profile.title ? <Text style={styles.userTitle}>{profile.title}</Text> : null}
+          
+          <View style={styles.bioWebsiteContainer}>
+            {profile.bio ? (
+              <Text style={styles.bio}>{profile.bio}</Text>
+            ) : null}
 
-          {profile.website ? (
+            {profile.website ? (
+              <TouchableOpacity 
+                style={styles.websiteButton}
+                onPress={handleWebsitePress}
+              >
+                <LinkIcon size={16} color="#fff" />
+                <Text style={styles.websiteText}>{profile.website}</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          {user && <AvatarGroup userId={user.id} />}
+
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{totalProducts}</Text>
+              <Text style={styles.statLabel}>Products</Text>
+            </View>
             <TouchableOpacity 
-              style={styles.websiteButton}
-              onPress={handleWebsitePress}
+              style={styles.statItem}
+              onPress={handleShowTrustMarks}
             >
-              <LinkIcon size={16} color="#fff" />
-              <Text style={styles.websiteText}>{profile.website}</Text>
+              <Text style={[styles.statNumber, styles.statNumberClickable]}>
+                {profile.trust_count}
+              </Text>
+              <Text style={[styles.statLabel, styles.statLabelClickable]}>
+                TrustMarks
+              </Text>
             </TouchableOpacity>
-          ) : null}
-        </View>
-
-        {user && <AvatarGroup userId={user.id} />}
-
-        <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{totalProducts}</Text>
-            <Text style={styles.statLabel}>Products</Text>
-          </View>
-          <TouchableOpacity 
-            style={styles.statItem}
-            onPress={handleShowTrustMarks}
-          >
-            <Text style={[styles.statNumber, styles.statNumberClickable]}>
-              {profile.trust_count}
-            </Text>
-            <Text style={[styles.statLabel, styles.statLabelClickable]}>
-              TrustMarks
-            </Text>
-          </TouchableOpacity>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{profile.sold_count}</Text>
-            <Text style={styles.statLabel}>Transactions</Text>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{profile.sold_count}</Text>
+              <Text style={styles.statLabel}>Transactions</Text>
+            </View>
           </View>
         </View>
-      </View>
 
-      <View style={styles.catalogSection}>
-        <View style={styles.catalogHeader}>
-          <Text style={styles.catalogTitle}>My Catalog</Text>
-          <TouchableOpacity 
-            style={styles.addButton}
-            onPress={handleAddProduct}
-          >
-            <Plus size={24} color="#fff" />
-            <Text style={styles.addButtonText}>Add Product</Text>
-          </TouchableOpacity>
+        <View style={styles.catalogSection}>
+          <View style={styles.catalogHeader}>
+            <Text style={styles.catalogTitle}>My Catalog</Text>
+          </View>
+
+          {totalProducts === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No products in catalog</Text>
+              <Text style={styles.emptySubtext}>Click 'Add Product' to get started</Text>
+            </View>
+          ) : (
+            <View style={styles.categoriesContainer}>
+              {Object.entries(productsByCategory).map(([category, products]) => (
+                <View key={category}>
+                  {renderCategorySection(category, products)}
+                  <View style={styles.categoryDivider} />
+                </View>
+              ))}
+            </View>
+          )}
         </View>
 
-        {totalProducts === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No products in catalog</Text>
-            <Text style={styles.emptySubtext}>Click 'Add Product' to get started</Text>
-          </View>
-        ) : (
-          <View style={styles.categoriesContainer}>
-            {Object.entries(productsByCategory).map(([category, products]) => (
-              <View key={category}>
-                {renderCategorySection(category, products)}
-                <View style={styles.categoryDivider} />
+        <FlatList
+          data={categories}
+          renderItem={({ item: category }) => (
+            <View key={category.id}>
+              <View style={styles.categorySection}>
+                <View style={styles.categoryHeader}>
+                  <Text style={styles.categoryTitle}>{category.name}</Text>
+                  {category.products.length > 3 && (
+                    <TouchableOpacity 
+                      style={styles.showMoreButton}
+                      onPress={() => toggleCategory(category.id)}
+                    >
+                      <Text style={styles.showMoreText}>
+                        {expandedCategories.has(category.id) ? 'הצג פחות' : 'הצג עוד'}
+                      </Text>
+                      <ChevronRight 
+                        size={16} 
+                        color="#6C5CE7" 
+                        style={[
+                          styles.showMoreIcon,
+                          expandedCategories.has(category.id) && styles.showMoreIconRotated
+                        ]} 
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <View style={styles.gridContainer}>
+                  {expandedCategories.has(category.id) ? (
+                    category.products.map(renderProductItem)
+                  ) : (
+                    category.products.slice(0, 3).map(renderProductItem)
+                  )}
+                </View>
               </View>
-            ))}
-          </View>
-        )}
-      </View>
+              <View style={styles.categoryDivider} />
+            </View>
+          )}
+          keyExtractor={item => item.id}
+          scrollEnabled={false}
+          ListEmptyComponent={null}
+        />
+      </ScrollView>
 
       <TrustMarksModal />
-    </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -435,11 +535,15 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2a2a2a',
+    paddingVertical: 16,
+  },
+  title: {
+    fontSize: 24,
+    fontFamily: 'Heebo-Bold',
+    color: '#fff',
   },
   settingsButton: {
     width: 40,
@@ -448,6 +552,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#2a2a2a',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  content: {
+    flex: 1,
   },
   profileSection: {
     alignItems: 'center',
@@ -562,20 +669,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontFamily: 'Heebo-Bold',
     color: '#fff',
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#2a2a2a',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'Heebo-Medium',
   },
   categoriesContainer: {
     gap: 24,
@@ -735,16 +828,20 @@ const styles = StyleSheet.create({
     fontFamily: 'Heebo-Regular',
   },
   showMoreButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    backgroundColor: '#2a2a2a',
-    borderRadius: 8,
-    marginVertical: 10,
+    gap: 4,
   },
   showMoreText: {
-    color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'Heebo-Medium',
+    color: '#6C5CE7',
+  },
+  showMoreIcon: {
+    transform: [{ rotate: '0deg' }],
+  },
+  showMoreIconRotated: {
+    transform: [{ rotate: '90deg' }],
   },
   gridRow: {
     flexDirection: 'row',
