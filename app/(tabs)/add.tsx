@@ -11,10 +11,6 @@ export default function AddScreen() {
       </SafeAreaView>
       
       <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Add New</Text>
-        </View>
-        
         <View style={styles.optionsContainer}>
           <TouchableOpacity 
             style={styles.option}
