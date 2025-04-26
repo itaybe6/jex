@@ -29,7 +29,7 @@ type Product = {
 };
 
 export default function ProductScreen() {
-  const { id } = useLocalSearchParams();
+  const { id, userId } = useLocalSearchParams();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -74,7 +74,11 @@ export default function ProductScreen() {
   };
 
   const handleBackPress = () => {
-    router.back();
+    if (userId) {
+      router.push(`/user/${userId}`);
+    } else {
+      router.back();
+    }
   };
 
   if (loading) {

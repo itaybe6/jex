@@ -250,7 +250,7 @@ export default function UserProfileScreen() {
     <TouchableOpacity 
       key={product.id}
       style={styles.gridItem}
-      onPress={() => handleProductPress(product.id)}
+      onPress={() => router.push({ pathname: `/products/${product.id}`, params: { userId } })}
     >
       <Image 
         source={{ uri: product.image_url }} 
