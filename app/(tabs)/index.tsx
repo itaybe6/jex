@@ -519,7 +519,6 @@ export default function HomeScreen() {
 
   const renderTopSellers = () => (
     <View style={styles.topSellersSection}>
-      <Text style={styles.topSellersTitle}>Top Sellers</Text>
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false}
@@ -555,6 +554,7 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <StatusBar style="light" />
       <SafeAreaView style={styles.safeArea}>
+        {renderTopSellers()}
         <View style={styles.header}>
           <View style={styles.headerButtons}>
             <View style={styles.tabButtons}>
@@ -564,12 +564,12 @@ export default function HomeScreen() {
               >
                 <Text style={[styles.tabButtonText, !showRequests && styles.tabButtonTextActive]}>For You</Text>
               </TouchableOpacity>
-            <TouchableOpacity
+              <TouchableOpacity
                 style={[styles.tabButton, showRequests && styles.tabButtonActive]}
                 onPress={() => setShowRequests(true)}
-            >
+              >
                 <Text style={[styles.tabButtonText, showRequests && styles.tabButtonTextActive]}>Requests</Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
             </View>
             <TouchableOpacity
               style={styles.filterButton}
@@ -580,14 +580,12 @@ export default function HomeScreen() {
           </View>
         </View>
       </SafeAreaView>
-
-          <ScrollView
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-            style={styles.scrollView}
-          >
-        {!showRequests && renderTopSellers()}
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        style={styles.scrollView}
+      >
         {showRequests ? renderRequests() : renderProducts()}
       </ScrollView>
 
@@ -703,7 +701,7 @@ const styles = StyleSheet.create({
   gridItem: {
     backgroundColor: '#1a1a1a',
     borderRadius: 16,
-    marginBottom: 20,
+    marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -716,18 +714,17 @@ const styles = StyleSheet.create({
   },
   gridItemImage: {
     width: '100%',
-    height: undefined,
-    aspectRatio: 1,
+    height: 180,
     resizeMode: 'cover',
   },
   gridItemContent: {
-    padding: 12,
+    padding: 8,
     backgroundColor: '#1a1a1a',
   },
   userInfoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 6,
     backgroundColor: '#1a1a1a',
     borderBottomWidth: 1,
     borderBottomColor: '#2a2a2a',
@@ -945,16 +942,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Heebo-Medium',
   },
   topSellersSection: {
-    paddingTop: 16,
-    paddingBottom: 24,
+    paddingTop: 4,
+    paddingBottom: 0,
     backgroundColor: '#121212',
-  },
-  topSellersTitle: {
-    fontSize: 18,
-    fontFamily: 'Heebo-Bold',
-    color: '#fff',
-    marginBottom: 16,
-    paddingHorizontal: 16,
   },
   topSellersList: {
     paddingHorizontal: 16,

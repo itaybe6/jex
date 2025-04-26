@@ -35,9 +35,7 @@ export default function TabLayout() {
           },
           tabBarActiveTintColor: '#6C5CE7',
           tabBarInactiveTintColor: '#888',
-          tabBarLabelStyle: {
-            fontFamily: 'Heebo-Medium',
-          },
+          tabBarShowLabel: false,
           headerStyle: {
             backgroundColor: '#121212',
           },
