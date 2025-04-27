@@ -49,7 +49,7 @@ export default function ProductScreen() {
         .single();
 
       if (error) throw error;
-      if (!data) throw new Error('מוצר לא נמצא');
+      if (!data) throw new Error('Product not found');
 
       setProduct(data);
     } catch (error: any) {
@@ -78,11 +78,11 @@ export default function ProductScreen() {
 
       if (soldError) {
         console.error('Error marking product as sold:', soldError);
-        throw new Error('אירעה שגיאה בסימון המוצר כנמכר');
+        throw new Error('An error occurred while marking the product as sold');
       }
 
       if (!soldData) {
-        throw new Error('לא הצלחנו לסמן את המוצר כנמכר');
+        throw new Error('Failed to mark the product as sold');
       }
 
       const { error: deleteError } = await supabase
@@ -97,22 +97,22 @@ export default function ProductScreen() {
           .delete()
           .eq('id', soldData.id);
           
-        throw new Error('אירעה שגיאה במחיקת המוצר מהקטלוג');
+        throw new Error('An error occurred while deleting the product from the catalog');
       }
 
       Alert.alert(
-        'הצלחה',
-        'המוצר סומן כנמכר והוסר מהקטלוג',
+        'Success',
+        'The product has been marked as sold and removed from the catalog',
         [
           {
-            text: 'אישור',
+            text: 'OK',
             onPress: () => router.replace(`/(tabs)/profile`)
           }
         ]
       );
     } catch (error: any) {
       console.error('Error in handleMarkAsSold:', error);
-      Alert.alert('שגיאה', error.message || 'אירעה שגיאה בסימון המוצר כנמכר');
+      Alert.alert('Error', error.message || 'An error occurred while marking the product as sold');
     } finally {
       setMarkingAsSold(false);
     }
@@ -122,15 +122,15 @@ export default function ProductScreen() {
     if (!product || !user) return;
     
     Alert.alert(
-      'סימון מוצר כנמכר',
-      'האם אתה בטוח שברצונך לסמן מוצר זה כנמכר? פעולה זו תסיר את המוצר מהקטלוג.',
+      'Mark as Sold',
+      'Are you sure you want to mark this product as sold? This action will remove the product from the catalog.',
       [
         {
-          text: 'ביטול',
+          text: 'Cancel',
           style: 'cancel'
         },
         {
-          text: 'אישור',
+          text: 'OK',
           onPress: handleMarkAsSold,
           style: 'destructive'
         }
@@ -155,7 +155,7 @@ export default function ProductScreen() {
   if (error || !product) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error || 'מוצר לא נמצא'}</Text>
+        <Text style={styles.errorText}>{error || 'Product not found'}</Text>
       </View>
     );
   }
@@ -168,17 +168,17 @@ export default function ProductScreen() {
     if (!product.details) return null;
 
     const detailsToShow = [
-      { label: 'משקל', value: product.details.weight ? `${product.details.weight} קראט` : undefined },
-      { label: 'ניקיון', value: product.details.clarity },
-      { label: 'צבע', value: product.details.color },
-      { label: 'חיתוך', value: product.details.cut },
+      { label: 'Weight', value: product.details.weight ? `${product.details.weight} ct` : undefined },
+      { label: 'Clarity', value: product.details.clarity },
+      { label: 'Color', value: product.details.color },
+      { label: 'Cut', value: product.details.cut },
     ].filter(detail => detail.value);
 
     if (detailsToShow.length === 0) return null;
 
     return (
       <View style={styles.detailsContainer}>
-        <Text style={styles.detailsTitle}>מפרט טכני</Text>
+        <Text style={styles.detailsTitle}>Specifications</Text>
         <View style={styles.detailsGrid}>
           {detailsToShow.map((detail, index) => (
             <View key={index} style={styles.detailItem}>
@@ -204,7 +204,7 @@ export default function ProductScreen() {
         </View>
 
         <View style={styles.categoryContainer}>
-          <Text style={styles.categoryLabel}>קטגוריה:</Text>
+          <Text style={styles.categoryLabel}>Category:</Text>
           <Text style={styles.categoryValue}>{product.category}</Text>
         </View>
 
@@ -219,7 +219,7 @@ export default function ProductScreen() {
             disabled={markingAsSold}
           >
             <Text style={styles.soldButtonText}>
-              {markingAsSold ? 'מסמן כנמכר...' : 'סמן כנמכר'}
+              {markingAsSold ? 'Marking as sold...' : 'Mark as Sold'}
             </Text>
           </TouchableOpacity>
         )}

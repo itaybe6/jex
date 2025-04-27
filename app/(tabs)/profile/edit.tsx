@@ -175,8 +175,8 @@ export default function EditProfileScreen() {
             style={styles.input}
             value={profile.full_name}
             onChangeText={(text) => setProfile({ ...profile, full_name: text })}
-            placeholder="הזן את שמך המלא"
-            textAlign="right"
+            placeholder="Enter your full name"
+            textAlign="left"
           />
         </View>
 
@@ -186,8 +186,8 @@ export default function EditProfileScreen() {
             style={styles.input}
             value={profile.phone}
             onChangeText={(text) => setProfile({ ...profile, phone: text })}
-            placeholder="הזן את מספר הטלפון שלך"
-            textAlign="right"
+            placeholder="Enter your phone number"
+            textAlign="left"
             keyboardType="phone-pad"
           />
         </View>
@@ -198,8 +198,8 @@ export default function EditProfileScreen() {
             style={styles.input}
             value={profile.title}
             onChangeText={(text) => setProfile({ ...profile, title: text })}
-            placeholder="לדוגמה: סוחר יהלומים מוסמך"
-            textAlign="right"
+            placeholder="e.g. Certified Diamond Dealer"
+            textAlign="left"
           />
         </View>
 
@@ -209,8 +209,8 @@ export default function EditProfileScreen() {
             style={styles.input}
             value={profile.website}
             onChangeText={(text) => setProfile({ ...profile, website: text })}
-            placeholder="הזן כתובת אתר"
-            textAlign="right"
+            placeholder="Enter your website URL"
+            textAlign="left"
             keyboardType="url"
             autoCapitalize="none"
           />
@@ -222,10 +222,10 @@ export default function EditProfileScreen() {
             style={[styles.input, styles.textArea]}
             value={profile.bio}
             onChangeText={(text) => setProfile({ ...profile, bio: text })}
-            placeholder="ספר קצת על עצמך..."
+            placeholder="Tell us a bit about yourself..."
             multiline
             numberOfLines={4}
-            textAlign="right"
+            textAlign="left"
             textAlignVertical="top"
           />
         </View>
@@ -236,7 +236,7 @@ export default function EditProfileScreen() {
           disabled={loading}
         >
           <Text style={styles.submitButtonText}>
-            {loading ? 'מעדכן...' : 'שמור שינויים'}
+            {loading ? 'Updating...' : 'Save Changes'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -247,13 +247,14 @@ export default function EditProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#121212',
   },
   imageSection: {
     padding: 20,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#222',
+    backgroundColor: '#121212',
   },
   avatarContainer: {
     position: 'relative',
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
     borderRadius: 60,
   },
   defaultAvatar: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#222',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -273,7 +274,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#6C5CE7',
     borderRadius: 20,
     padding: 8,
   },
@@ -285,24 +286,27 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: '#666',
+    color: '#fff',
     marginBottom: 8,
-    textAlign: 'right',
+    textAlign: 'left',
     fontFamily: 'Heebo-Medium',
   },
   input: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#222',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
     fontFamily: 'Heebo-Regular',
+    color: '#fff',
+    borderWidth: 1,
+    borderColor: '#333',
   },
   textArea: {
     height: 100,
     paddingTop: 12,
   },
   submitButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#6C5CE7',
     paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
