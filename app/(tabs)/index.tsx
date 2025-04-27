@@ -92,9 +92,9 @@ type ProductsByCategory = {
 };
 
 type Profile = {
-  id: string;
-  full_name: string;
-  avatar_url: string | null;
+    id: string;
+    full_name: string;
+    avatar_url: string | null;
   trust_count: number;
 };
 
@@ -204,7 +204,7 @@ export default function HomeScreen() {
     const date = new Date(dateString);
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
+    
     if (diffInSeconds < 60) {
       return 'Just now';
     } else if (diffInSeconds < 3600) {
@@ -305,7 +305,7 @@ export default function HomeScreen() {
       return (
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading...</Text>
-        </View>
+          </View>
       );
     }
 
@@ -326,14 +326,14 @@ export default function HomeScreen() {
       return (
         <View style={styles.itemsGrid}>
           {sortedProducts.map((product) => (
-            <TouchableOpacity
+                  <TouchableOpacity
               key={product.id}
               style={styles.gridItem}
               onPress={() => router.push({
                 pathname: "/products/[id]",
                 params: { id: product.id }
               })}
-            >
+                  >
               <View style={styles.userInfoContainer}>
                 <Image 
                   source={{ 
@@ -343,7 +343,7 @@ export default function HomeScreen() {
                 />
                 <Text style={styles.userNameSmall} numberOfLines={1}>
                   {product.profiles.full_name}
-                </Text>
+                    </Text>
                 <Text style={styles.gridItemTime}>
                   {formatTimeAgo(product.created_at)}
                 </Text>
@@ -354,7 +354,7 @@ export default function HomeScreen() {
               />
               <Text style={styles.gridItemTitle} numberOfLines={2}>
                 {product.title}
-              </Text>
+                    </Text>
               <View style={styles.productDetailsRow}>
                 {product.details?.weight && (
                   <Text style={styles.gridItemWeight}>
@@ -365,9 +365,9 @@ export default function HomeScreen() {
                   ${product.price.toLocaleString()}
                 </Text>
               </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
       );
     }
 
@@ -376,7 +376,7 @@ export default function HomeScreen() {
       return (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No products match your filters</Text>
-        </View>
+          </View>
       );
     }
     return Object.entries(filteredProducts).map(([category, products]) => (
@@ -384,7 +384,7 @@ export default function HomeScreen() {
         <Text style={styles.categoryTitle}>{category}</Text>
         <View style={styles.itemsGrid}>
           {products.map((product) => (
-            <TouchableOpacity
+    <TouchableOpacity 
               key={product.id}
               style={styles.gridItem}
               onPress={() => router.push({
@@ -393,19 +393,19 @@ export default function HomeScreen() {
               })}
             >
               <View style={styles.userInfoContainer}>
-                <Image 
-                  source={{ 
+            <Image 
+              source={{ 
                     uri: product.profiles.avatar_url || 'https://www.gravatar.com/avatar/default?d=mp' 
-                  }} 
+              }} 
                   style={styles.userAvatarSmall} 
-                />
+            />
                 <Text style={styles.userNameSmall} numberOfLines={1}>
                   {product.profiles.full_name}
                 </Text>
                 <Text style={styles.gridItemTime}>
                   {formatTimeAgo(product.created_at)}
                 </Text>
-              </View>
+        </View>
               <Image
                 source={{ uri: product.image_url }}
                 style={styles.gridItemImage}
@@ -422,8 +422,8 @@ export default function HomeScreen() {
                 <Text style={styles.gridItemPrice}>
                   ${product.price.toLocaleString()}
                 </Text>
-              </View>
-            </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
           ))}
         </View>
       </View>
@@ -450,25 +450,25 @@ export default function HomeScreen() {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
+                <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Request Details</Text>
               <TouchableOpacity onPress={() => setShowDetailsModal(false)}>
                 <X size={24} color="#fff" />
               </TouchableOpacity>
-            </View>
+                </View>
 
             <ScrollView style={styles.modalBody}>
               <View style={styles.userInfoModal}>
-                <Image 
-                  source={{ 
+                  <Image 
+                    source={{ 
                     uri: selectedRequest.profiles.avatar_url || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'
-                  }} 
+                    }} 
                   style={styles.avatarModal} 
-                />
+                  />
                 <View>
                   <Text style={styles.userNameModal}>{selectedRequest.profiles.full_name}</Text>
                   <Text style={styles.timeAgoModal}>{formatTimeAgo(selectedRequest.created_at)}</Text>
-                </View>
+                  </View>
               </View>
 
               <View style={styles.detailSection}>
@@ -478,19 +478,19 @@ export default function HomeScreen() {
                   <Text style={styles.detailValue}>
                     {selectedRequest.min_weight}{selectedRequest.max_weight ? `-${selectedRequest.max_weight}` : ''} ct
                   </Text>
-                </View>
+                        </View>
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Cut:</Text>
                   <Text style={styles.detailValue}>{selectedRequest.cut}</Text>
-                </View>
+                        </View>
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Clarity:</Text>
                   <Text style={styles.detailValue}>{selectedRequest.clarity}</Text>
-                </View>
+                        </View>
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Color:</Text>
                   <Text style={styles.detailValue}>{selectedRequest.color}</Text>
-                </View>
+                        </View>
                 {selectedRequest.price && (
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Budget:</Text>
@@ -514,10 +514,10 @@ export default function HomeScreen() {
 
   const renderRequests = () => {
     if (loading) {
-      return (
+  return (
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading...</Text>
-        </View>
+      </View>
       );
     }
 
@@ -546,7 +546,7 @@ export default function HomeScreen() {
                 <View>
                   <Text style={styles.userName}>{request.profiles.full_name}</Text>
                   <Text style={styles.timeAgo}>{formatTimeAgo(request.created_at)}</Text>
-                </View>
+        </View>
               </View>
               {request.price && (
                 <Text style={styles.price}>${request.price.toLocaleString()}</Text>
@@ -563,13 +563,13 @@ export default function HomeScreen() {
               <Text style={styles.specsItem}>Color {request.color}</Text>
             </View>
 
-            <TouchableOpacity 
+        <TouchableOpacity 
               style={styles.respondButton}
               onPress={() => handleRequestPress(request.id)}
-            >
+        >
               <Text style={styles.respondButtonText}>Details</Text>
-            </TouchableOpacity>
-          </View>
+        </TouchableOpacity>
+      </View>
         ))}
       </View>
     );
@@ -583,7 +583,7 @@ export default function HomeScreen() {
         contentContainerStyle={styles.topSellersList}
       >
         {topSellers.map((seller) => (
-          <TouchableOpacity
+            <TouchableOpacity 
             key={seller.id}
             style={styles.topSellerItem}
             onPress={() => router.push(`/user/${seller.id}`)}
@@ -602,10 +602,10 @@ export default function HomeScreen() {
             <Text style={styles.topSellerName} numberOfLines={1}>
               {seller.full_name}
             </Text>
-          </TouchableOpacity>
+            </TouchableOpacity>
         ))}
       </ScrollView>
-    </View>
+          </View>
   );
 
   return (
@@ -616,7 +616,7 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.headerButtons}>
             <View style={styles.tabButtons}>
-              <TouchableOpacity
+            <TouchableOpacity 
                 style={[styles.tabButton, !showRequests && styles.tabButtonActive]}
                 onPress={() => setShowRequests(false)}
               >
@@ -625,17 +625,17 @@ export default function HomeScreen() {
               <TouchableOpacity
                 style={[styles.tabButton, showRequests && styles.tabButtonActive]}
                 onPress={() => setShowRequests(true)}
-              >
+            >
                 <Text style={[styles.tabButtonText, showRequests && styles.tabButtonTextActive]}>Requests</Text>
-              </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
+          </View>
             <TouchableOpacity
               style={styles.filterButton}
               onPress={() => setShowFilterModal(true)}
             >
               <Filter size={24} color="#fff" />
             </TouchableOpacity>
-          </View>
+      </View>
         </View>
       </SafeAreaView>
       <ScrollView

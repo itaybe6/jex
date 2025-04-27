@@ -377,99 +377,89 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}> </Text>
-        <TouchableOpacity 
-          style={styles.settingsButton}
-          onPress={handleSettingsPress}
-        >
-          <Settings size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
-      
       <ScrollView style={styles.content}>
-        <View style={styles.profileSection}>
-          <View style={styles.profileImageContainer}>
-            <Image
-              source={{ 
-                uri: profile.avatar_url || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=800&auto=format&fit=crop&q=60'
-              }}
-              style={styles.profileImage}
-            />
-          </View>
+      <View style={styles.profileSection}>
+        <View style={styles.profileImageContainer}>
+          <Image
+            source={{ 
+              uri: profile.avatar_url || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=800&auto=format&fit=crop&q=60'
+            }}
+            style={styles.profileImage}
+          />
+        </View>
 
-          <TouchableOpacity 
-            style={styles.editButton}
-            onPress={handleEditProfile}
-          >
-            <Text style={styles.editButtonText}>Edit Profile</Text>
-          </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.editButton}
+          onPress={handleEditProfile}
+        >
+          <Text style={styles.editButtonText}>Edit Profile</Text>
+        </TouchableOpacity>
 
-          <Text style={styles.userName}>{profile.full_name}</Text>
-          {profile.title ? <Text style={styles.userTitle}>{profile.title}</Text> : null}
-          
-          <View style={styles.bioWebsiteContainer}>
-            {profile.bio ? (
-              <Text style={styles.bio}>{profile.bio}</Text>
-            ) : null}
+        <Text style={styles.userName}>{profile.full_name}</Text>
+        {profile.title ? <Text style={styles.userTitle}>{profile.title}</Text> : null}
+        
+        <View style={styles.bioWebsiteContainer}>
+          {profile.bio ? (
+            <Text style={styles.bio}>{profile.bio}</Text>
+          ) : null}
 
-            {profile.website ? (
-              <TouchableOpacity 
-                style={styles.websiteButton}
-                onPress={handleWebsitePress}
-              >
-                <LinkIcon size={16} color="#fff" />
-                <Text style={styles.websiteText}>{profile.website}</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-
-          {user && <AvatarGroup userId={user.id} />}
-
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{totalProducts}</Text>
-              <Text style={styles.statLabel}>Products</Text>
-            </View>
+          {profile.website ? (
             <TouchableOpacity 
-              style={styles.statItem}
-              onPress={handleShowTrustMarks}
+              style={styles.websiteButton}
+              onPress={handleWebsitePress}
             >
-              <Text style={[styles.statNumber, styles.statNumberClickable]}>
-                {profile.trust_count}
-              </Text>
-              <Text style={[styles.statLabel, styles.statLabelClickable]}>
-                TrustMarks
-              </Text>
+                <LinkIcon size={16} color="#fff" />
+              <Text style={styles.websiteText}>{profile.website}</Text>
             </TouchableOpacity>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{profile.sold_count}</Text>
-              <Text style={styles.statLabel}>Transactions</Text>
-            </View>
-          </View>
+          ) : null}
         </View>
 
-        <View style={styles.catalogSection}>
-          <View style={styles.catalogHeader}>
-            <Text style={styles.catalogTitle}>My Catalog</Text>
-          </View>
+        {user && <AvatarGroup userId={user.id} />}
 
-          {totalProducts === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No products in catalog</Text>
-              <Text style={styles.emptySubtext}>Click 'Add Product' to get started</Text>
-            </View>
-          ) : (
-            <View style={styles.categoriesContainer}>
-              {Object.entries(productsByCategory).map(([category, products]) => (
-                <View key={category}>
-                  {renderCategorySection(category, products)}
-                  <View style={styles.categoryDivider} />
-                </View>
-              ))}
-            </View>
-          )}
+        <View style={styles.statsContainer}>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{totalProducts}</Text>
+            <Text style={styles.statLabel}>Products</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.statItem}
+            onPress={handleShowTrustMarks}
+          >
+            <Text style={[styles.statNumber, styles.statNumberClickable]}>
+              {profile.trust_count}
+            </Text>
+            <Text style={[styles.statLabel, styles.statLabelClickable]}>
+              TrustMarks
+            </Text>
+          </TouchableOpacity>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{profile.sold_count}</Text>
+            <Text style={styles.statLabel}>Transactions</Text>
+          </View>
         </View>
+      </View>
+
+      <View style={styles.catalogSection}>
+        <View style={styles.catalogHeader}>
+          <Text style={styles.catalogTitle}>My Catalog</Text>
+        </View>
+
+        {totalProducts === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No products in catalog</Text>
+            <Text style={styles.emptySubtext}>Click 'Add Product' to get started</Text>
+          </View>
+        ) : (
+          <View style={styles.categoriesContainer}>
+            {Object.entries(productsByCategory).map(([category, products]) => (
+              <View key={category}>
+                {renderCategorySection(category, products)}
+                <View style={styles.categoryDivider} />
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
 
         <FlatList
           data={categories}
@@ -484,7 +474,7 @@ export default function ProfileScreen() {
                       onPress={() => toggleCategory(category.id)}
                     >
                       <Text style={styles.showMoreText}>
-                        {expandedCategories.has(category.id) ? 'הצג פחות' : 'הצג עוד'}
+                        {expandedCategories.has(category.id) ? 'Show Less' : 'Show More'}
                       </Text>
                       <ChevronRight 
                         size={16} 
@@ -532,26 +522,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#fff',
     fontFamily: 'Heebo-Regular',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontFamily: 'Heebo-Bold',
-    color: '#fff',
-  },
-  settingsButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#2a2a2a',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   content: {
     flex: 1,

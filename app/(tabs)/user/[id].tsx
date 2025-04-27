@@ -297,7 +297,7 @@ export default function UserProfileScreen() {
         ) : (
           <View style={[styles.avatar, styles.defaultAvatar]}>
             <User size={50} color="#666" />
-          </View>
+        </View>
         )}
         <Text style={styles.name}>{profile?.full_name}</Text>
         {profile?.title && <Text style={styles.title}>{profile.title}</Text>}
@@ -315,28 +315,28 @@ export default function UserProfileScreen() {
 
         <View style={styles.actionsContainer}>
           {user?.id !== userId && (
-            <TouchableOpacity
+          <TouchableOpacity 
               style={[styles.actionButton, hasTrusted && styles.actionButtonActive]}
-              onPress={handleTrustMark}
-              disabled={trustLoading}
-            >
+            onPress={handleTrustMark}
+            disabled={trustLoading}
+          >
               <Shield size={20} color={hasTrusted ? '#fff' : '#007AFF'} />
               <Text style={[styles.actionButtonText, hasTrusted && styles.actionButtonTextActive]}>
-                {hasTrusted ? 'Trusted' : 'Mark as Trusted'}
-              </Text>
-            </TouchableOpacity>
-          )}
+              {hasTrusted ? 'Trusted' : 'Mark as Trusted'}
+            </Text>
+          </TouchableOpacity>
+        )}
 
           {profile?.phone && (
-            <TouchableOpacity
+          <TouchableOpacity 
               style={[styles.actionButton, styles.whatsappButton]}
               onPress={handleWhatsAppPress}
-            >
+          >
               <MessageCircle size={20} color="#fff" />
               <Text style={[styles.actionButtonText, styles.whatsappButtonText]}>
                 WhatsApp
-              </Text>
-            </TouchableOpacity>
+            </Text>
+          </TouchableOpacity>
           )}
 
           {profile?.website && (

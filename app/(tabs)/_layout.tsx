@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Home, User, Search, Plus } from 'lucide-react-native';
+import { Home, User, Search, Plus, Settings } from 'lucide-react-native';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { TopHeader } from '@/components/TopHeader';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -72,6 +72,13 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
+          name="settings"
+          options={{
+            title: 'Settings',
+            tabBarIcon: ({ color }) => <Settings size={24} color={color} />,
+          }}
+        />
+        <Tabs.Screen
           name="profile"
           options={{
             title: 'Profile',
@@ -86,12 +93,6 @@ export default function TabLayout() {
         />
         <Tabs.Screen
           name="user/[id]"
-          options={{
-            href: null
-          }}
-        />
-        <Tabs.Screen
-          name="settings"
           options={{
             href: null
           }}
