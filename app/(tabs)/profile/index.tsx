@@ -432,10 +432,13 @@ export default function ProfileScreen() {
               TrustMarks
             </Text>
           </TouchableOpacity>
-          <View style={styles.statItem}>
+          <TouchableOpacity 
+            style={styles.statItem}
+            onPress={() => router.push('./transactions')}
+          >
             <Text style={styles.statNumber}>{profile.sold_count}</Text>
             <Text style={styles.statLabel}>Transactions</Text>
-          </View>
+          </TouchableOpacity>
         </View>
       </View>
 

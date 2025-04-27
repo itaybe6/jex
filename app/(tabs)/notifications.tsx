@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert } from 'react-native';
 import { Settings } from 'lucide-react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import React from 'react';
 
 type Notification = {
   id: string;
@@ -19,6 +20,8 @@ type Notification = {
 export default function NotificationsScreen() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -95,12 +98,94 @@ export default function NotificationsScreen() {
     }
   };
 
+  const handleDealAction = async (notification: Notification, approve: boolean) => {
+    setActionLoading(notification.id);
+    setActionError(null);
+    try {
+      const { transaction_id, product_title, seller_id, product_id } = notification.data;
+      const { error: txError } = await supabase
+        .from('transactions')
+        .update({ status: approve ? 'approved' : 'rejected' })
+        .eq('id', transaction_id);
+      if (txError) throw txError;
+      if (approve && product_id) {
+        if (user?.id === seller_id) {
+          console.log('User is product owner, deleting product:', product_id);
+          const { data: deleted, error: deleteError } = await supabase
+            .from('products')
+            .delete()
+            .eq('id', product_id);
+          console.log('Delete result:', deleted, deleteError);
+          if (deleteError) {
+            console.log('Delete product error:', deleteError);
+            throw deleteError;
+          }
+          console.log('Product deleted');
+        } else {
+          console.log('User is not product owner, skipping product delete');
+        }
+      }
+      const { error: notifError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: seller_id,
+          type: 'deal_' + (approve ? 'approved' : 'rejected'),
+          data: {
+            transaction_id,
+            product_title,
+            buyer_id: user?.id,
+            product_id,
+            sender_id: user?.id,
+            sender_name: user?.user_metadata?.full_name || user?.email || 'User',
+            sender_avatar: user?.user_metadata?.avatar_url || null,
+            message: approve
+              ? 'The deal was approved successfully.'
+              : 'The deal was rejected.',
+          },
+          read: false,
+        });
+      if (notifError) throw notifError;
+      await markAsRead(notification.id);
+      setNotifications(prev => prev.filter(n => n.id !== notification.id));
+      Alert.alert(
+        approve ? 'Deal Approved' : 'Deal Rejected',
+        approve ? 'You have approved the deal.' : 'You have rejected the deal.'
+      );
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to update deal');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      if (!user) return;
+      await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', user.id)
+        .eq('read', false);
+      fetchNotifications();
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      markAllAsRead();
+    }, [user])
+  );
+
   const renderNotification = (notification: Notification) => {
     const { type, data } = notification;
     
     let title = '';
     let description = '';
     let image = null;
+    const senderName = data.sender_name;
+    const senderAvatar = data.sender_avatar;
 
     if (type === 'new_product') {
       title = 'New Product Listed';
@@ -109,6 +194,90 @@ export default function NotificationsScreen() {
     } else if (type === 'new_request') {
       title = 'New Request Posted';
       description = `Someone is looking for a ${data.cut} diamond, ${data.weight}ct, ${data.clarity}, color ${data.color}`;
+    } else if (type === 'deal_request') {
+      const displayName = senderName || 'Unknown User';
+      const displayAvatar = senderAvatar || 'https://ui-avatars.com/api/?name=User';
+      return (
+        <View key={notification.id} style={[styles.notificationCard, !notification.read && styles.unreadCard]}>
+          <View style={styles.notificationContent}>
+            <Text style={styles.notificationTitle}>Deal Request</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              <Image source={{ uri: displayAvatar }} style={{ width: 32, height: 32, borderRadius: 16, marginRight: 8, backgroundColor: '#444' }} />
+              <Text style={{ color: '#fff', fontSize: 14 }}>{displayName}</Text>
+            </View>
+            <Text style={styles.notificationDescription}>{description}</Text>
+            <Text style={styles.notificationTime}>{new Date(notification.created_at).toLocaleDateString()}</Text>
+            {actionError && actionLoading === notification.id && (
+              <Text style={{ color: 'red', marginVertical: 4 }}>{actionError}</Text>
+            )}
+            <View style={{ flexDirection: 'row', marginTop: 8 }}>
+              <TouchableOpacity
+                style={[styles.soldButton, { backgroundColor: '#4CAF50', flex: 1, marginRight: 8, opacity: actionLoading && actionLoading === notification.id ? 0.5 : 1 }]}
+                onPress={() => handleDealAction(notification, true)}
+                disabled={!!actionLoading}
+              >
+                {actionLoading === notification.id ? <ActivityIndicator color="#fff" /> : <Text style={styles.soldButtonText}>Approve</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.soldButton, { backgroundColor: '#FF3B30', flex: 1, opacity: actionLoading && actionLoading === notification.id ? 0.5 : 1 }]}
+                onPress={() => handleDealAction(notification, false)}
+                disabled={!!actionLoading}
+              >
+                {actionLoading === notification.id ? <ActivityIndicator color="#fff" /> : <Text style={styles.soldButtonText}>Reject</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      );
+    } else if (type === 'deal_approved' || type === 'deal_rejected') {
+      return (
+        <View key={notification.id} style={[styles.notificationCard, !notification.read && styles.unreadCard]}>
+          <View style={styles.notificationContent}>
+            <Text style={styles.notificationTitle}>{type === 'deal_approved' ? 'Deal Approved' : 'Deal Rejected'}</Text>
+            {senderName && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                {senderAvatar && (
+                  <Image source={{ uri: senderAvatar }} style={{ width: 32, height: 32, borderRadius: 16, marginRight: 8 }} />
+                )}
+                <Text style={{ color: '#fff', fontSize: 14 }}>{senderName}</Text>
+              </View>
+            )}
+            <Text style={styles.notificationDescription}>{data.message || (type === 'deal_approved' ? 'The deal was approved. You can now remove the product from your catalog.' : 'The deal was rejected.')}</Text>
+            <Text style={styles.notificationTime}>{new Date(notification.created_at).toLocaleDateString()}</Text>
+            {type === 'deal_approved' && (
+              <TouchableOpacity
+                style={[styles.soldButton, { backgroundColor: '#FF3B30', marginTop: 8 }]}
+                onPress={async () => {
+                  setActionLoading(notification.id);
+                  setActionError(null);
+                  try {
+                    const { product_id } = data;
+                    if (!product_id) throw new Error('Missing product_id');
+                    const { data: deleted, error: deleteError } = await supabase
+                      .from('products')
+                      .delete()
+                      .eq('id', product_id);
+                    if (deleteError) throw deleteError;
+                    await markAsRead(notification.id);
+                    setNotifications(prev => prev.filter(n => n.id !== notification.id));
+                    Alert.alert('Product Removed', 'The product was removed from your catalog.');
+                  } catch (err: any) {
+                    setActionError(err.message || 'Failed to remove product');
+                  } finally {
+                    setActionLoading(null);
+                  }
+                }}
+                disabled={!!actionLoading}
+              >
+                {actionLoading === notification.id ? <ActivityIndicator color="#fff" /> : <Text style={styles.soldButtonText}>Finish & Remove Product</Text>}
+              </TouchableOpacity>
+            )}
+            {actionError && actionLoading === notification.id && (
+              <Text style={{ color: 'red', marginVertical: 4 }}>{actionError}</Text>
+            )}
+          </View>
+        </View>
+      );
     }
 
     return (
@@ -234,5 +403,19 @@ const styles = StyleSheet.create({
     color: '#888',
     textAlign: 'center',
     marginHorizontal: 20,
+  },
+  soldButton: {
+    backgroundColor: '#6C5CE7',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 0,
+    marginBottom: 0,
+    marginHorizontal: 0,
+  },
+  soldButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Heebo-Medium',
   },
 });
