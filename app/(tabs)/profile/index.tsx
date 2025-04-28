@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Modal } from 'react-native';
 import { Settings, Plus, Link as LinkIcon, X, ChevronRight } from 'lucide-react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { AvatarGroup } from '@/components/AvatarGroup';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlatList } from 'react-native';
+import React from 'react';
 
 const GRID_SPACING = 8; // Increased spacing between items
 const NUM_COLUMNS = 3;
@@ -71,6 +72,15 @@ export default function ProfileScreen() {
       fetchProducts();
     }
   }, [user]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user) {
+        fetchProfile();
+        fetchProducts();
+      }
+    }, [user])
+  );
 
   const fetchProfile = async () => {
     try {
@@ -382,7 +392,9 @@ export default function ProfileScreen() {
         <View style={styles.profileImageContainer}>
           <Image
             source={{ 
-              uri: profile.avatar_url || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=800&auto=format&fit=crop&q=60'
+              uri: profile.avatar_url 
+                ? profile.avatar_url + `?t=${new Date().getTime()}`
+                : 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=800&auto=format&fit=crop&q=60'
             }}
             style={styles.profileImage}
           />

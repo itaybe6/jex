@@ -201,11 +201,30 @@ export default function NotificationsScreen() {
         <View key={notification.id} style={[styles.notificationCard, !notification.read && styles.unreadCard]}>
           <View style={styles.notificationContent}>
             <Text style={styles.notificationTitle}>Deal Request</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
               <Image source={{ uri: displayAvatar }} style={{ width: 32, height: 32, borderRadius: 16, marginRight: 8, backgroundColor: '#444' }} />
               <Text style={{ color: '#fff', fontSize: 14 }}>{displayName}</Text>
             </View>
-            <Text style={styles.notificationDescription}>{description}</Text>
+            <View style={styles.dealProductBox}>
+              {data.product_image_url && (
+                <Image source={{ uri: data.product_image_url }} style={styles.dealProductImage} />
+              )}
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                {data.product_title && (
+                  <Text style={styles.dealProductTitle}>{data.product_title}</Text>
+                )}
+                {data.product_description && (
+                  <Text style={styles.dealProductDesc}>{data.product_description}</Text>
+                )}
+                {typeof data.price !== 'undefined' && (
+                  <View style={styles.dealProductPriceRow}>
+                    <Text style={styles.dealProductPriceIcon}>💰</Text>
+                    <Text style={styles.dealProductPrice}>{data.price} ₪</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+            <Text style={[styles.notificationDescription, {marginTop: 8}]}>{description}</Text>
             <Text style={styles.notificationTime}>{new Date(notification.created_at).toLocaleDateString()}</Text>
             {actionError && actionLoading === notification.id && (
               <Text style={{ color: 'red', marginVertical: 4 }}>{actionError}</Text>
@@ -417,5 +436,52 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontFamily: 'Heebo-Medium',
+  },
+  dealProductBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#23232b',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 8,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: '#444',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  dealProductImage: {
+    width: 54,
+    height: 54,
+    borderRadius: 8,
+    marginRight: 8,
+    backgroundColor: '#1a1a1a',
+  },
+  dealProductTitle: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  dealProductDesc: {
+    color: '#aaa',
+    fontSize: 13,
+    marginBottom: 2,
+  },
+  dealProductPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  dealProductPriceIcon: {
+    fontSize: 16,
+    marginRight: 3,
+  },
+  dealProductPrice: {
+    color: '#6C5CE7',
+    fontSize: 15,
+    fontWeight: 'bold',
   },
 });

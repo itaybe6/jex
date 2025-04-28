@@ -337,7 +337,9 @@ export default function HomeScreen() {
               <View style={styles.userInfoContainer}>
                 <Image 
                   source={{ 
-                    uri: product.profiles.avatar_url || 'https://www.gravatar.com/avatar/default?d=mp' 
+                    uri: product.profiles.avatar_url 
+                      ? product.profiles.avatar_url + `?t=${new Date().getTime()}`
+                      : 'https://www.gravatar.com/avatar/default?d=mp' 
                   }} 
                   style={styles.userAvatarSmall} 
                 />
@@ -395,7 +397,9 @@ export default function HomeScreen() {
               <View style={styles.userInfoContainer}>
             <Image 
               source={{ 
-                    uri: product.profiles.avatar_url || 'https://www.gravatar.com/avatar/default?d=mp' 
+                    uri: product.profiles.avatar_url 
+                      ? product.profiles.avatar_url + `?t=${new Date().getTime()}`
+                      : 'https://www.gravatar.com/avatar/default?d=mp' 
               }} 
                   style={styles.userAvatarSmall} 
             />

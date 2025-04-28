@@ -39,6 +39,7 @@ export default function ProductScreen() {
   const [dealError, setDealError] = useState<string | null>(null);
   const [dealSuccess, setDealSuccess] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [dealPrice, setDealPrice] = useState<string>('');
 
   useEffect(() => {
     if (productId) {
@@ -171,6 +172,10 @@ export default function ProductScreen() {
 
   const sendDealRequest = async () => {
     if (!product || !user || !selectedBuyer) return;
+    if (!dealPrice || isNaN(Number(dealPrice)) || Number(dealPrice) <= 0) {
+      setDealError('Please enter a valid price');
+      return;
+    }
     setDealLoading(true);
     setDealError(null);
     try {
@@ -187,28 +192,38 @@ export default function ProductScreen() {
           product_id: product.id,
           seller_id: user.id,
           buyer_id: selectedBuyer.id,
-          price: product.price,
+          price: Number(dealPrice),
           status: 'pending',
         })
         .select()
         .single();
       if (transactionError) throw transactionError;
-      // 2. שלח notification לקונה
+      // שלב 1: בנה את אובייקט ההתראה הקיים (אם יש)
+      let baseNotificationData: any = {};
+      if (transaction && transaction.data) {
+        baseNotificationData = { ...transaction.data };
+      }
+      // שלב 2: הוסף/דרוס רק את השדות החדשים
+      const notificationData = {
+        ...baseNotificationData,
+        // שדות חדשים ודורסים
+        transaction_id: transaction.id,
+        product_id: product.id,
+        seller_id: user.id,
+        sender_id: user.id,
+        sender_name: profile?.full_name || user.email || 'User',
+        sender_avatar: profile?.avatar_url || null,
+        price: Number(dealPrice),
+        product_title: product.title,
+        product_image_url: product.image_url,
+        product_description: product.description,
+      };
       const { error: notifError } = await supabase
         .from('notifications')
         .insert({
           user_id: selectedBuyer.id,
           type: 'deal_request',
-          data: {
-            transaction_id: transaction.id,
-            product_id: product.id,
-            seller_id: user.id,
-            price: product.price,
-            product_title: product.title,
-            sender_id: user.id,
-            sender_name: profile?.full_name || user.email || 'User',
-            sender_avatar: profile?.avatar_url || null,
-          },
+          data: notificationData,
           read: false,
         });
       if (notifError) throw notifError;
@@ -216,6 +231,7 @@ export default function ProductScreen() {
       setTimeout(() => {
         setDealSuccess(false);
         closeBuyerModal();
+        setDealPrice('');
       }, 1500);
     } catch (err: any) {
       setDealError(err.message || 'Failed to send deal request');
@@ -329,6 +345,17 @@ export default function ProductScreen() {
                 placeholderTextColor="#aaa"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
+              />
+            </View>
+            <View style={{ width: '100%', marginBottom: 12 }}>
+              <Text style={styles.priceInputLabel}>Enter Price</Text>
+              <TextInput
+                style={styles.priceInput}
+                placeholder="Enter price..."
+                placeholderTextColor="#aaa"
+                value={dealPrice}
+                onChangeText={setDealPrice}
+                keyboardType="numeric"
               />
             </View>
             {usersLoading ? (
@@ -622,5 +649,25 @@ const styles = StyleSheet.create({
   sendButtonDisabled: {
     backgroundColor: '#a15a56',
     opacity: 0.7,
+  },
+  priceInputLabel: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Heebo-Medium',
+    marginBottom: 4,
+    marginLeft: 4,
+  },
+  priceInput: {
+    width: '100%',
+    backgroundColor: '#2a2a2a',
+    color: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 18,
+    fontFamily: 'Heebo-Regular',
+    marginBottom: 0,
+    borderWidth: 1,
+    borderColor: '#333',
   },
 });
