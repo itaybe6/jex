@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Modal } from 'react-native';
-import { Settings, Plus, Link as LinkIcon, X, ChevronRight } from 'lucide-react-native';
+import { Settings, Plus, Link as LinkIcon, X, ChevronRight, ClipboardList } from 'lucide-react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
@@ -65,11 +65,15 @@ export default function ProfileScreen() {
   const [showAllCategories, setShowAllCategories] = useState<Record<string, boolean>>({});
   const [categories, setCategories] = useState<Category[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState<'catalog' | 'requests'>('catalog');
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
 
   useEffect(() => {
     if (user) {
       fetchProfile();
       fetchProducts();
+      fetchUserRequests();
     }
   }, [user]);
 
@@ -372,6 +376,24 @@ export default function ProfileScreen() {
     </Modal>
   );
 
+  const fetchUserRequests = async () => {
+    if (!user) return;
+    setLoadingRequests(true);
+    try {
+      const { data, error } = await supabase
+        .from('diamond_requests')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setRequests(data || []);
+    } catch (err) {
+      setRequests([]);
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
+
   if (loading || !profile) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
@@ -388,138 +410,175 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.content}>
-      <View style={styles.profileSection}>
-        <View style={styles.profileImageContainer}>
-          <Image
-            source={{ 
-              uri: profile.avatar_url 
-                ? profile.avatar_url + `?t=${new Date().getTime()}`
-                : 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=800&auto=format&fit=crop&q=60'
-            }}
-            style={styles.profileImage}
-          />
-        </View>
+        <View style={styles.profileSection}>
+          <View style={styles.profileImageContainer}>
+            <Image
+              source={{ 
+                uri: profile.avatar_url 
+                  ? profile.avatar_url + `?t=${new Date().getTime()}`
+                  : 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=800&auto=format&fit=crop&q=60'
+              }}
+              style={styles.profileImage}
+            />
+          </View>
 
-        <TouchableOpacity 
-          style={styles.editButton}
-          onPress={handleEditProfile}
-        >
-          <Text style={styles.editButtonText}>Edit Profile</Text>
-        </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.editButton}
+            onPress={handleEditProfile}
+          >
+            <Text style={styles.editButtonText}>Edit Profile</Text>
+          </TouchableOpacity>
 
-        <Text style={styles.userName}>{profile.full_name}</Text>
-        {profile.title ? <Text style={styles.userTitle}>{profile.title}</Text> : null}
-        
-        <View style={styles.bioWebsiteContainer}>
-          {profile.bio ? (
-            <Text style={styles.bio}>{profile.bio}</Text>
-          ) : null}
-
-          {profile.website ? (
+          <Text style={styles.userName}>{profile.full_name}</Text>
+          {profile.title ? <Text style={styles.userTitle}>{profile.title}</Text> : null}
+          <View style={styles.bioWebsiteContainer}>
+            {profile.bio ? (
+              <Text style={styles.bio}>{profile.bio}</Text>
+            ) : null}
+            {profile.website ? (
+              <TouchableOpacity 
+                style={styles.websiteButton}
+                onPress={handleWebsitePress}
+              >
+                  <LinkIcon size={16} color="#fff" />
+                <Text style={styles.websiteText}>{profile.website}</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          {user && <AvatarGroup userId={user.id} />}
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{totalProducts}</Text>
+              <Text style={styles.statLabel}>Products</Text>
+            </View>
             <TouchableOpacity 
-              style={styles.websiteButton}
-              onPress={handleWebsitePress}
+              style={styles.statItem}
+              onPress={handleShowTrustMarks}
             >
-                <LinkIcon size={16} color="#fff" />
-              <Text style={styles.websiteText}>{profile.website}</Text>
+              <Text style={[styles.statNumber, styles.statNumberClickable]}>
+                {profile.trust_count}
+              </Text>
+              <Text style={[styles.statLabel, styles.statLabelClickable]}>
+                TrustMarks
+              </Text>
             </TouchableOpacity>
-          ) : null}
+            <TouchableOpacity 
+              style={styles.statItem}
+              onPress={() => router.push(`./profile/transactions?userId=${user?.id}`)}
+              >
+              <Text style={styles.statNumber}>{profile.sold_count}</Text>
+              <Text style={styles.statLabel}>Transactions</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {user && <AvatarGroup userId={user.id} />}
-
-        <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{totalProducts}</Text>
-            <Text style={styles.statLabel}>Products</Text>
+        <View style={styles.catalogSection}>
+          <View style={styles.tabButtonsRow}>
+            <TouchableOpacity
+              style={[styles.tabButton, activeTab === 'catalog' && styles.tabButtonActive]}
+              onPress={() => setActiveTab('catalog')}
+            >
+              <Text style={[styles.tabButtonText, activeTab === 'catalog' && styles.tabButtonTextActive]}>Catalog</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tabButton, activeTab === 'requests' && styles.tabButtonActive]}
+              onPress={() => setActiveTab('requests')}
+            >
+              <Text style={[styles.tabButtonText, activeTab === 'requests' && styles.tabButtonTextActive]}>Requests</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity 
-            style={styles.statItem}
-            onPress={handleShowTrustMarks}
-          >
-            <Text style={[styles.statNumber, styles.statNumberClickable]}>
-              {profile.trust_count}
-            </Text>
-            <Text style={[styles.statLabel, styles.statLabelClickable]}>
-              TrustMarks
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.statItem}
-            onPress={() => router.push('./transactions')}
-          >
-            <Text style={styles.statNumber}>{profile.sold_count}</Text>
-            <Text style={styles.statLabel}>Transactions</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.catalogSection}>
-        <View style={styles.catalogHeader}>
-          <Text style={styles.catalogTitle}>My Catalog</Text>
-        </View>
-
-        {totalProducts === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No products in catalog</Text>
-            <Text style={styles.emptySubtext}>Click 'Add Product' to get started</Text>
-          </View>
-        ) : (
-          <View style={styles.categoriesContainer}>
-            {Object.entries(productsByCategory).map(([category, products]) => (
-              <View key={category}>
-                {renderCategorySection(category, products)}
-                <View style={styles.categoryDivider} />
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
-
-        <FlatList
-          data={categories}
-          renderItem={({ item: category }) => (
-            <View key={category.id}>
-              <View style={styles.categorySection}>
-                <View style={styles.categoryHeader}>
-                  <Text style={styles.categoryTitle}>{category.name}</Text>
-                  {category.products.length > 3 && (
-                    <TouchableOpacity 
-                      style={styles.showMoreButton}
-                      onPress={() => toggleCategory(category.id)}
-                    >
-                      <Text style={styles.showMoreText}>
-                        {expandedCategories.has(category.id) ? 'Show Less' : 'Show More'}
-                      </Text>
-                      <ChevronRight 
-                        size={16} 
-                        color="#6C5CE7" 
-                        style={[
-                          styles.showMoreIcon,
-                          expandedCategories.has(category.id) && styles.showMoreIconRotated
-                        ]} 
-                      />
-                    </TouchableOpacity>
-                  )}
+          {activeTab === 'catalog' && (
+            <>
+              {totalProducts === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No products in catalog</Text>
+                  <Text style={styles.emptySubtext}>Click 'Add Product' to get started</Text>
                 </View>
-                <View style={styles.gridContainer}>
-                  {expandedCategories.has(category.id) ? (
-                    category.products.map(renderProductItem)
-                  ) : (
-                    category.products.slice(0, 3).map(renderProductItem)
-                  )}
+              ) : (
+                <View style={styles.categoriesContainer}>
+                  {Object.entries(productsByCategory).map(([category, products]) => (
+                    <View key={category}>
+                      {renderCategorySection(category, products)}
+                      <View style={styles.categoryDivider} />
+                    </View>
+                  ))}
                 </View>
-              </View>
-              <View style={styles.categoryDivider} />
+              )}
+              <FlatList
+                data={categories}
+                renderItem={({ item: category }) => (
+                  <View key={category.id}>
+                    <View style={styles.categorySection}>
+                      <View style={styles.categoryHeader}>
+                        <Text style={styles.categoryTitle}>{category.name}</Text>
+                        {category.products.length > 3 && (
+                          <TouchableOpacity 
+                            style={styles.showMoreButton}
+                            onPress={() => toggleCategory(category.id)}
+                          >
+                            <Text style={styles.showMoreText}>
+                              {expandedCategories.has(category.id) ? 'Show Less' : 'Show More'}
+                            </Text>
+                            <ChevronRight 
+                              size={16} 
+                              color="#6C5CE7" 
+                              style={[
+                                styles.showMoreIcon,
+                                expandedCategories.has(category.id) && styles.showMoreIconRotated
+                              ]} 
+                            />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                      <View style={styles.gridContainer}>
+                        {expandedCategories.has(category.id) ? (
+                          category.products.map(renderProductItem)
+                        ) : (
+                          category.products.slice(0, 3).map(renderProductItem)
+                        )}
+                      </View>
+                    </View>
+                    <View style={styles.categoryDivider} />
+                  </View>
+                )}
+                keyExtractor={item => item.id}
+                scrollEnabled={false}
+                ListEmptyComponent={null}
+              />
+            </>
+          )}
+          {activeTab === 'requests' && (
+            <View style={styles.requestsSection}>
+              {loadingRequests ? (
+                <Text style={styles.loadingText}>Loading requests...</Text>
+              ) : requests.length === 0 ? (
+                <Text style={styles.emptyText}>No requests found</Text>
+              ) : (
+                requests.map((req) => (
+                  <View key={req.id} style={styles.requestCardImproved}>
+                    <View style={styles.requestHeaderImproved}>
+                      <ClipboardList size={22} color="#6C5CE7" style={{ marginRight: 10 }} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.requestTitleImproved}>{req.cut} {req.min_weight}-{req.max_weight || req.min_weight}ct, {req.clarity}, Color {req.color}</Text>
+                        {req.price && (
+                          <Text style={styles.requestPriceImproved}>Budget: {req.price} ₪</Text>
+                        )}
+                      </View>
+                      <View style={[styles.requestStatusPill, req.status === 'active' ? styles.statusActive : styles.statusOther]}>
+                        <Text style={styles.requestStatusText}>{req.status === 'active' ? 'Active' : req.status}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.requestFooterImproved}>
+                      <Text style={styles.requestDateImproved}>{new Date(req.created_at).toLocaleDateString()}</Text>
+                    </View>
+                  </View>
+                ))
+              )}
             </View>
           )}
-          keyExtractor={item => item.id}
-          scrollEnabled={false}
-          ListEmptyComponent={null}
-        />
+        </View>
+        <TrustMarksModal />
       </ScrollView>
-
-      <TrustMarksModal />
     </SafeAreaView>
   );
 }
@@ -643,77 +702,98 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#2a2a2a',
   },
-  catalogHeader: {
+  tabButtonsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 8,
+    gap: 8,
   },
-  catalogTitle: {
-    fontSize: 24,
-    fontFamily: 'Heebo-Bold',
+  tabButton: {
+    flex: 1,
+    paddingVertical: 10,
+    backgroundColor: '#23232b',
+    borderRadius: 16,
+    marginHorizontal: 6,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  tabButtonActive: {
+    backgroundColor: '#6C5CE7',
+    borderColor: '#6C5CE7',
+  },
+  tabButtonText: {
     color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Heebo-Medium',
   },
-  categoriesContainer: {
-    gap: 24,
+  tabButtonTextActive: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
-  categorySection: {
+  requestsSection: {
     paddingHorizontal: 20,
+    marginTop: 12,
   },
-  categoryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  requestCardImproved: {
+    backgroundColor: '#23232b',
+    borderRadius: 14,
+    padding: 16,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#444',
+    shadowColor: '#000',
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
-  categoryTitle: {
-    fontSize: 20,
-    fontFamily: 'Heebo-Bold',
+  requestHeaderImproved: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  requestTitleImproved: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 2,
   },
-  categoryCount: {
-    fontSize: 14,
-    fontFamily: 'Heebo-Regular',
+  requestPriceImproved: {
+    color: '#6C5CE7',
+    fontSize: 15,
+    marginBottom: 2,
+    fontWeight: '500',
+  },
+  requestStatusPill: {
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
+    marginLeft: 8,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  statusActive: {
+    backgroundColor: '#4CAF50',
+  },
+  statusOther: {
+    backgroundColor: '#888',
+  },
+  requestStatusText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  requestFooterImproved: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 6,
+  },
+  requestDateImproved: {
     color: '#888',
-  },
-  categoryDivider: {
-    height: 1,
-    backgroundColor: '#2a2a2a',
-    marginTop: 24,
-  },
-  gridContainer: {
-    width: '100%',
-  },
-  gridItem: {
-    width: ITEM_WIDTH,
-    height: ITEM_WIDTH,
-    marginBottom: GRID_SPACING,
-    backgroundColor: '#2a2a2a',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  gridImage: {
-    width: '100%',
-    height: '100%',
-  },
-  gridItemOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: 8,
-  },
-  gridItemTitle: {
-    fontSize: 14,
-    fontFamily: 'Heebo-Bold',
-    color: '#fff',
-  },
-  gridItemPrice: {
-    fontSize: 12,
-    fontFamily: 'Heebo-Regular',
-    color: '#fff',
+    fontSize: 13,
   },
   emptyContainer: {
     margin: 20,
@@ -832,5 +912,65 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: GRID_SPACING,
+  },
+  categoriesContainer: {
+    gap: 24,
+  },
+  categorySection: {
+    paddingHorizontal: 20,
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  categoryTitle: {
+    fontSize: 20,
+    fontFamily: 'Heebo-Bold',
+    color: '#fff',
+  },
+  categoryCount: {
+    fontSize: 14,
+    fontFamily: 'Heebo-Regular',
+    color: '#888',
+  },
+  categoryDivider: {
+    height: 1,
+    backgroundColor: '#2a2a2a',
+    marginTop: 24,
+  },
+  gridContainer: {
+    width: '100%',
+  },
+  gridItem: {
+    width: ITEM_WIDTH,
+    height: ITEM_WIDTH,
+    marginBottom: GRID_SPACING,
+    backgroundColor: '#2a2a2a',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  gridImage: {
+    width: '100%',
+    height: '100%',
+  },
+  gridItemOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 8,
+  },
+  gridItemTitle: {
+    fontSize: 14,
+    fontFamily: 'Heebo-Bold',
+    color: '#fff',
+  },
+  gridItemPrice: {
+    fontSize: 12,
+    fontFamily: 'Heebo-Regular',
+    color: '#fff',
   },
 });

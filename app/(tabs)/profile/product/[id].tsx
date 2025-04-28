@@ -297,37 +297,37 @@ export default function ProductScreen() {
 
   return (
     <>
-      <ScrollView style={styles.container}>
-        <Image source={{ uri: product.image_url }} style={styles.image} />
-        
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <Text style={styles.title}>{product.title}</Text>
-            <Text style={styles.price}>{formatPrice(product.price)}</Text>
-          </View>
-
-          <View style={styles.categoryContainer}>
-            <Text style={styles.categoryLabel}>Category:</Text>
-            <Text style={styles.categoryValue}>{product.category}</Text>
-          </View>
-
-          <Text style={styles.description}>{product.description}</Text>
-
-          {renderDetails()}
-
-          {isOwner && (
-            <TouchableOpacity
-              style={[styles.soldButton, markingAsSold && styles.soldButtonDisabled]}
-              onPress={confirmMarkAsSold}
-              disabled={markingAsSold}
-            >
-              <Text style={styles.soldButtonText}>
-                {markingAsSold ? 'Marking as sold...' : 'Mark as Sold'}
-              </Text>
-            </TouchableOpacity>
-          )}
+    <ScrollView style={styles.container}>
+      <Image source={{ uri: product.image_url }} style={styles.image} />
+      
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.title}>{product.title}</Text>
+          <Text style={styles.price}>{formatPrice(product.price)}</Text>
         </View>
-      </ScrollView>
+
+        <View style={styles.categoryContainer}>
+            <Text style={styles.categoryLabel}>Category:</Text>
+          <Text style={styles.categoryValue}>{product.category}</Text>
+        </View>
+
+        <Text style={styles.description}>{product.description}</Text>
+
+        {renderDetails()}
+
+        {isOwner && (
+          <TouchableOpacity
+            style={[styles.soldButton, markingAsSold && styles.soldButtonDisabled]}
+            onPress={confirmMarkAsSold}
+            disabled={markingAsSold}
+          >
+            <Text style={styles.soldButtonText}>
+                {markingAsSold ? 'Marking as sold...' : 'Mark as Sold'}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </ScrollView>
       {/* Buyer Selection Modal */}
       <Modal
         visible={buyerModalVisible}

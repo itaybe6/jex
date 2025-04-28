@@ -2,27 +2,29 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 export default function TransactionsScreen() {
   const { user } = useAuth();
+  const params = useLocalSearchParams();
+  const userId = typeof params.userId === 'string' ? params.userId : user?.id;
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) fetchTransactions();
-  }, [user]);
+    if (userId) fetchTransactions();
+  }, [userId]);
 
   const fetchTransactions = async () => {
-    if (!user) return;
+    if (!userId) return;
     setLoading(true);
     setError(null);
     try {
       const { data, error } = await supabase
         .from('transactions')
         .select(`*, products(*), profiles:seller_id(full_name, avatar_url), buyer:buyer_id(full_name, avatar_url)`)
-        .or(`seller_id.eq.${user.id},buyer_id.eq.${user.id}`)
+        .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`)
         .order('created_at', { ascending: false });
       if (error) throw error;
       setTransactions(data || []);

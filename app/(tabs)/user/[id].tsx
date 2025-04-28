@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Alert, Modal, Linking } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { Link as LinkIcon, Shield, X, MessageCircle, User } from 'lucide-react-native';
+import { Link as LinkIcon, Shield, X, MessageCircle, User, ClipboardList } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 
 const GRID_SPACING = 2;
@@ -47,11 +47,15 @@ export default function UserProfileScreen() {
   const [showTrustMarks, setShowTrustMarks] = useState(false);
   const [loadingTrustMarks, setLoadingTrustMarks] = useState(false);
   const [trustMarks, setTrustMarks] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'catalog' | 'requests'>('catalog');
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
 
   useEffect(() => {
     if (userId) {
       fetchProfile();
       fetchProducts();
+      fetchUserRequests();
       if (user) {
         checkTrustStatus();
       }
@@ -159,7 +163,7 @@ export default function UserProfileScreen() {
 
   const handleUserPress = (userId: string) => {
     setShowTrustMarks(false);
-    router.push(`/profile/${userId}`);
+    router.push({ pathname: '/user/[id]', params: { id: userId } });
   };
 
   const fetchTrustMarks = async () => {
@@ -216,6 +220,23 @@ export default function UserProfileScreen() {
     }
   };
 
+  const fetchUserRequests = async () => {
+    setLoadingRequests(true);
+    try {
+      const { data, error } = await supabase
+        .from('diamond_requests')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setRequests(data || []);
+    } catch (err) {
+      setRequests([]);
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
+
   const handleWhatsAppPress = () => {
     if (profile?.phone) {
       // נקה את מספר הטלפון מכל תווים שאינם ספרות
@@ -250,7 +271,7 @@ export default function UserProfileScreen() {
     <TouchableOpacity 
       key={product.id}
       style={styles.gridItem}
-      onPress={() => router.push({ pathname: `/products/${product.id}`, params: { userId } })}
+      onPress={() => router.push({ pathname: '/products/[id]', params: { id: product.id, userId } })}
     >
       <Image 
         source={{ uri: product.image_url }} 
@@ -311,6 +332,13 @@ export default function UserProfileScreen() {
             <Text style={styles.statValue}>{profile?.sold_count || 0}</Text>
             <Text style={styles.statLabel}>Sales</Text>
           </View>
+          <TouchableOpacity
+            style={styles.statItem}
+            onPress={() => router.push({ pathname: '/profile/transactions', params: { userId: profile?.id } })}
+          >
+            <Text style={styles.statValue}>{profile?.sold_count || 0}</Text>
+            <Text style={styles.statLabel}>Transactions</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.actionsContainer}>
@@ -351,16 +379,59 @@ export default function UserProfileScreen() {
       </View>
 
       <View style={styles.catalogSection}>
-        <Text style={styles.catalogTitle}>Catalog</Text>
-        
-        {totalProducts === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No products in catalog</Text>
-          </View>
-        ) : (
-          <View style={styles.categoriesContainer}>
-            {Object.entries(productsByCategory).map(([category, products]) => 
-              renderCategorySection(category, products)
+        <View style={styles.tabButtonsRow}>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'catalog' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('catalog')}
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'catalog' && styles.tabButtonTextActive]}>Catalog</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'requests' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('requests')}
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'requests' && styles.tabButtonTextActive]}>Requests</Text>
+          </TouchableOpacity>
+        </View>
+        {activeTab === 'catalog' && (
+          totalProducts === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No products in catalog</Text>
+            </View>
+          ) : (
+            <View style={styles.categoriesContainer}>
+              {Object.entries(productsByCategory).map(([category, products]) => 
+                renderCategorySection(category, products)
+              )}
+            </View>
+          )
+        )}
+        {activeTab === 'requests' && (
+          <View style={styles.requestsSection}>
+            {loadingRequests ? (
+              <Text style={styles.loadingText}>Loading requests...</Text>
+            ) : requests.length === 0 ? (
+              <Text style={styles.emptyText}>No requests found</Text>
+            ) : (
+              requests.map((req) => (
+                <View key={req.id} style={styles.requestCardImproved}>
+                  <View style={styles.requestHeaderImproved}>
+                    <ClipboardList size={22} color="#6C5CE7" style={{ marginRight: 10 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.requestTitleImproved}>{req.cut} {req.min_weight}-{req.max_weight || req.min_weight}ct, {req.clarity}, Color {req.color}</Text>
+                      {req.price && (
+                        <Text style={styles.requestPriceImproved}>Budget: {req.price} ₪</Text>
+                      )}
+                    </View>
+                    <View style={[styles.requestStatusPill, req.status === 'active' ? styles.statusActive : styles.statusOther]}>
+                      <Text style={styles.requestStatusText}>{req.status === 'active' ? 'Active' : req.status}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.requestFooterImproved}>
+                    <Text style={styles.requestDateImproved}>{new Date(req.created_at).toLocaleDateString()}</Text>
+                  </View>
+                </View>
+              ))
             )}
           </View>
         )}
@@ -442,7 +513,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 60,
-    paddingBottom: 4,
+    paddingBottom: 0,
     backgroundColor: '#121212',
   },
   avatar: {
@@ -514,16 +585,103 @@ const styles = StyleSheet.create({
   },
   catalogSection: {
     paddingHorizontal: 20,
-    paddingTop: 12,
-    borderTopWidth: 1,
+    paddingTop: 0,
+    marginTop: -70,  // הוספה!
+
+    borderTopWidth: 0.5,
     borderTopColor: '#2a2a2a',
     backgroundColor: '#121212',
   },
-  catalogTitle: {
-    fontSize: 20,
-    fontFamily: 'Heebo-Bold',
-    marginBottom: 20,
+  tabButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 8,
+    gap: 8,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 10,
+    backgroundColor: '#23232b',
+    borderRadius: 16,
+    marginHorizontal: 6,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  tabButtonActive: {
+    backgroundColor: '#6C5CE7',
+    borderColor: '#6C5CE7',
+  },
+  tabButtonText: {
     color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Heebo-Medium',
+  },
+  tabButtonTextActive: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  requestsSection: {
+    paddingHorizontal: 20,
+    marginTop: 12,
+  },
+  requestCardImproved: {
+    backgroundColor: '#23232b',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#444',
+    shadowColor: '#000',
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  requestHeaderImproved: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  requestTitleImproved: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  requestPriceImproved: {
+    color: '#6C5CE7',
+    fontSize: 15,
+    marginBottom: 2,
+    fontWeight: '500',
+  },
+  requestStatusPill: {
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
+    marginLeft: 8,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  statusActive: {
+    backgroundColor: '#4CAF50',
+  },
+  statusOther: {
+    backgroundColor: '#888',
+  },
+  requestStatusText: {
+    color: '#fff',
+    fontSize: 13,
+  },
+  requestFooterImproved: {
+    marginTop: 8,
+    alignItems: 'flex-end',
+  },
+  requestDateImproved: {
+    color: '#aaa',
+    fontSize: 12,
   },
   emptyContainer: {
     padding: 40,

@@ -110,19 +110,48 @@ export default function NotificationsScreen() {
       if (txError) throw txError;
       if (approve && product_id) {
         if (user?.id === seller_id) {
-          console.log('User is product owner, deleting product:', product_id);
+          const { data: productData, error: productError } = await supabase
+            .from('products')
+            .select('*')
+            .eq('id', product_id)
+            .single();
+          if (productError) throw productError;
+          const { error: transactionError } = await supabase
+            .from('transactions')
+            .insert({
+              product_id: product_id,
+              seller_id: seller_id,
+              buyer_id: user?.id,
+              price: productData?.price || 0,
+              status: 'approved',
+              created_at: new Date().toISOString(),
+            });
+          if (transactionError) throw transactionError;
           const { data: deleted, error: deleteError } = await supabase
             .from('products')
             .delete()
             .eq('id', product_id);
-          console.log('Delete result:', deleted, deleteError);
           if (deleteError) {
-            console.log('Delete product error:', deleteError);
             throw deleteError;
           }
-          console.log('Product deleted');
         } else {
-          console.log('User is not product owner, skipping product delete');
+          const { data: productData, error: productError } = await supabase
+            .from('products')
+            .select('*')
+            .eq('id', product_id)
+            .single();
+          if (productError) throw productError;
+          const { error: transactionError } = await supabase
+            .from('transactions')
+            .insert({
+              product_id: product_id,
+              seller_id: seller_id,
+              buyer_id: user?.id,
+              price: productData?.price || 0,
+              status: 'approved',
+              created_at: new Date().toISOString(),
+            });
+          if (transactionError) throw transactionError;
         }
       }
       const { error: notifError } = await supabase
