@@ -50,15 +50,18 @@ export default function UserProfileScreen() {
   const [activeTab, setActiveTab] = useState<'catalog' | 'requests'>('catalog');
   const [requests, setRequests] = useState<any[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
+  const [soldCount, setSoldCount] = useState<number>(0);
 
   useEffect(() => {
     if (userId) {
       fetchProfile();
       fetchProducts();
       fetchUserRequests();
+      fetchTrustMarks();
       if (user) {
         checkTrustStatus();
       }
+      fetchSoldCount();
     }
   }, [userId, user]);
 
@@ -294,6 +297,15 @@ export default function UserProfileScreen() {
     </View>
   );
 
+  const fetchSoldCount = async () => {
+    const { count, error } = await supabase
+      .from('transactions')
+      .select('*', { count: 'exact', head: true })
+      .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`)
+      .eq('status', 'approved');
+    if (!error) setSoldCount(count || 0);
+  };
+
   if (loading || !profile) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
@@ -326,25 +338,19 @@ export default function UserProfileScreen() {
         <View style={styles.statsContainer}>
           <TouchableOpacity
             style={styles.statItem}
-            onPress={() => {
-              setShowTrustMarks(true);
-              fetchTrustMarks();
-            }}
+            onPress={() => setShowTrustMarks(true)}
           >
-            <Text style={[styles.statValue, { textDecorationLine: 'underline', color: '#6C5CE7' }]}>{Array.isArray(trustMarks) ? trustMarks.length : 0}</Text>
+            <Text style={[styles.statValue, { textDecorationLine: 'underline', color: '#6C5CE7' }]}>{trustMarks.length}</Text>
             <Text style={[styles.statLabel, { color: '#6C5CE7' }]}>Trust</Text>
           </TouchableOpacity>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{totalProducts}</Text>
             <Text style={styles.statLabel}>Products</Text>
           </View>
-          <TouchableOpacity
-            style={styles.statItem}
-            onPress={() => router.push({ pathname: '/profile/transactions', params: { fromProfileType: 'other', userId: profile?.id } })}
-          >
-            <Text style={styles.statValue}>{profile?.sold_count ?? 0}</Text>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{soldCount}</Text>
             <Text style={styles.statLabel}>Transactions</Text>
-          </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.actionsContainer}>

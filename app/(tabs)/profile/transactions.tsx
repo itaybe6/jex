@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Image, TextInput, Modal, Pressable, Platform } from 'react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
+// @ts-ignore
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function TransactionsScreen() {
   const { user } = useAuth();
@@ -15,6 +17,13 @@ export default function TransactionsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigation = useNavigation();
+  const [activeStatus, setActiveStatus] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
+  const [search, setSearch] = useState('');
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [dateRange, setDateRange] = useState<{start: Date | null, end: Date | null}>({ start: null, end: null });
+  const [tempDateRange, setTempDateRange] = useState<{start: Date | null, end: Date | null}>({ start: null, end: null });
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
 
   useEffect(() => {
     if (userId) fetchTransactions();
@@ -64,10 +73,9 @@ export default function TransactionsScreen() {
   };
 
   const renderItem = ({ item }: { item: any }) => {
-    if (!user) return null;
-    const isSeller = item.seller_id === user.id;
-    const otherUser = isSeller ? item.buyer : item.profiles;
     const product = item.products;
+    const seller = item.profiles; // profiles:seller_id
+    const buyer = item.buyer;     // buyer:buyer_id
     return (
       <View style={styles.card}>
         <View style={styles.row}>
@@ -78,27 +86,191 @@ export default function TransactionsScreen() {
             <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString()}</Text>
           </View>
         </View>
-        <View style={styles.row}>
-          <Image source={{ uri: otherUser?.avatar_url || 'https://via.placeholder.com/40' }} style={styles.avatar} />
-          <Text style={styles.userName}>{otherUser?.full_name || ''}</Text>
-          <Text style={styles.role}>{isSeller ? 'Buyer' : 'Seller'}</Text>
+        <View style={styles.partiesRow}>
+          {/* Seller */}
+          <View style={styles.partyCol}>
+            <Image source={{ uri: seller?.avatar_url || 'https://via.placeholder.com/40' }} style={styles.avatar} />
+            <Text style={styles.userName}>{seller?.full_name || 'Unknown'}</Text>
+            <Text style={styles.role}>Seller</Text>
+          </View>
+          <View style={styles.partyDivider} />
+          {/* Buyer */}
+          <View style={styles.partyCol}>
+            <Image source={{ uri: buyer?.avatar_url || 'https://via.placeholder.com/40' }} style={styles.avatar} />
+            <Text style={styles.userName}>{buyer?.full_name || 'Unknown'}</Text>
+            <Text style={styles.role}>Buyer</Text>
+          </View>
+        </View>
+        <View style={styles.statusRow}>
           {renderStatus(item.status)}
         </View>
       </View>
     );
   };
 
+  let filteredTransactions = activeStatus === 'all'
+    ? transactions
+    : transactions.filter(t => {
+        if (activeStatus === 'pending') return t.status === 'pending';
+        if (activeStatus === 'completed') return t.status === 'approved';
+        if (activeStatus === 'rejected') return t.status === 'rejected';
+        return true;
+      });
+
+  if (search.trim()) {
+    const s = search.trim().toLowerCase();
+    filteredTransactions = filteredTransactions.filter(t => {
+      const sellerName = t.profiles?.full_name?.toLowerCase() || '';
+      const buyerName = t.buyer?.full_name?.toLowerCase() || '';
+      const productTitle = t.products?.title?.toLowerCase() || '';
+      return sellerName.includes(s) || buyerName.includes(s) || productTitle.includes(s);
+    });
+  }
+
+  if (dateRange.start || dateRange.end) {
+    filteredTransactions = filteredTransactions.filter(t => {
+      const d = new Date(t.created_at);
+      if (dateRange.start && d < dateRange.start) return false;
+      if (dateRange.end && d > dateRange.end) return false;
+      return true;
+    });
+  }
+
+  // Date picker web fallback
+  const DateInput = ({ value, onChange }: { value: Date | null, onChange: (d: Date) => void }) => {
+    if (Platform.OS === 'web') {
+      return (
+        <input
+          type="date"
+          value={value ? value.toISOString().slice(0, 10) : ''}
+          onChange={e => {
+            const d = new Date(e.target.value);
+            if (!isNaN(d.getTime())) onChange(d);
+          }}
+          style={{
+            background: '#1a1a1a', color: '#fff', border: '1px solid #444', borderRadius: 10, padding: 8, fontFamily: 'Heebo-Regular', fontSize: 15
+          }}
+        />
+      );
+    }
+    // Native fallback
+    return null;
+  };
+
   return (
     <View style={styles.container}>
+      <View style={styles.searchFilterRow}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search by user or product..."
+          placeholderTextColor="#888"
+          value={search}
+          onChangeText={setSearch}
+        />
+        <TouchableOpacity style={styles.filterIconBtn} onPress={() => {
+          setTempDateRange(dateRange);
+          setFilterModalVisible(true);
+        }}>
+          <Text style={styles.filterIconText}>Filter</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.filterRow}>
+        {[
+          { label: 'All', value: 'all' },
+          { label: 'Pending', value: 'pending' },
+          { label: 'Completed', value: 'completed' },
+          { label: 'Rejected', value: 'rejected' },
+        ].map(btn => (
+          <TouchableOpacity
+            key={btn.value}
+            style={[styles.filterButton, activeStatus === btn.value && styles.filterButtonActive]}
+            onPress={() => setActiveStatus(btn.value as any)}
+          >
+            <Text style={[styles.filterButtonText, activeStatus === btn.value && styles.filterButtonTextActive]}>{btn.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <Modal
+        visible={filterModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Filter by Date Range</Text>
+            <View style={styles.datePickersRow}>
+              {/* Start Date Picker */}
+              <Pressable style={styles.datePickerBtn} onPress={() => setShowStartPicker(true)}>
+                <Text style={styles.datePickerText}>{tempDateRange.start ? tempDateRange.start.toLocaleDateString() : 'Start Date'}</Text>
+                {Platform.OS === 'web' && showStartPicker && (
+                  <DateInput value={tempDateRange.start} onChange={d => {
+                    setShowStartPicker(false);
+                    setTempDateRange(prev => ({ ...prev, start: d }));
+                  }} />
+                )}
+              </Pressable>
+              <Text style={{ color: '#fff', marginHorizontal: 8 }}>-</Text>
+              {/* End Date Picker */}
+              <Pressable style={styles.datePickerBtn} onPress={() => setShowEndPicker(true)}>
+                <Text style={styles.datePickerText}>{tempDateRange.end ? tempDateRange.end.toLocaleDateString() : 'End Date'}</Text>
+                {Platform.OS === 'web' && showEndPicker && (
+                  <DateInput value={tempDateRange.end} onChange={d => {
+                    setShowEndPicker(false);
+                    setTempDateRange(prev => ({ ...prev, end: d }));
+                  }} />
+                )}
+              </Pressable>
+            </View>
+            {/* Native pickers */}
+            {Platform.OS !== 'web' && showStartPicker && (
+              <DateTimePicker
+                value={tempDateRange.start || new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(e: any, d?: Date) => {
+                  setShowStartPicker(false);
+                  if (d) setTempDateRange(prev => ({ ...prev, start: d }));
+                }}
+              />
+            )}
+            {Platform.OS !== 'web' && showEndPicker && (
+              <DateTimePicker
+                value={tempDateRange.end || new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(e: any, d?: Date) => {
+                  setShowEndPicker(false);
+                  if (d) setTempDateRange(prev => ({ ...prev, end: d }));
+                }}
+              />
+            )}
+            <View style={styles.modalActionsRow}>
+              <TouchableOpacity style={styles.modalActionBtn} onPress={() => setFilterModalVisible(false)}>
+                <Text style={styles.modalActionText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalActionBtn, (tempDateRange.start && tempDateRange.end && tempDateRange.end < tempDateRange.start) && { backgroundColor: '#888' }]}
+                disabled={!!(tempDateRange.start && tempDateRange.end && tempDateRange.end < tempDateRange.start)}
+                onPress={() => {
+                  setDateRange(tempDateRange);
+                  setFilterModalVisible(false);
+                }}>
+                <Text style={styles.modalActionText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       {loading ? (
         <ActivityIndicator color="#6C5CE7" style={{ marginTop: 40 }} />
       ) : error ? (
         <Text style={styles.error}>{error}</Text>
-      ) : transactions.length === 0 ? (
+      ) : filteredTransactions.length === 0 ? (
         <Text style={styles.empty}>No transactions found.</Text>
       ) : (
         <FlatList
-          data={transactions}
+          data={filteredTransactions}
           renderItem={renderItem}
           keyExtractor={item => item.id}
           contentContainerStyle={{ paddingBottom: 40 }}
@@ -192,5 +364,149 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 40,
     fontSize: 16,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    marginTop: 8,
+    gap: 6,
+  },
+  filterButton: {
+    flex: 1,
+    paddingVertical: 8,
+    backgroundColor: '#23232b',
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#444',
+    marginHorizontal: 2,
+  },
+  filterButtonActive: {
+    backgroundColor: '#6C5CE7',
+    borderColor: '#6C5CE7',
+  },
+  filterButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontFamily: 'Heebo-Medium',
+  },
+  filterButtonTextActive: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  partiesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 4,
+    gap: 8,
+  },
+  partyCol: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  partyDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#333',
+    marginHorizontal: 8,
+    borderRadius: 1,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  searchFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    marginTop: 2,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    backgroundColor: '#23232b',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    color: '#fff',
+    fontSize: 15,
+    fontFamily: 'Heebo-Regular',
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  filterIconBtn: {
+    backgroundColor: '#6C5CE7',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginLeft: 6,
+  },
+  filterIconText: {
+    color: '#fff',
+    fontSize: 15,
+    fontFamily: 'Heebo-Bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#23232b',
+    borderRadius: 18,
+    padding: 24,
+    width: '85%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontFamily: 'Heebo-Bold',
+    marginBottom: 18,
+  },
+  datePickersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  datePickerBtn: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  datePickerText: {
+    color: '#fff',
+    fontSize: 15,
+    fontFamily: 'Heebo-Regular',
+  },
+  modalActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 10,
+    gap: 12,
+  },
+  modalActionBtn: {
+    flex: 1,
+    backgroundColor: '#6C5CE7',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  modalActionText: {
+    color: '#fff',
+    fontSize: 15,
+    fontFamily: 'Heebo-Bold',
   },
 }); 
