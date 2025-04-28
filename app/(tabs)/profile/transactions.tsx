@@ -2,19 +2,41 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 
 export default function TransactionsScreen() {
   const { user } = useAuth();
   const params = useLocalSearchParams();
-  const userId = typeof params.userId === 'string' ? params.userId : user?.id;
+  const fromProfileType = params.fromProfileType;
+  const userId = fromProfileType === 'other'
+    ? (typeof params.userId === 'string' ? params.userId : null)
+    : user?.id;
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigation = useNavigation();
 
   useEffect(() => {
     if (userId) fetchTransactions();
   }, [userId]);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => {
+        return (
+          <TouchableOpacity onPress={() => {
+            if (fromProfileType === 'other' && userId) {
+              router.replace(`/user/${userId}`);
+            } else {
+              router.replace('/profile');
+            }
+          }} style={{ paddingHorizontal: 16 }}>
+            <Text style={{ color: '#fff', fontSize: 18 }}>{'‹'}</Text>
+          </TouchableOpacity>
+        );
+      },
+    });
+  }, [navigation, fromProfileType, userId]);
 
   const fetchTransactions = async () => {
     if (!userId) return;
@@ -82,15 +104,6 @@ export default function TransactionsScreen() {
           contentContainerStyle={{ paddingBottom: 40 }}
         />
       )}
-      <TouchableOpacity style={styles.backButton} onPress={() => {
-        if (params.userId) {
-          router.replace(`/user/${params.userId}`);
-        } else {
-          router.replace('/profile');
-        }
-      }}>
-        <Text style={styles.backButtonText}>Back</Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -179,18 +192,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 40,
     fontSize: 16,
-  },
-  backButton: {
-    marginTop: 16,
-    alignSelf: 'center',
-    backgroundColor: '#6C5CE7',
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  backButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'Heebo-Medium',
   },
 }); 

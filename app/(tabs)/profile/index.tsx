@@ -464,7 +464,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.statItem}
-              onPress={() => router.push(`./profile/transactions?userId=${user?.id}`)}
+              onPress={() => router.push({ pathname: '/profile/transactions', params: { fromProfileType: 'self' } })}
               >
               <Text style={styles.statNumber}>{profile.sold_count}</Text>
               <Text style={styles.statLabel}>Transactions</Text>
