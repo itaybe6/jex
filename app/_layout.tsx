@@ -1,18 +1,20 @@
+import React from 'react';
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Platform, View, ActivityIndicator } from 'react-native';
-import { useFonts, Heebo_400Regular, Heebo_500Medium, Heebo_700Bold } from '@expo-google-fonts/heebo';
+import { useFonts, Montserrat_400Regular, Montserrat_500Medium, Montserrat_600SemiBold, Montserrat_700Bold } from '@expo-google-fonts/montserrat';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuth } from '@/hooks/useAuth';
 import { TopHeader } from '@/components/TopHeader';
 import { Tabs } from 'expo-router';
 import { Home, Package, User, Plus } from 'lucide-react-native';
-import { TouchableOpacity, Text, Modal, StyleSheet } from 'react-native';
+import { TouchableOpacity, Modal, StyleSheet } from 'react-native';
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import CustomText from '../components/CustomText';
 
 // Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -26,9 +28,10 @@ export default function RootLayout() {
   }
 
   const [fontsLoaded, fontError] = useFonts({
-    'Heebo-Regular': Heebo_400Regular,
-    'Heebo-Medium': Heebo_500Medium,
-    'Heebo-Bold': Heebo_700Bold,
+    'Montserrat-Regular': Montserrat_400Regular,
+    'Montserrat-Medium': Montserrat_500Medium,
+    'Montserrat-SemiBold': Montserrat_600SemiBold,
+    'Montserrat-Bold': Montserrat_700Bold,
   });
 
   useEffect(() => {
@@ -49,6 +52,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
+      <CustomText style={{ display: 'none' }}> </CustomText>
       <Stack
         screenOptions={{
           headerShown: false,
@@ -125,7 +129,7 @@ export function TabLayout() {
             borderTopColor: '#eee',
           },
           tabBarLabelStyle: {
-            fontFamily: 'Heebo-Medium',
+            fontFamily: 'Montserrat-Medium',
             fontSize: 12,
           },
         }}
@@ -190,7 +194,7 @@ export function TabLayout() {
               onPress={handleAddProduct}
             >
               <Package size={24} color="#333" />
-              <Text style={styles.menuText}>Add Product</Text>
+              <CustomText style={styles.menuText}>Add Product</CustomText>
             </TouchableOpacity>
             <View style={styles.menuDivider} />
             <TouchableOpacity 
@@ -198,7 +202,7 @@ export function TabLayout() {
               onPress={handleAddRequest}
             >
               <Plus size={24} color="#333" />
-              <Text style={styles.menuText}>Add Request</Text>
+              <CustomText style={styles.menuText}>Add Request</CustomText>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -244,7 +248,7 @@ const styles = StyleSheet.create({
   },
   menuText: {
     fontSize: 16,
-    fontFamily: 'Heebo-Medium',
+    fontFamily: 'Montserrat-Medium',
     color: '#333',
   },
   menuDivider: {
