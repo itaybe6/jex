@@ -4,7 +4,6 @@ import { Settings, Plus, Link as LinkIcon, X, ChevronRight, ClipboardList } from
 import { router, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-import { AvatarGroup } from '@/components/AvatarGroup';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlatList } from 'react-native';
 import React from 'react';
@@ -311,8 +310,14 @@ export default function ProfileScreen() {
             </View>
           ))}
         </View>
-        {products.length > 3 && !showAll && (
-          <TouchableOpacity onPress={() => setShowAllCategories(prev => ({ ...prev, [category]: true }))} style={styles.showMoreButton}>
+        {products.length > 3 && !showAll && user && (
+          <TouchableOpacity
+            onPress={() => router.push({
+              pathname: '/(tabs)/profile/category-products',
+              params: { category, userId: user.id }
+            })}
+            style={styles.showMoreButton}
+          >
             <Text style={styles.showMoreText}>Show More</Text>
           </TouchableOpacity>
         )}
@@ -445,7 +450,6 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             ) : null}
           </View>
-          {user && <AvatarGroup userId={user.id} />}
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
               <Text style={styles.statNumber}>{totalProducts}</Text>
@@ -464,7 +468,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.statItem}
-              onPress={() => router.push(`./profile/transactions?userId=${user?.id}`)}
+              onPress={() => router.push({ pathname: '/profile/transactions', params: { fromProfileType: 'self' } })}
               >
               <Text style={styles.statNumber}>{profile.sold_count}</Text>
               <Text style={styles.statLabel}>Transactions</Text>
