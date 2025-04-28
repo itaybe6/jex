@@ -324,19 +324,25 @@ export default function UserProfileScreen() {
         {profile?.title && <Text style={styles.title}>{profile.title}</Text>}
         
         <View style={styles.statsContainer}>
+          <TouchableOpacity
+            style={styles.statItem}
+            onPress={() => {
+              setShowTrustMarks(true);
+              fetchTrustMarks();
+            }}
+          >
+            <Text style={[styles.statValue, { textDecorationLine: 'underline', color: '#6C5CE7' }]}>{Array.isArray(trustMarks) ? trustMarks.length : 0}</Text>
+            <Text style={[styles.statLabel, { color: '#6C5CE7' }]}>Trust</Text>
+          </TouchableOpacity>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{profile?.trust_count || 0}</Text>
-            <Text style={styles.statLabel}>Trust</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{profile?.sold_count || 0}</Text>
-            <Text style={styles.statLabel}>Sales</Text>
+            <Text style={styles.statValue}>{totalProducts}</Text>
+            <Text style={styles.statLabel}>Products</Text>
           </View>
           <TouchableOpacity
             style={styles.statItem}
             onPress={() => router.push({ pathname: '/profile/transactions', params: { userId: profile?.id } })}
           >
-            <Text style={styles.statValue}>{profile?.sold_count || 0}</Text>
+            <Text style={styles.statValue}>{profile?.sold_count ?? 0}</Text>
             <Text style={styles.statLabel}>Transactions</Text>
           </TouchableOpacity>
         </View>
