@@ -164,6 +164,12 @@ export function TabLayout() {
             title: 'Profile',
             tabBarIcon: ({ color }) => <User size={24} color={color} />,
           }}
+          listeners={{
+            tabPress: (e) => {
+              e.preventDefault();
+              router.replace('/profile');
+            },
+          }}
         />
       </Tabs>
 

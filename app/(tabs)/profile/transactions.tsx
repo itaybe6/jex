@@ -68,7 +68,6 @@ export default function TransactionsScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>My Transactions</Text>
       {loading ? (
         <ActivityIndicator color="#6C5CE7" style={{ marginTop: 40 }} />
       ) : error ? (
@@ -83,7 +82,13 @@ export default function TransactionsScreen() {
           contentContainerStyle={{ paddingBottom: 40 }}
         />
       )}
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+      <TouchableOpacity style={styles.backButton} onPress={() => {
+        if (params.userId) {
+          router.replace(`/user/${params.userId}`);
+        } else {
+          router.replace('/profile');
+        }
+      }}>
         <Text style={styles.backButtonText}>Back</Text>
       </TouchableOpacity>
     </View>
