@@ -1,15 +1,20 @@
 /*
-  # Fix Product Deletion Permissions
+  # Fix Product Deletion Permissions and Add Product Status
 
   1. Changes
     - Add explicit CASCADE option to foreign key constraints
     - Update RLS policies for product deletion
     - Ensure proper user authorization checks
+    - Add status column to products table
 
   2. Security
     - Maintains data integrity
     - Enforces proper user authorization
 */
+
+-- Add status column to products
+ALTER TABLE products
+ADD COLUMN IF NOT EXISTS status text DEFAULT 'available';
 
 -- Drop existing foreign key constraints if they exist
 DO $$ 

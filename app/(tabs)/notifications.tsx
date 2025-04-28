@@ -380,23 +380,23 @@ export default function NotificationsScreen() {
                   try {
                     const { product_id } = data;
                     if (!product_id) throw new Error('Missing product_id');
-                    const { data: deleted, error: deleteError } = await supabase
+                    const { error: updateError } = await supabase
                       .from('products')
-                      .delete()
+                      .update({ status: 'sold' })
                       .eq('id', product_id);
-                    if (deleteError) throw deleteError;
+                    if (updateError) throw updateError;
                     await markAsRead(notification.id);
                     setNotifications(prev => prev.filter(n => n.id !== notification.id));
-                    Alert.alert('Product Removed', 'The product was removed from your catalog.');
+                    Alert.alert('Product Updated', 'The product was marked as sold in your catalog.');
                   } catch (err: any) {
-                    setActionError(err.message || 'Failed to remove product');
+                    setActionError(err.message || 'Failed to update product');
                   } finally {
                     setActionLoading(null);
                   }
                 }}
                 disabled={!!actionLoading}
               >
-                {actionLoading === notification.id ? <ActivityIndicator color="#fff" /> : <Text style={styles.soldButtonText}>Finish & Remove Product</Text>}
+                {actionLoading === notification.id ? <ActivityIndicator color="#fff" /> : <Text style={styles.soldButtonText}>Mark as Sold & Finish</Text>}
               </TouchableOpacity>
             )}
             {actionError && actionLoading === notification.id && (
@@ -426,7 +426,7 @@ export default function NotificationsScreen() {
                   console.log('Complete Deal clicked', data.product_id, notification.id);
                   Alert.alert(
                     'Are you sure?',
-                    'Are you sure you want to complete the deal? The product will be removed from the catalog.',
+                    'Are you sure you want to complete the deal? The product will be marked as sold.',
                     [
                       { text: 'Cancel', style: 'cancel' },
                       {
@@ -435,13 +435,22 @@ export default function NotificationsScreen() {
                         onPress: async () => {
                           try {
                             console.log('Complete Deal clicked', data.product_id, notification.id);
-                            // Delete product
-                            const { error: deleteError } = await supabase
+                            
+                            // Update transaction status to completed
+                            const { error: txError } = await supabase
+                              .from('transactions')
+                              .update({ status: 'completed' })
+                              .eq('id', data.transaction_id);
+                            if (txError) throw txError;
+
+                            // Update product status to sold instead of deleting
+                            const { error: updateError } = await supabase
                               .from('products')
-                              .delete()
+                              .update({ status: 'sold' })
                               .eq('id', data.product_id);
-                            console.log('Product delete result:', deleteError);
-                            if (deleteError) throw deleteError;
+                            console.log('Product update result:', updateError);
+                            if (updateError) throw updateError;
+
                             // Update notification is_action_done
                             const { error: notifDoneError } = await supabase
                               .from('notifications')
@@ -449,10 +458,12 @@ export default function NotificationsScreen() {
                               .eq('id', notification.id);
                             console.log('Notification update result:', notifDoneError);
                             if (notifDoneError) throw notifDoneError;
+
                             setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, is_action_done: true } : n));
-                            Alert.alert('Deal Completed', 'The product was removed from the catalog.');
+                            Alert.alert('Deal Completed', 'The deal was completed successfully and the product was marked as sold.');
                           } catch (err: any) {
-                            Alert.alert('Error', err.message || 'An error occurred while deleting the product');
+                            console.error('Error completing deal:', err);
+                            Alert.alert('Error', err.message || 'An error occurred while completing the deal');
                           }
                         },
                       },

@@ -136,6 +136,7 @@ export default function HomeScreen() {
             avatar_url
           )
         `)
+        .eq('status', 'available')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

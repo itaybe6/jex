@@ -31,11 +31,19 @@ export default function CategoryProductsScreen() {
     const to = from + PAGE_SIZE - 1;
     const { data, error } = await supabase
       .from('products')
-      .select('*')
+      .select(`
+        *,
+        profiles!products_user_id_fkey (
+          id,
+          full_name,
+          avatar_url
+        )
+      `)
       .eq('user_id', userId)
       .eq('category', category)
-      .order('created_at', { ascending: false })
-      .range(from, to);
+      .eq('status', 'available')
+      .range(from, to)
+      .order('created_at', { ascending: false });
     if (!error) {
       if (reset) {
         setProducts(data || []);
