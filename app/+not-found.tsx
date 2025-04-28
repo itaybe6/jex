@@ -1,14 +1,16 @@
+import React from 'react';
 import { Link, Stack } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import CustomText from '../components/CustomText';
 
 export default function NotFoundScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Oops!' }} />
       <View style={styles.container}>
-        <Text style={styles.text}>This screen doesn't exist.</Text>
+        <CustomText style={styles.text}>This screen doesn't exist.</CustomText>
         <Link href="/" style={styles.link}>
-          <Text>Go to home screen!</Text>
+          <CustomText>Go to home screen!</CustomText>
         </Link>
       </View>
     </>
