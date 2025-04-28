@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Alert, Modal, Linking } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { Link as LinkIcon, Shield, X, MessageCircle } from 'lucide-react-native';
+import { Link as LinkIcon, Shield, X, MessageCircle, ClipboardList } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 
 const GRID_SPACING = 2;
@@ -58,11 +58,15 @@ export default function UserProfileScreen() {
   const [showTrustMarks, setShowTrustMarks] = useState(false);
   const [trustMarks, setTrustMarks] = useState<TrustMark[]>([]);
   const [loadingTrustMarks, setLoadingTrustMarks] = useState(false);
+  const [activeTab, setActiveTab] = useState<'catalog' | 'requests'>('catalog');
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
 
   useEffect(() => {
     if (userId) {
       fetchProfile();
       fetchProducts();
+      fetchUserRequests();
       if (user) {
         checkTrustStatus();
       }
@@ -213,6 +217,23 @@ export default function UserProfileScreen() {
       console.error('Error fetching products:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUserRequests = async () => {
+    setLoadingRequests(true);
+    try {
+      const { data, error } = await supabase
+        .from('diamond_requests')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setRequests(data || []);
+    } catch (err) {
+      setRequests([]);
+    } finally {
+      setLoadingRequests(false);
     }
   };
 
@@ -435,17 +456,63 @@ export default function UserProfileScreen() {
         </View>
       </View>
 
+      <View style={styles.tabButtonsRowUser}>
+        <TouchableOpacity
+          style={[styles.tabButtonUser, activeTab === 'catalog' && styles.tabButtonActiveUser]}
+          onPress={() => setActiveTab('catalog')}
+        >
+          <Text style={[styles.tabButtonTextUser, activeTab === 'catalog' && styles.tabButtonTextActiveUser]}>Catalog</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabButtonUser, activeTab === 'requests' && styles.tabButtonActiveUser]}
+          onPress={() => setActiveTab('requests')}
+        >
+          <Text style={[styles.tabButtonTextUser, activeTab === 'requests' && styles.tabButtonTextActiveUser]}>Requests</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.catalogSection}>
-        <Text style={styles.catalogTitle}>Catalog</Text>
-        
-        {totalProducts === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No products in catalog</Text>
-          </View>
-        ) : (
-          <View style={styles.categoriesContainer}>
-            {Object.entries(productsByCategory).map(([category, products]) => 
-              renderCategorySection(category, products)
+        {activeTab === 'catalog' && (
+          <>
+            {totalProducts === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No products in catalog</Text>
+              </View>
+            ) : (
+              <View style={styles.categoriesContainer}>
+                {Object.entries(productsByCategory).map(([category, products]) => 
+                  renderCategorySection(category, products)
+                )}
+              </View>
+            )}
+          </>
+        )}
+        {activeTab === 'requests' && (
+          <View style={styles.requestsSectionUser}>
+            {loadingRequests ? (
+              <Text style={styles.loadingText}>Loading requests...</Text>
+            ) : requests.length === 0 ? (
+              <Text style={styles.emptyText}>No requests found</Text>
+            ) : (
+              requests.map((req) => (
+                <View key={req.id} style={styles.requestCardUser}>
+                  <View style={styles.requestHeaderUser}>
+                    <ClipboardList size={22} color="#6C5CE7" style={{ marginRight: 10 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.requestTitleUser}>{req.cut} {req.min_weight}-{req.max_weight || req.min_weight}ct, {req.clarity}, Color {req.color}</Text>
+                      {req.price && (
+                        <Text style={styles.requestPriceUser}>Budget: {req.price} ₪</Text>
+                      )}
+                    </View>
+                    <View style={[styles.requestStatusPillUser, req.status === 'active' ? styles.statusActiveUser : styles.statusOtherUser]}>
+                      <Text style={styles.requestStatusTextUser}>{req.status === 'active' ? 'Active' : req.status}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.requestFooterUser}>
+                    <Text style={styles.requestDateUser}>{new Date(req.created_at).toLocaleDateString()}</Text>
+                  </View>
+                </View>
+              ))
             )}
           </View>
         )}
@@ -608,11 +675,98 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     backgroundColor: '#121212',
   },
-  catalogTitle: {
-    fontSize: 20,
-    fontFamily: 'Heebo-Bold',
-    marginBottom: 16,
+  tabButtonsRowUser: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 8,
+    gap: 8,
+  },
+  tabButtonUser: {
+    flex: 1,
+    paddingVertical: 10,
+    backgroundColor: '#23232b',
+    borderRadius: 16,
+    marginHorizontal: 6,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  tabButtonActiveUser: {
+    backgroundColor: '#6C5CE7',
+    borderColor: '#6C5CE7',
+  },
+  tabButtonTextUser: {
     color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Heebo-Medium',
+  },
+  tabButtonTextActiveUser: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  requestsSectionUser: {
+    paddingHorizontal: 20,
+    marginTop: 12,
+  },
+  requestCardUser: {
+    backgroundColor: '#23232b',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#444',
+    shadowColor: '#000',
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  requestHeaderUser: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  requestTitleUser: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  requestPriceUser: {
+    color: '#6C5CE7',
+    fontSize: 15,
+    marginBottom: 2,
+    fontWeight: '500',
+  },
+  requestStatusPillUser: {
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
+    marginLeft: 8,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  statusActiveUser: {
+    backgroundColor: '#4CAF50',
+  },
+  statusOtherUser: {
+    backgroundColor: '#888',
+  },
+  requestStatusTextUser: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  requestFooterUser: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 6,
+  },
+  requestDateUser: {
+    color: '#888',
+    fontSize: 13,
   },
   emptyContainer: {
     padding: 24,
