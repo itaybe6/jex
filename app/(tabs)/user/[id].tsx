@@ -67,14 +67,31 @@ export default function UserProfileScreen() {
 
   const fetchProfile = async () => {
     try {
-      const { data, error } = await supabase
+
+      // First get the profile data
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
-      setProfile(data);
+      if (profileError) throw profileError;
+      // Then get the completed transactions count where user was either buyer or seller
+      const { data: transactionsCount, error: countError } = await supabase
+        .from('transactions')
+        .select('id', { count: 'exact' })
+        .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`)
+        .eq('status', 'completed');
+
+      if (countError) throw countError;
+
+      // Combine the data
+      const profile = {
+        ...profileData,
+        sold_count: transactionsCount.length
+      };
+      
+      setProfile(profile);
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
@@ -302,7 +319,7 @@ export default function UserProfileScreen() {
       .from('transactions')
       .select('*', { count: 'exact', head: true })
       .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`)
-      .eq('status', 'approved');
+      .eq('status', 'completed');
     if (!error) setSoldCount(count || 0);
   };
 

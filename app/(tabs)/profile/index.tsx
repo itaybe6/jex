@@ -22,6 +22,7 @@ type Profile = {
   website: string | null;
   trust_count: number;
   sold_count: number;
+  sold_count_aggregate?: { count: number }[];
 };
 
 type TrustMark = {
@@ -89,14 +90,31 @@ export default function ProfileScreen() {
     try {
       if (!user) return;
 
-      const { data, error } = await supabase
+      // First get the profile data
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
 
-      if (error) throw error;
-      setProfile(data);
+      if (profileError) throw profileError;
+
+      // Then get the completed transactions count where user was either buyer or seller
+      const { data: transactionsCount, error: countError } = await supabase
+        .from('transactions')
+        .select('id', { count: 'exact' })
+        .or(`seller_id.eq.${user.id},buyer_id.eq.${user.id}`)
+        .eq('status', 'completed');
+
+      if (countError) throw countError;
+
+      // Combine the data
+      const profile = {
+        ...profileData,
+        sold_count: transactionsCount.length
+      };
+      
+      setProfile(profile);
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
