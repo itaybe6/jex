@@ -15,6 +15,8 @@ type Notification = {
   type: string;
   data: any;
   read: boolean;
+  user_id: string;
+  is_action_done: boolean;
 };
 
 export default function NotificationsScreen() {
@@ -22,6 +24,7 @@ export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionDone, setActionDone] = useState<{ [id: string]: boolean }>({});
 
   useEffect(() => {
     if (user) {
@@ -99,87 +102,160 @@ export default function NotificationsScreen() {
   };
 
   const handleDealAction = async (notification: Notification, approve: boolean) => {
+    console.log('handleDealAction called');
+    console.log('user:', user);
+    console.log('notification:', notification);
+    const buyer_id = notification.user_id;
+    console.log('buyer_id:', buyer_id, 'seller_id:', notification.data?.seller_id, 'user.id:', user?.id, 'transaction_id:', notification.data?.transaction_id);
     setActionLoading(notification.id);
     setActionError(null);
     try {
       const { transaction_id, product_title, seller_id, product_id } = notification.data;
-      const { error: txError } = await supabase
+      // Fetch transaction to determine who is acting
+      const { data: transaction, error: txFetchError } = await supabase
         .from('transactions')
-        .update({ status: approve ? 'approved' : 'rejected' })
-        .eq('id', transaction_id);
-      if (txError) throw txError;
-      if (approve && product_id) {
-        if (user?.id === seller_id) {
-          const { data: productData, error: productError } = await supabase
-            .from('products')
-            .select('*')
-            .eq('id', product_id)
-            .single();
-          if (productError) throw productError;
-          const { error: transactionError } = await supabase
-            .from('transactions')
-            .insert({
-              product_id: product_id,
-              seller_id: seller_id,
-              buyer_id: user?.id,
-              price: productData?.price || 0,
-              status: 'approved',
-              created_at: new Date().toISOString(),
-            });
-          if (transactionError) throw transactionError;
-          const { data: deleted, error: deleteError } = await supabase
+        .select('*')
+        .eq('id', transaction_id)
+        .single();
+      if (txFetchError) throw txFetchError;
+      if (!transaction) throw new Error('Transaction not found');
+      // If user is the buyer and approves, update notification message
+      if (approve && user?.id === buyer_id && transaction.status === 'pending') {
+        // Update transaction status
+        const { error: txError } = await supabase
+          .from('transactions')
+          .update({ status: 'waiting_seller_approval' })
+          .eq('id', transaction_id);
+        if (txError) throw txError;
+        // Update notification message and is_action_done (column only)
+        const newMessage = 'The deal was approved and is waiting for the seller\'s final approval.';
+        const newData = { ...notification.data, message: newMessage };
+        const { error: notifUpdateError } = await supabase
+          .from('notifications')
+          .update({ data: newData, is_action_done: true })
+          .eq('id', notification.id);
+        if (notifUpdateError) throw notifUpdateError;
+        setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, data: newData, is_action_done: true } : n));
+        // Fetch buyer profile
+        const { data: buyerProfile, error: buyerProfileError } = await supabase
+          .from('profiles')
+          .select('full_name, avatar_url')
+          .eq('id', user.id)
+          .single();
+        if (buyerProfileError) throw buyerProfileError;
+        // Insert new notification for seller
+        const { error: sellerNotifError } = await supabase
+          .from('notifications')
+          .insert({
+            user_id: seller_id,
+            type: 'waiting_seller_approval',
+            data: {
+              message: 'The buyer approved the price. Please complete the deal by clicking Complete Deal.',
+              transaction_id,
+              product_id,
+              sender_avatar_url: buyerProfile.avatar_url || null,
+              sender_full_name: buyerProfile.full_name || user.email || 'Buyer',
+            },
+            read: false,
+            is_action_done: false,
+          });
+        if (sellerNotifError) throw sellerNotifError;
+        Alert.alert('Waiting Seller Approval', newMessage);
+        return;
+      }
+      // If user is the buyer and rejects, update notification message
+      if (!approve && user?.id === buyer_id && transaction.status === 'pending') {
+        // Update transaction status
+        const { error: txError } = await supabase
+          .from('transactions')
+          .update({ status: 'rejected' })
+          .eq('id', transaction_id);
+        if (txError) throw txError;
+        // Update notification message and is_action_done (column only)
+        const newMessage = 'The deal was rejected by the buyer.';
+        const newData = { ...notification.data, message: newMessage };
+        const { error: notifUpdateError } = await supabase
+          .from('notifications')
+          .update({ data: newData, is_action_done: true })
+          .eq('id', notification.id);
+        if (notifUpdateError) throw notifUpdateError;
+        setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, data: newData, is_action_done: true } : n));
+        // Fetch buyer profile
+        const { data: buyerProfile, error: buyerProfileError } = await supabase
+          .from('profiles')
+          .select('full_name, avatar_url')
+          .eq('id', user.id)
+          .single();
+        if (buyerProfileError) throw buyerProfileError;
+        // Insert new notification for seller
+        const { error: sellerNotifError } = await supabase
+          .from('notifications')
+          .insert({
+            user_id: seller_id,
+            type: 'waiting_seller_approval',
+            data: {
+              message: 'The buyer rejected the deal.',
+              transaction_id,
+              product_id,
+              sender_avatar_url: buyerProfile.avatar_url || null,
+              sender_full_name: buyerProfile.full_name || user.email || 'Buyer',
+            },
+            read: false,
+            is_action_done: false,
+          });
+        if (sellerNotifError) throw sellerNotifError;
+        Alert.alert('Deal Rejected', newMessage);
+        return;
+      }
+      // If user is the seller and approves, move to completed and delete product
+      if (approve && user?.id === seller_id && transaction.status === 'waiting_seller_approval') {
+        // Update status
+        const { error: txError } = await supabase
+          .from('transactions')
+          .update({ status: 'completed' })
+          .eq('id', transaction_id);
+        if (txError) throw txError;
+        // Delete product
+        if (product_id) {
+          const { error: deleteError } = await supabase
             .from('products')
             .delete()
             .eq('id', product_id);
-          if (deleteError) {
-            throw deleteError;
-          }
-        } else {
-          const { data: productData, error: productError } = await supabase
-            .from('products')
-            .select('*')
-            .eq('id', product_id)
-            .single();
-          if (productError) throw productError;
-          const { error: transactionError } = await supabase
-            .from('transactions')
-            .insert({
-              product_id: product_id,
-              seller_id: seller_id,
-              buyer_id: user?.id,
-              price: productData?.price || 0,
-              status: 'approved',
-              created_at: new Date().toISOString(),
-            });
-          if (transactionError) throw transactionError;
+          if (deleteError) throw deleteError;
         }
+        // Delete old notification
+        const { error: delNotifError } = await supabase
+          .from('notifications')
+          .delete()
+          .eq('id', notification.id);
+        console.log('delNotifError:', delNotifError);
+        if (delNotifError) throw delNotifError;
+        setNotifications(prev => prev.filter(n => n.id !== notification.id));
+        Alert.alert('Deal Completed', 'The deal is completed and the product was removed.');
+        return;
       }
-      const { error: notifError } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: seller_id,
-          type: 'deal_' + (approve ? 'approved' : 'rejected'),
-          data: {
-            transaction_id,
-            product_title,
-            buyer_id: user?.id,
-            product_id,
-            sender_id: user?.id,
-            sender_name: user?.user_metadata?.full_name || user?.email || 'User',
-            sender_avatar: user?.user_metadata?.avatar_url || null,
-            message: approve
-              ? 'The deal was approved successfully.'
-              : 'The deal was rejected.',
-          },
-          read: false,
-        });
-      if (notifError) throw notifError;
-      await markAsRead(notification.id);
+      // If seller rejects at waiting_seller_approval
+      if (!approve && user?.id === seller_id && transaction.status === 'waiting_seller_approval') {
+        // Update status
+        const { error: txError } = await supabase
+          .from('transactions')
+          .update({ status: 'rejected' })
+          .eq('id', transaction_id);
+        if (txError) throw txError;
+        // Delete old notification
+        const { error: delNotifError } = await supabase
+          .from('notifications')
+          .delete()
+          .eq('id', notification.id);
+        console.log('delNotifError:', delNotifError);
+        if (delNotifError) throw delNotifError;
+        setNotifications(prev => prev.filter(n => n.id !== notification.id));
+        Alert.alert('Deal Rejected', 'You have rejected the deal.');
+        return;
+      }
+      // Fallback: do nothing
+      await supabase.from('notifications').delete().eq('id', notification.id);
       setNotifications(prev => prev.filter(n => n.id !== notification.id));
-      Alert.alert(
-        approve ? 'Deal Approved' : 'Deal Rejected',
-        approve ? 'You have approved the deal.' : 'You have rejected the deal.'
-      );
     } catch (err: any) {
       setActionError(err.message || 'Failed to update deal');
     } finally {
@@ -226,6 +302,7 @@ export default function NotificationsScreen() {
     } else if (type === 'deal_request') {
       const displayName = senderName || 'Unknown User';
       const displayAvatar = senderAvatar || 'https://ui-avatars.com/api/?name=User';
+      const messageToShow = data.message || 'No message available.';
       return (
         <View key={notification.id} style={[styles.notificationCard, !notification.read && styles.unreadCard]}>
           <View style={styles.notificationContent}>
@@ -253,27 +330,29 @@ export default function NotificationsScreen() {
                 )}
               </View>
             </View>
-            <Text style={[styles.notificationDescription, {marginTop: 8}]}>{description}</Text>
+            <Text style={[styles.notificationDescription, {marginTop: 8}]}>{messageToShow}</Text>
             <Text style={styles.notificationTime}>{new Date(notification.created_at).toLocaleDateString()}</Text>
             {actionError && actionLoading === notification.id && (
               <Text style={{ color: 'red', marginVertical: 4 }}>{actionError}</Text>
             )}
-            <View style={{ flexDirection: 'row', marginTop: 8 }}>
-              <TouchableOpacity
-                style={[styles.soldButton, { backgroundColor: '#4CAF50', flex: 1, marginRight: 8, opacity: actionLoading && actionLoading === notification.id ? 0.5 : 1 }]}
-                onPress={() => handleDealAction(notification, true)}
-                disabled={!!actionLoading}
-              >
-                {actionLoading === notification.id ? <ActivityIndicator color="#fff" /> : <Text style={styles.soldButtonText}>Approve</Text>}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.soldButton, { backgroundColor: '#FF3B30', flex: 1, opacity: actionLoading && actionLoading === notification.id ? 0.5 : 1 }]}
-                onPress={() => handleDealAction(notification, false)}
-                disabled={!!actionLoading}
-              >
-                {actionLoading === notification.id ? <ActivityIndicator color="#fff" /> : <Text style={styles.soldButtonText}>Reject</Text>}
-              </TouchableOpacity>
-            </View>
+            {type === 'deal_request' && !notification.is_action_done && (
+              <View style={{ flexDirection: 'row', marginTop: 8 }}>
+                <TouchableOpacity
+                  style={[styles.soldButton, { backgroundColor: '#4CAF50', flex: 1, marginRight: 8, opacity: actionLoading && actionLoading === notification.id ? 0.5 : 1 }]}
+                  onPress={() => handleDealAction(notification, true)}
+                  disabled={!!actionLoading}
+                >
+                  {actionLoading === notification.id ? <ActivityIndicator color="#fff" /> : <Text style={styles.soldButtonText}>Approve</Text>}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.soldButton, { backgroundColor: '#FF3B30', flex: 1, opacity: actionLoading && actionLoading === notification.id ? 0.5 : 1 }]}
+                  onPress={() => handleDealAction(notification, false)}
+                  disabled={!!actionLoading}
+                >
+                  {actionLoading === notification.id ? <ActivityIndicator color="#fff" /> : <Text style={styles.soldButtonText}>Reject</Text>}
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       );
@@ -322,6 +401,67 @@ export default function NotificationsScreen() {
             )}
             {actionError && actionLoading === notification.id && (
               <Text style={{ color: 'red', marginVertical: 4 }}>{actionError}</Text>
+            )}
+          </View>
+        </View>
+      );
+    } else if (type === 'waiting_seller_approval') {
+      const displayName = data.sender_full_name || 'Unknown User';
+      const displayAvatar = data.sender_avatar_url || 'https://ui-avatars.com/api/?name=User';
+      const messageToShow = data.message || 'No message available.';
+      return (
+        <View key={notification.id} style={[styles.notificationCard, { backgroundColor: notification.is_action_done ? '#23232b' : '#6C5CE7' }, !notification.read && styles.unreadCard]}>
+          <View style={styles.notificationContent}>
+            <Text style={styles.notificationTitle}>Waiting Seller Approval</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+              <Image source={{ uri: displayAvatar }} style={{ width: 32, height: 32, borderRadius: 16, marginRight: 8, backgroundColor: '#444' }} />
+              <Text style={{ color: '#fff', fontSize: 14 }}>{displayName}</Text>
+            </View>
+            <Text style={styles.notificationDescription}>{messageToShow}</Text>
+            <Text style={styles.notificationTime}>{new Date(notification.created_at).toLocaleDateString()}</Text>
+            {!notification.is_action_done && (
+              <TouchableOpacity
+                style={[styles.soldButton, { backgroundColor: '#4CAF50', marginTop: 8 }]}
+                onPress={async () => {
+                  console.log('Complete Deal clicked', data.product_id, notification.id);
+                  Alert.alert(
+                    'Are you sure?',
+                    'Are you sure you want to complete the deal? The product will be removed from the catalog.',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Confirm',
+                        style: 'destructive',
+                        onPress: async () => {
+                          try {
+                            console.log('Complete Deal clicked', data.product_id, notification.id);
+                            // Delete product
+                            const { error: deleteError } = await supabase
+                              .from('products')
+                              .delete()
+                              .eq('id', data.product_id);
+                            console.log('Product delete result:', deleteError);
+                            if (deleteError) throw deleteError;
+                            // Update notification is_action_done
+                            const { error: notifDoneError } = await supabase
+                              .from('notifications')
+                              .update({ is_action_done: true })
+                              .eq('id', notification.id);
+                            console.log('Notification update result:', notifDoneError);
+                            if (notifDoneError) throw notifDoneError;
+                            setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, is_action_done: true } : n));
+                            Alert.alert('Deal Completed', 'The product was removed from the catalog.');
+                          } catch (err: any) {
+                            Alert.alert('Error', err.message || 'An error occurred while deleting the product');
+                          }
+                        },
+                      },
+                    ]
+                  );
+                }}
+              >
+                <Text style={styles.soldButtonText}>Complete Deal</Text>
+              </TouchableOpacity>
             )}
           </View>
         </View>

@@ -17,7 +17,7 @@ export default function TransactionsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigation = useNavigation();
-  const [activeStatus, setActiveStatus] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
+  const [activeStatus, setActiveStatus] = useState<'all' | 'pending' | 'completed' | 'rejected' | 'waiting_seller_approval'>('all');
   const [search, setSearch] = useState('');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [dateRange, setDateRange] = useState<{start: Date | null, end: Date | null}>({ start: null, end: null });
@@ -67,8 +67,12 @@ export default function TransactionsScreen() {
   };
 
   const renderStatus = (status: string) => {
-    if (status === 'approved') return <Text style={[styles.status, { color: '#4CAF50' }]}>Approved</Text>;
-    if (status === 'rejected') return <Text style={[styles.status, { color: '#FF3B30' }]}>Rejected</Text>;
+    if (status === 'approved' || status === 'completed')
+      return <Text style={[styles.status, { color: '#4CAF50' }]}>Approved</Text>;
+    if (status === 'rejected')
+      return <Text style={[styles.status, { color: '#FF3B30' }]}>Rejected</Text>;
+    if (status === 'waiting_seller_approval')
+      return <Text style={[styles.status, { color: '#6C5CE7' }]}>Waiting Seller Approval</Text>;
     return <Text style={[styles.status, { color: '#FFA500' }]}>Pending</Text>;
   };
 
@@ -112,7 +116,8 @@ export default function TransactionsScreen() {
     ? transactions
     : transactions.filter(t => {
         if (activeStatus === 'pending') return t.status === 'pending';
-        if (activeStatus === 'completed') return t.status === 'approved';
+        if (activeStatus === 'waiting_seller_approval') return t.status === 'waiting_seller_approval';
+        if (activeStatus === 'completed') return t.status === 'approved' || t.status === 'completed';
         if (activeStatus === 'rejected') return t.status === 'rejected';
         return true;
       });
@@ -178,6 +183,7 @@ export default function TransactionsScreen() {
         {[
           { label: 'All', value: 'all' },
           { label: 'Pending', value: 'pending' },
+          { label: 'Waiting Seller Approval', value: 'waiting_seller_approval' },
           { label: 'Completed', value: 'completed' },
           { label: 'Rejected', value: 'rejected' },
         ].map(btn => (

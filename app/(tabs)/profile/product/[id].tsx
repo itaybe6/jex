@@ -72,44 +72,37 @@ export default function ProductScreen() {
 
   const handleMarkAsSold = async () => {
     if (!product || !user) return;
-
+    setMarkingAsSold(true);
     try {
-      setMarkingAsSold(true);
-
-      const { data: soldData, error: soldError } = await supabase
-        .from('sold_products')
-        .insert([{
-          product_id: product.id,
-          seller_id: user.id,
-          price: product.price
-        }])
-        .select()
-        .single();
-
-      if (soldError) {
-        console.error('Error marking product as sold:', soldError);
-        throw new Error('An error occurred while marking the product as sold');
+      const canDelete = await canDeleteProduct();
+      if (!canDelete) {
+        Alert.alert('Cannot delete', 'This product is pending seller approval and cannot be deleted until the process is complete.');
+        setMarkingAsSold(false);
+        return;
       }
-
-      if (!soldData) {
-        throw new Error('Failed to mark the product as sold');
+      // Find the transaction in waiting_seller_approval
+      const { data: transaction, error: txError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('product_id', product.id)
+        .eq('status', 'waiting_seller_approval')
+        .maybeSingle();
+      if (txError) throw txError;
+      if (transaction) {
+        // Update status to 'completed'
+        const { error: updateError } = await supabase
+          .from('transactions')
+          .update({ status: 'completed' })
+          .eq('id', transaction.id);
+        if (updateError) throw updateError;
       }
-
+      // Now delete the product
       const { error: deleteError } = await supabase
         .from('products')
         .delete()
         .eq('id', product.id)
         .eq('user_id', user.id);
-
-      if (deleteError) {
-        await supabase
-          .from('sold_products')
-          .delete()
-          .eq('id', soldData.id);
-          
-        throw new Error('An error occurred while deleting the product from the catalog');
-      }
-
+      if (deleteError) throw deleteError;
       Alert.alert(
         'Success',
         'The product has been marked as sold and removed from the catalog',
@@ -121,7 +114,6 @@ export default function ProductScreen() {
         ]
       );
     } catch (error: any) {
-      console.error('Error in handleMarkAsSold:', error);
       Alert.alert('Error', error.message || 'An error occurred while marking the product as sold');
     } finally {
       setMarkingAsSold(false);
@@ -179,13 +171,13 @@ export default function ProductScreen() {
     setDealLoading(true);
     setDealError(null);
     try {
-      // שלוף את הפרופיל של המשתמש השולח
+      // Fetch sender profile
       const { data: profile } = await supabase
         .from('profiles')
         .select('full_name, avatar_url')
         .eq('id', user.id)
         .single();
-      // 1. צור רשומה ב-transactions
+      // 1. Create transaction with status 'pending'
       const { data: transaction, error: transactionError } = await supabase
         .from('transactions')
         .insert({
@@ -198,15 +190,13 @@ export default function ProductScreen() {
         .select()
         .single();
       if (transactionError) throw transactionError;
-      // שלב 1: בנה את אובייקט ההתראה הקיים (אם יש)
+      // Notification logic remains
       let baseNotificationData: any = {};
       if (transaction && transaction.data) {
         baseNotificationData = { ...transaction.data };
       }
-      // שלב 2: הוסף/דרוס רק את השדות החדשים
       const notificationData = {
         ...baseNotificationData,
-        // שדות חדשים ודורסים
         transaction_id: transaction.id,
         product_id: product.id,
         seller_id: user.id,
@@ -294,6 +284,20 @@ export default function ProductScreen() {
   };
 
   const isOwner = user?.id === product.user_id;
+
+  // Prevent manual deletion if transaction is in 'waiting_seller_approval'
+  const canDeleteProduct = async () => {
+    if (!product) return true;
+    // Check if there is a transaction for this product in 'waiting_seller_approval'
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('id')
+      .eq('product_id', product.id)
+      .eq('status', 'waiting_seller_approval')
+      .maybeSingle();
+    if (error) return true;
+    return !data;
+  };
 
   return (
     <>
