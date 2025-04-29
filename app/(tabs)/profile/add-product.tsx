@@ -66,15 +66,113 @@ const PRODUCT_TYPES = [
   'Necklace',
   'Bracelet',
   'Earrings',
-  'Pendant',
+  'Special pieces',
+  'Watches',
+  'Gems',
+  'Rough Diamonds',
 ] as const;
 
 const WEIGHT_OPTIONS = Array.from({ length: 46 }, (_, i) => (0.5 + i * 0.1).toFixed(1));
+
+const CURRENCY_OPTIONS = [
+  { label: '₪', value: 'ILS' },
+  { label: '$', value: 'USD' },
+  { label: '€', value: 'EUR' },
+];
 
 type DiamondCut = typeof DIAMOND_CUTS[number];
 type ProductType = typeof PRODUCT_TYPES[number];
 type ClarityGrade = typeof CLARITY_GRADES[number];
 type ColorGrade = typeof COLOR_GRADES[number];
+
+const productOptions = {
+  "Ring": [
+    "Wedding ring",
+    "Hand Chain Ring - Bracelet",
+    "Classic ring",
+    "Engagement ring",
+    "Solitaire ring",
+    "All around ring",
+    "Band ring"
+  ],
+  "Necklace": [
+    "Pendant",
+    "Chain",
+    "Cuban links"
+  ],
+  "Earrings": [
+    "Stud earrings",
+    "Drop earrings",
+    "English lock earrings",
+    "Hoop earrings",
+    "Chandelier earrings"
+  ],
+  "Bracelet": [
+    "Tennis",
+    "Bangle",
+    "Armlet",
+    "Bracelet"
+  ],
+  "Special pieces": [
+    "Crowns",
+    "Cuff links",
+    "Pins",
+    "Belly chains"
+  ],
+  "Loose Diamond": [
+    "Certificated",
+    "None Certificated",
+    "Natural",
+    "Lab Grown",
+    "Treated"
+  ],
+  "Rough Diamonds": [],
+  "Gems": [
+    "Certificated",
+    "None Certificated",
+    "Natural",
+    "Lab Grown",
+    "Treated"
+  ],
+  "Watches": [
+    "Rolex", "Omega", "Breitling", "IWC", "Tag Heuer", "Panerai", "Hublot",
+    "Audemards Piguet", "Cartier", "Patek Philippe", "Zenith", "Tudor",
+    "Chopard", "Bulgari", "Richard Mille"
+  ]
+};
+
+const baseRingFields = [
+  { label: "Diamond Size (Carat) From", type: "number", key: "diamondSizeFrom" },
+  { label: "Diamond Size (Carat) To", type: "number", key: "diamondSizeTo" },
+  { label: "Diamond Color", type: "select", key: "diamondColor", options: ["D", "E", "F", "G", "H", "I", "J", "K", "Z"] },
+  { label: "Clarity", type: "select", key: "clarity", options: ["I3", "I2", "I1", "SI2", "SI1", "VS2", "VS1", "VVS2", "VVS1", "IF", "FL"] },
+  { label: "Side Stones", type: "select", key: "sideStones", options: ["With Side Stones", "Without Side Stones"] },
+  { label: "Cut Grade", type: "select", key: "cutGrade", options: ["POOR", "FAIR", "GOOD", "VERY GOOD", "EXCELLENT"] },
+  { label: "Certification", type: "select", key: "certification", options: ["GIA", "IGI", "HRD", "EGL", "SGL", "CGL", "IGL", "AIG"] },
+  { label: "Gold Color", type: "select", key: "goldColor", options: ["WHITE", "ROSE", "YELLOW"] },
+  { label: "Material", type: "select", key: "material", options: ["GOLD", "PLATINUM", "SILVER"] },
+  { label: "Gold Karat", type: "select", key: "goldKarat", options: ["9K", "10K", "14K", "18K", "21K", "22K", "24K"] }
+];
+const productFieldsMap = {
+  "Ring": baseRingFields,
+  "Necklace": baseRingFields,
+  "Earrings": baseRingFields,
+  "Bracelet": baseRingFields,
+  "Special pieces": baseRingFields,
+  "Loose Diamond": [
+    { label: "Diamond Shape", type: "select", key: "diamondShape", options: ["Round", "Oval", "Princess", "Emerald", "Cushion", "Heart", "Marquise", "Asscher", "Pear", "Trapeze", "Baguette"] },
+    { label: "Certification", type: "select", key: "certification", options: ["GIA", "IGI", "HRD", "EGL", "SGL", "IGL", "AIG", "None"] },
+    { label: "Origin", type: "select", key: "origin", options: ["Natural", "Lab Grown", "Treated"] },
+    { label: "Lab Grown Type", type: "select", key: "labGrownType", options: ["CVD", "HPHT"], condition: "origin == 'Lab Grown'" },
+    { label: "Treatment Type", type: "select", key: "treatmentType", options: ["Laser Drill", "Fracture Filling", "HPHT Color"], condition: "origin == 'Treated'" }
+  ],
+  "Gems": [
+    { label: "Certification", type: "select", key: "certification", options: ["GIA", "IGI", "None"] },
+    { label: "Origin", type: "select", key: "origin", options: ["Natural", "Lab Grown", "Treated"] }
+  ],
+  "Watches": [],
+  "Rough Diamonds": []
+};
 
 export default function AddProductScreen() {
   const { user } = useAuth();
@@ -98,8 +196,33 @@ export default function AddProductScreen() {
   const [showClarityModal, setShowClarityModal] = useState(false);
   const [showColorModal, setShowColorModal] = useState(false);
   const [showWeightModal, setShowWeightModal] = useState(false);
+  const [showProductNameModal, setShowProductNameModal] = useState(false);
+  const [productNameOptions, setProductNameOptions] = useState<string[]>([]);
+
+  const [dynamicFields, setDynamicFields] = useState({});
+  const [dynamicErrors, setDynamicErrors] = useState({});
+  const [showDynamicSelect, setShowDynamicSelect] = useState({}); // { [key]: boolean }
+
+  const [currency, setCurrency] = useState('ILS');
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
 
   const isLooseDiamond = formData.category === 'Loose Diamond';
+
+  useEffect(() => {
+    const options = productOptions[formData.category] || [];
+    setProductNameOptions(options);
+    // Reset product name if type changes
+    setFormData((prev) => ({ ...prev, title: "" }));
+  }, [formData.category]);
+
+  useEffect(() => {
+    const fields = productFieldsMap[formData.category] || [];
+    const initial = {};
+    fields.forEach(f => initial[f.key] = "");
+    setDynamicFields(initial);
+    setDynamicErrors({});
+    setShowDynamicSelect({});
+  }, [formData.category]);
 
   const pickImage = async () => {
     try {
@@ -192,9 +315,9 @@ export default function AddProductScreen() {
       }
 
       // Validate price
-      if (formData.price && isNaN(parseFloat(formData.price))) {
+      if (formData.price && (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0)) {
         newErrors.price = true;
-        Alert.alert('Error', 'Please enter a valid price');
+        Alert.alert('Error', 'Please enter a valid positive price');
         setLoading(false);
         setErrors(newErrors);
         return;
@@ -215,6 +338,13 @@ export default function AddProductScreen() {
       if (!imageUri) {
         missingFields.push('image');
         newErrors.image = true;
+      }
+
+      // Validate dynamic fields
+      if (!validateDynamicFields()) {
+        Alert.alert('Error', 'Please fill in all required dynamic fields');
+        setLoading(false);
+        return;
       }
 
       if (missingFields.length > 0) {
@@ -251,16 +381,12 @@ export default function AddProductScreen() {
       const productData = {
         title: formData.title,
         price: parseFloat(formData.price),
+        currency: currency,
         description: formData.description,
         category: formData.category,
         image_url: imageUrl,
         user_id: user.id,
-        details: formData.category === 'Loose Diamond' ? {
-          weight: formData.weight,
-          clarity: formData.clarity,
-          color: formData.color,
-          cut: formData.cut,
-        } : null,
+        details: Object.keys(dynamicFields).length > 0 ? dynamicFields : null,
         created_at: new Date().toISOString(),
       };
 
@@ -285,6 +411,23 @@ export default function AddProductScreen() {
       Alert.alert('Error', 'An error occurred while adding the product. Please try again.');
       setLoading(false);
     }
+  };
+
+  const validateDynamicFields = () => {
+    const fields = productFieldsMap[formData.category] || [];
+    const errors = {};
+    let valid = true;
+    fields.forEach(field => {
+      if (!dynamicFields[field.key]) {
+        errors[field.key] = true;
+        valid = false;
+      } else if (field.type === "number" && isNaN(Number(dynamicFields[field.key]))) {
+        errors[field.key] = true;
+        valid = false;
+      }
+    });
+    setDynamicErrors(errors);
+    return valid;
   };
 
   const SelectionModal = ({ 
@@ -345,6 +488,60 @@ export default function AddProductScreen() {
     </Modal>
   );
 
+  const renderDynamicFields = () => {
+    const fields = productFieldsMap[formData.category] || [];
+    return fields.map(field => {
+      // תנאי לשדה תלוי
+      if (field.condition) {
+        const [depKey, depVal] = field.condition.split(" == ");
+        if (dynamicFields[depKey.trim()] !== depVal.replace(/'/g, "").trim()) return null;
+      }
+      if (field.type === "select") {
+        return (
+          <View key={field.key} style={styles.inputGroup}>
+            <Text style={styles.label}>{field.label}</Text>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => setShowDynamicSelect(s => ({ ...s, [field.key]: true }))}
+            >
+              <Text style={styles.selectButtonText}>
+                {dynamicFields[field.key] || `בחר ${field.label}`}
+              </Text>
+              <ChevronDown size={20} color="#666" />
+            </TouchableOpacity>
+            {dynamicErrors[field.key] && <Text style={styles.errorText}>שדה חובה</Text>}
+            <SelectionModal
+              visible={!!showDynamicSelect[field.key]}
+              onClose={() => setShowDynamicSelect(s => ({ ...s, [field.key]: false }))}
+              title={field.label}
+              options={field.options}
+              onSelect={value => {
+                setDynamicFields(f => ({ ...f, [field.key]: value }));
+                setShowDynamicSelect(s => ({ ...s, [field.key]: false }));
+              }}
+              selected={dynamicFields[field.key]}
+            />
+          </View>
+        );
+      }
+      if (field.type === "number") {
+        return (
+          <View key={field.key} style={styles.inputGroup}>
+            <Text style={styles.label}>{field.label}</Text>
+            <TextInput
+              style={styles.input}
+              value={dynamicFields[field.key]}
+              onChangeText={text => setDynamicFields(f => ({ ...f, [field.key]: text }))}
+              keyboardType="numeric"
+            />
+            {dynamicErrors[field.key] && <Text style={styles.errorText}>שדה חובה/מספר לא תקין</Text>}
+          </View>
+        );
+      }
+      return null;
+    });
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.imageSection}>
@@ -389,24 +586,64 @@ export default function AddProductScreen() {
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Product Name</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.title}
-            onChangeText={(text) => setFormData({ ...formData, title: text })}
-            placeholder={isLooseDiamond ? "Example: 1 Carat Round Diamond" : "Example: Solitaire Diamond Ring"}
-            textAlign="left"
-          />
+          {productNameOptions.length > 0 ? (
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => setShowProductNameModal(true)}
+            >
+              <Text style={styles.selectButtonText}>
+                {formData.title || 'Select product name'}
+              </Text>
+              <ChevronDown size={20} color="#666" />
+            </TouchableOpacity>
+          ) : (
+            <TextInput
+              style={styles.input}
+              value={formData.title}
+              onChangeText={(text) => setFormData({ ...formData, title: text })}
+              placeholder={isLooseDiamond ? "Example: 1 Carat Round Diamond" : "Example: Solitaire Diamond Ring"}
+              textAlign="left"
+            />
+          )}
         </View>
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Price</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.price}
-            onChangeText={(text) => setFormData({ ...formData, price: text })}
-            placeholder="Enter price in USD"
-            keyboardType="numeric"
-            textAlign="left"
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TextInput
+              style={[styles.input, { flex: 1, marginRight: 8 }]}
+              value={formData.price}
+              onChangeText={text => {
+                // Allow only positive numbers
+                const sanitized = text.replace(/[^0-9.]/g, '');
+                setFormData({ ...formData, price: sanitized });
+              }}
+              placeholder="Enter price"
+              keyboardType="numeric"
+              textAlign="left"
+            />
+            <TouchableOpacity
+              style={styles.currencyButton}
+              onPress={() => setShowCurrencyModal(true)}
+            >
+              <Text style={styles.currencyButtonText}>
+                {CURRENCY_OPTIONS.find(opt => opt.value === currency)?.label || '₪'}
+              </Text>
+              <ChevronDown size={16} color="#666" />
+            </TouchableOpacity>
+          </View>
+          {errors.price && <Text style={styles.errorText}>Price is required and must be a positive number</Text>}
+          <SelectionModal
+            visible={showCurrencyModal}
+            onClose={() => setShowCurrencyModal(false)}
+            title="Select Currency"
+            options={CURRENCY_OPTIONS.map(opt => opt.label)}
+            onSelect={label => {
+              const selected = CURRENCY_OPTIONS.find(opt => opt.label === label);
+              if (selected) setCurrency(selected.value);
+              setShowCurrencyModal(false);
+            }}
+            selected={CURRENCY_OPTIONS.find(opt => opt.value === currency)?.label}
           />
         </View>
 
@@ -426,57 +663,7 @@ export default function AddProductScreen() {
 
         <Text style={styles.sectionTitle}>Technical Specifications</Text>
 
-        <View style={styles.inputGroup}>
-          <Text style={[styles.label, isLooseDiamond && styles.requiredField]}>Weight (Carat)</Text>
-          <TouchableOpacity
-            style={styles.selectButton}
-            onPress={() => setShowWeightModal(true)}
-          >
-            <Text style={styles.selectButtonText}>
-              {formData.weight ? `${formData.weight} Carat` : 'Select weight'}
-            </Text>
-            <ChevronDown size={20} color="#666" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={[styles.label, isLooseDiamond && styles.requiredField]}>Clarity</Text>
-          <TouchableOpacity
-            style={styles.selectButton}
-            onPress={() => setShowClarityModal(true)}
-          >
-            <Text style={styles.selectButtonText}>
-              {formData.clarity || 'Select clarity grade'}
-            </Text>
-            <ChevronDown size={20} color="#666" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={[styles.label, isLooseDiamond && styles.requiredField]}>Color</Text>
-          <TouchableOpacity
-            style={styles.selectButton}
-            onPress={() => setShowColorModal(true)}
-          >
-            <Text style={styles.selectButtonText}>
-              {formData.color || 'Select color grade'}
-            </Text>
-            <ChevronDown size={20} color="#666" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={[styles.label, isLooseDiamond && styles.requiredField]}>Cut</Text>
-          <TouchableOpacity
-            style={styles.selectButton}
-            onPress={() => setShowCutModal(true)}
-          >
-            <Text style={styles.selectButtonText}>
-              {formData.cut || 'Select cut type'}
-            </Text>
-            <ChevronDown size={20} color="#666" />
-          </TouchableOpacity>
-        </View>
+        {renderDynamicFields()}
 
         <TouchableOpacity 
           style={[styles.submitButton, loading && styles.submitButtonDisabled]}
@@ -533,6 +720,15 @@ export default function AddProductScreen() {
         options={PRODUCT_TYPES}
         onSelect={(value) => setFormData({ ...formData, category: value })}
         selected={formData.category}
+      />
+
+      <SelectionModal
+        visible={showProductNameModal}
+        onClose={() => setShowProductNameModal(false)}
+        title="Select Product Name"
+        options={productNameOptions}
+        onSelect={(value) => setFormData({ ...formData, title: value })}
+        selected={formData.title}
       />
     </ScrollView>
   );
@@ -703,5 +899,27 @@ const styles = StyleSheet.create({
   },
   modalOptionTextSelected: {
     color: '#fff',
+  },
+  errorText: {
+    color: '#ff4444',
+    fontSize: 12,
+    marginTop: 4,
+    fontFamily: 'Heebo-Regular',
+  },
+  currencyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2a2a2a',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  currencyButtonText: {
+    fontSize: 18,
+    color: '#fff',
+    marginRight: 4,
+    fontFamily: 'Heebo-Medium',
   },
 });
