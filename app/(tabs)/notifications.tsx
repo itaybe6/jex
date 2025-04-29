@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert } from 'react-native';
 import { Settings } from 'lucide-react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -8,6 +8,7 @@ import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import React from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Notification = {
   id: string;
@@ -283,385 +284,190 @@ export default function NotificationsScreen() {
     }, [user])
   );
 
-  const renderNotification = (notification: Notification) => {
-    const { type, data } = notification;
-    
-    let title = '';
-    let description = '';
-    let image = null;
-    const senderName = data.sender_name;
-    const senderAvatar = data.sender_avatar;
+  const renderNotification = ({ item: notification }: { item: Notification }) => {
+    const formattedDate = new Date(notification.created_at).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
 
-    if (type === 'new_product') {
-      title = 'New Product Listed';
-      description = `A new ${data.cut} diamond, ${data.weight}ct, ${data.clarity}, color ${data.color} has been listed`;
-      image = data.image_url;
-    } else if (type === 'new_request') {
-      title = 'New Request Posted';
-      description = `Someone is looking for a ${data.cut} diamond, ${data.weight}ct, ${data.clarity}, color ${data.color}`;
-    } else if (type === 'deal_request') {
-      const displayName = senderName || 'Unknown User';
-      const displayAvatar = senderAvatar || 'https://ui-avatars.com/api/?name=User';
-      const messageToShow = data.message || 'No message available.';
-      return (
-        <View key={notification.id} style={[styles.notificationCard, !notification.read && styles.unreadCard]}>
-          <View style={styles.notificationContent}>
-            <Text style={styles.notificationTitle}>Deal Request</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-              <Image source={{ uri: displayAvatar }} style={{ width: 32, height: 32, borderRadius: 16, marginRight: 8, backgroundColor: '#444' }} />
-              <Text style={{ color: '#fff', fontSize: 14 }}>{displayName}</Text>
-            </View>
-            <View style={styles.dealProductBox}>
-              {data.product_image_url && (
-                <Image source={{ uri: data.product_image_url }} style={styles.dealProductImage} />
-              )}
-              <View style={{ flex: 1, marginLeft: 10 }}>
-                {data.product_title && (
-                  <Text style={styles.dealProductTitle}>{data.product_title}</Text>
-                )}
-                {data.product_description && (
-                  <Text style={styles.dealProductDesc}>{data.product_description}</Text>
-                )}
-                {typeof data.price !== 'undefined' && (
-                  <View style={styles.dealProductPriceRow}>
-                    <Text style={styles.dealProductPriceIcon}>💰</Text>
-                    <Text style={styles.dealProductPrice}>{data.price} ₪</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-            <Text style={[styles.notificationDescription, {marginTop: 8}]}>{messageToShow}</Text>
-            <Text style={styles.notificationTime}>{new Date(notification.created_at).toLocaleDateString()}</Text>
-            {actionError && actionLoading === notification.id && (
-              <Text style={{ color: 'red', marginVertical: 4 }}>{actionError}</Text>
-            )}
-            {type === 'deal_request' && !notification.is_action_done && (
-              <View style={{ flexDirection: 'row', marginTop: 8 }}>
-                <TouchableOpacity
-                  style={[styles.soldButton, { backgroundColor: '#4CAF50', flex: 1, marginRight: 8, opacity: actionLoading && actionLoading === notification.id ? 0.5 : 1 }]}
-                  onPress={() => handleDealAction(notification, true)}
-                  disabled={!!actionLoading}
-                >
-                  {actionLoading === notification.id ? <ActivityIndicator color="#fff" /> : <Text style={styles.soldButtonText}>Approve</Text>}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.soldButton, { backgroundColor: '#FF3B30', flex: 1, opacity: actionLoading && actionLoading === notification.id ? 0.5 : 1 }]}
-                  onPress={() => handleDealAction(notification, false)}
-                  disabled={!!actionLoading}
-                >
-                  {actionLoading === notification.id ? <ActivityIndicator color="#fff" /> : <Text style={styles.soldButtonText}>Reject</Text>}
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        </View>
-      );
-    } else if (type === 'deal_approved' || type === 'deal_rejected') {
-      return (
-        <View key={notification.id} style={[styles.notificationCard, !notification.read && styles.unreadCard]}>
-          <View style={styles.notificationContent}>
-            <Text style={styles.notificationTitle}>{type === 'deal_approved' ? 'Deal Approved' : 'Deal Rejected'}</Text>
-            {senderName && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                {senderAvatar && (
-                  <Image source={{ uri: senderAvatar }} style={{ width: 32, height: 32, borderRadius: 16, marginRight: 8 }} />
-                )}
-                <Text style={{ color: '#fff', fontSize: 14 }}>{senderName}</Text>
-              </View>
-            )}
-            <Text style={styles.notificationDescription}>{data.message || (type === 'deal_approved' ? 'The deal was approved. You can now remove the product from your catalog.' : 'The deal was rejected.')}</Text>
-            <Text style={styles.notificationTime}>{new Date(notification.created_at).toLocaleDateString()}</Text>
-            {type === 'deal_approved' && (
-              <TouchableOpacity
-                style={[styles.soldButton, { backgroundColor: '#FF3B30', marginTop: 8 }]}
-                onPress={async () => {
-                  setActionLoading(notification.id);
-                  setActionError(null);
-                  try {
-                    const { product_id } = data;
-                    if (!product_id) throw new Error('Missing product_id');
-                    const { error: updateError } = await supabase
-                      .from('products')
-                      .update({ status: 'sold' })
-                      .eq('id', product_id);
-                    if (updateError) throw updateError;
-                    await markAsRead(notification.id);
-                    setNotifications(prev => prev.filter(n => n.id !== notification.id));
-                    Alert.alert('Product Updated', 'The product was marked as sold in your catalog.');
-                  } catch (err: any) {
-                    setActionError(err.message || 'Failed to update product');
-                  } finally {
-                    setActionLoading(null);
-                  }
-                }}
-                disabled={!!actionLoading}
-              >
-                {actionLoading === notification.id ? <ActivityIndicator color="#fff" /> : <Text style={styles.soldButtonText}>Mark as Sold & Finish</Text>}
-              </TouchableOpacity>
-            )}
-            {actionError && actionLoading === notification.id && (
-              <Text style={{ color: 'red', marginVertical: 4 }}>{actionError}</Text>
-            )}
-          </View>
-        </View>
-      );
-    } else if (type === 'waiting_seller_approval') {
-      const displayName = data.sender_full_name || 'Unknown User';
-      const displayAvatar = data.sender_avatar_url || 'https://ui-avatars.com/api/?name=User';
-      const messageToShow = data.message || 'No message available.';
-      return (
-        <View key={notification.id} style={[styles.notificationCard, { backgroundColor: notification.is_action_done ? '#23232b' : '#6C5CE7' }, !notification.read && styles.unreadCard]}>
-          <View style={styles.notificationContent}>
-            <Text style={styles.notificationTitle}>Waiting Seller Approval</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-              <Image source={{ uri: displayAvatar }} style={{ width: 32, height: 32, borderRadius: 16, marginRight: 8, backgroundColor: '#444' }} />
-              <Text style={{ color: '#fff', fontSize: 14 }}>{displayName}</Text>
-            </View>
-            <Text style={styles.notificationDescription}>{messageToShow}</Text>
-            <Text style={styles.notificationTime}>{new Date(notification.created_at).toLocaleDateString()}</Text>
-            {!notification.is_action_done && (
-              <TouchableOpacity
-                style={[styles.soldButton, { backgroundColor: '#4CAF50', marginTop: 8 }]}
-                onPress={async () => {
-                  console.log('Complete Deal clicked', data.product_id, notification.id);
-                  Alert.alert(
-                    'Are you sure?',
-                    'Are you sure you want to complete the deal? The product will be marked as sold.',
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      {
-                        text: 'Confirm',
-                        style: 'destructive',
-                        onPress: async () => {
-                          try {
-                            console.log('Complete Deal clicked', data.product_id, notification.id);
-                            
-                            // Update transaction status to completed
-                            const { error: txError } = await supabase
-                              .from('transactions')
-                              .update({ status: 'completed' })
-                              .eq('id', data.transaction_id);
-                            if (txError) throw txError;
-
-                            // Update product status to sold instead of deleting
-                            const { error: updateError } = await supabase
-                              .from('products')
-                              .update({ status: 'sold' })
-                              .eq('id', data.product_id);
-                            console.log('Product update result:', updateError);
-                            if (updateError) throw updateError;
-
-                            // Update notification is_action_done
-                            const { error: notifDoneError } = await supabase
-                              .from('notifications')
-                              .update({ is_action_done: true })
-                              .eq('id', notification.id);
-                            console.log('Notification update result:', notifDoneError);
-                            if (notifDoneError) throw notifDoneError;
-
-                            setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, is_action_done: true } : n));
-                            Alert.alert('Deal Completed', 'The deal was completed successfully and the product was marked as sold.');
-                          } catch (err: any) {
-                            console.error('Error completing deal:', err);
-                            Alert.alert('Error', err.message || 'An error occurred while completing the deal');
-                          }
-                        },
-                      },
-                    ]
-                  );
-                }}
-              >
-                <Text style={styles.soldButtonText}>Complete Deal</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-      );
-    }
+    const profileImage = notification.data?.sender_avatar_url || 'https://ui-avatars.com/api/?background=0E2657&color=fff&name=' + encodeURIComponent(notification.data?.sender_full_name || 'U');
 
     return (
-      <TouchableOpacity
-        key={notification.id}
-        style={[styles.notificationCard, !notification.read && styles.unreadCard]}
-        onPress={() => markAsRead(notification.id)}
-      >
-        {image && (
-          <Image source={{ uri: image }} style={styles.notificationImage} />
-        )}
-        <View style={styles.notificationContent}>
-          <Text style={styles.notificationTitle}>{title}</Text>
-          <Text style={styles.notificationDescription}>{description}</Text>
-          <Text style={styles.notificationTime}>
-            {new Date(notification.created_at).toLocaleDateString()}
-          </Text>
-        </View>
-      </TouchableOpacity>
+      <View style={styles.notificationWrapper}>
+        <Image 
+          source={{ uri: profileImage }}
+          style={styles.profileImage}
+        />
+        <TouchableOpacity
+          style={[
+            styles.notificationCard,
+            !notification.read && styles.unreadCard
+          ]}
+          onPress={() => markAsRead(notification.id)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.textContainer}>
+            <Text style={styles.statusText}>
+              {notification.type === 'waiting_seller_approval' ? 'Waiting Seller Approval' : 
+               notification.type === 'deal_completed' ? 'Deal Completed' : 
+               'New Notification'}
+            </Text>
+            
+            <Text style={styles.userName}>
+              {notification.data?.sender_full_name || 'Unknown User'}
+            </Text>
+            
+            <Text style={styles.messageText} numberOfLines={2}>
+              {notification.data?.message || 'No message available'}
+            </Text>
+            
+            <Text style={styles.dateText}>{formattedDate}</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
     );
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={[styles.container, { marginTop: 0 }]} edges={['left', 'right']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Notifications</Text>
-        <TouchableOpacity
-          style={styles.settingsButton}
+        <TouchableOpacity 
           onPress={() => router.push('/notifications/settings')}
+          style={styles.settingsButton}
+          activeOpacity={0.7}
         >
-          <Settings size={24} color="#007AFF" />
+          <Settings size={24} color="#0E2657" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
-        {notifications.length > 0 ? (
-          notifications.map(renderNotification)
-        ) : (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateTitle}>No notifications yet</Text>
-            <Text style={styles.emptyStateDescription}>
-              You'll see notifications here when someone posts a product or request matching your preferences
-            </Text>
+      <FlatList
+        data={notifications}
+        renderItem={renderNotification}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContainer}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No notifications yet</Text>
           </View>
-        )}
-      </ScrollView>
-    </View>
+        }
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#F5F8FC',
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2a2a2a',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 6,
+    paddingTop: 32,
+    marginBottom: 6,
+    backgroundColor: '#F5F8FC',
   },
   headerTitle: {
     fontSize: 24,
-    fontFamily: 'Heebo-Bold',
-    color: '#fff',
+    fontFamily: 'Montserrat-Bold',
+    color: '#111827',
   },
   settingsButton: {
-    padding: 8,
+    padding: 4,
+    borderRadius: 8,
   },
-  content: {
-    flex: 1,
+  listContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
+  },
+  notificationWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    marginRight: 16,
+    marginLeft: 40,
+    position: 'relative',
   },
   notificationCard: {
-    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2a2a2a',
-    backgroundColor: '#2a2a2a',
+    paddingLeft: 40,
+    flex: 1,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   unreadCard: {
-    backgroundColor: '#6C5CE7',
+    borderLeftWidth: 3,
+    borderLeftColor: '#0E2657',
   },
-  notificationImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    marginRight: 12,
+  profileImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#E5E7EB',
+    position: 'absolute',
+    left: -24,
+    zIndex: 1,
+    borderWidth: 5,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  notificationContent: {
-    flex: 1,
+  textContainer: {
+    gap: 4,
   },
-  notificationTitle: {
-    fontSize: 16,
-    fontFamily: 'Heebo-Bold',
-    color: '#fff',
+  statusText: {
+    fontSize: 15,
+    fontFamily: 'Montserrat-SemiBold',
+    color: '#0E2657',
   },
-  notificationDescription: {
+  userName: {
     fontSize: 14,
-    fontFamily: 'Heebo-Regular',
-    color: '#fff',
+    fontFamily: 'Montserrat-Medium',
+    color: '#111827',
   },
-  notificationTime: {
+  messageText: {
+    fontSize: 13,
+    fontFamily: 'Montserrat-Regular',
+    color: '#6B7280',
+    lineHeight: 18,
+  },
+  dateText: {
     fontSize: 12,
-    fontFamily: 'Heebo-Regular',
-    color: '#888',
+    fontFamily: 'Montserrat-Regular',
+    color: '#9CA3AF',
+    marginTop: 4,
   },
-  emptyState: {
+  emptyContainer: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
+    paddingTop: 40,
   },
-  emptyStateTitle: {
-    fontSize: 18,
-    fontFamily: 'Heebo-Bold',
-    color: '#fff',
-  },
-  emptyStateDescription: {
-    fontSize: 14,
-    fontFamily: 'Heebo-Regular',
-    color: '#888',
-    textAlign: 'center',
-    marginHorizontal: 20,
-  },
-  soldButton: {
-    backgroundColor: '#6C5CE7',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 0,
-    marginBottom: 0,
-    marginHorizontal: 0,
-  },
-  soldButtonText: {
-    color: '#fff',
+  emptyText: {
     fontSize: 16,
-    fontFamily: 'Heebo-Medium',
-  },
-  dealProductBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#23232b',
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 8,
-    marginTop: 4,
-    borderWidth: 1,
-    borderColor: '#444',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  dealProductImage: {
-    width: 54,
-    height: 54,
-    borderRadius: 8,
-    marginRight: 8,
-    backgroundColor: '#1a1a1a',
-  },
-  dealProductTitle: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  dealProductDesc: {
-    color: '#aaa',
-    fontSize: 13,
-    marginBottom: 2,
-  },
-  dealProductPriceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  dealProductPriceIcon: {
-    fontSize: 16,
-    marginRight: 3,
-  },
-  dealProductPrice: {
-    color: '#6C5CE7',
-    fontSize: 15,
-    fontWeight: 'bold',
+    fontFamily: 'Montserrat-Medium',
+    color: '#6B7280',
   },
 });
