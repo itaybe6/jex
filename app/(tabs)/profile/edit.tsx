@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Image, Alert, Platform } from 'react-native';
-import { Camera, X, User } from 'lucide-react-native';
+import { Camera, X, User, ChevronLeft, CheckCircle } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
@@ -149,96 +149,128 @@ export default function EditProfileScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.imageSection}>
-        <View style={styles.avatarContainer}>
-          {imageUri ? (
-            <Image source={{ uri: imageUri }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.defaultAvatar]}>
-              <User size={50} color="#666" />
-            </View>
-          )}
+    <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1, backgroundColor: '#F5F8FC', paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
+      {/* Top Navigation Bar */}
+      <View style={styles.topNavBar}>
+        <TouchableOpacity style={styles.navLeft} onPress={() => router.back()} activeOpacity={0.7}>
+          <ChevronLeft size={26} color="#0E2657" />
+          <Text style={styles.navTitle}>Profile</Text>
+        </TouchableOpacity>
+      </View>
+      {/* White Card */}
+      <View style={styles.card}>
+        <View style={styles.imageSection}>
+          <View style={styles.avatarContainer}>
+            {imageUri ? (
+              <Image source={{ uri: imageUri }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatar, styles.defaultAvatar]}>
+                <User size={50} color="#666" />
+              </View>
+            )}
+            <TouchableOpacity 
+              style={styles.editAvatarButton}
+              onPress={pickImage}
+              activeOpacity={0.7}
+            >
+              <Camera size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View style={styles.form}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Full Name</Text>
+            <TextInput
+              style={styles.input}
+              value={profile.full_name}
+              onChangeText={(text) => setProfile({ ...profile, full_name: text })}
+              placeholder="Enter your full name"
+              textAlign="left"
+              placeholderTextColor="#6B7280"
+              autoCapitalize="words"
+              autoCorrect={false}
+              importantForAutofill="no"
+              keyboardType="default"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Phone Number</Text>
+            <TextInput
+              style={styles.input}
+              value={profile.phone}
+              onChangeText={(text) => setProfile({ ...profile, phone: text })}
+              placeholder="Enter your phone number"
+              textAlign="left"
+              placeholderTextColor="#6B7280"
+              keyboardType="phone-pad"
+              autoCapitalize="none"
+              autoCorrect={false}
+              importantForAutofill="no"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Role</Text>
+            <TextInput
+              style={styles.input}
+              value={profile.title}
+              onChangeText={(text) => setProfile({ ...profile, title: text })}
+              placeholder="Enter your role"
+              textAlign="left"
+              placeholderTextColor="#6B7280"
+              autoCapitalize="words"
+              autoCorrect={false}
+              importantForAutofill="no"
+              keyboardType="default"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Website</Text>
+            <TextInput
+              style={styles.input}
+              value={profile.website}
+              onChangeText={(text) => setProfile({ ...profile, website: text })}
+              placeholder="Enter your website URL"
+              textAlign="left"
+              placeholderTextColor="#6B7280"
+              autoCapitalize="none"
+              autoCorrect={false}
+              importantForAutofill="no"
+              keyboardType="url"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>About Me</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={profile.bio}
+              onChangeText={(text) => setProfile({ ...profile, bio: text })}
+              placeholder="Tell us a bit about yourself..."
+              multiline
+              numberOfLines={4}
+              textAlign="left"
+              textAlignVertical="top"
+              placeholderTextColor="#6B7280"
+              autoCapitalize="sentences"
+              autoCorrect={false}
+              importantForAutofill="no"
+              keyboardType="default"
+            />
+          </View>
+
           <TouchableOpacity 
-            style={styles.editAvatarButton}
-            onPress={pickImage}
+            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+            onPress={handleSubmit}
+            disabled={loading}
+            activeOpacity={0.85}
           >
-            <Camera size={20} color="#fff" />
+            <Text style={styles.submitButtonText}>{loading ? 'Saving...' : 'Save Changes'}</Text>
+            <CheckCircle size={20} color="#fff" style={{ marginLeft: 8 }} />
           </TouchableOpacity>
         </View>
-      </View>
-
-      <View style={styles.form}>
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>שם מלא</Text>
-          <TextInput
-            style={styles.input}
-            value={profile.full_name}
-            onChangeText={(text) => setProfile({ ...profile, full_name: text })}
-            placeholder="Enter your full name"
-            textAlign="left"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>טלפון</Text>
-          <TextInput
-            style={styles.input}
-            value={profile.phone}
-            onChangeText={(text) => setProfile({ ...profile, phone: text })}
-            placeholder="Enter your phone number"
-            textAlign="left"
-            keyboardType="phone-pad"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>תפקיד</Text>
-          <TextInput
-            style={styles.input}
-            value={profile.title}
-            onChangeText={(text) => setProfile({ ...profile, title: text })}
-            placeholder="e.g. Certified Diamond Dealer"
-            textAlign="left"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>אתר אינטרנט</Text>
-          <TextInput
-            style={styles.input}
-            value={profile.website}
-            onChangeText={(text) => setProfile({ ...profile, website: text })}
-            placeholder="Enter your website URL"
-            textAlign="left"
-            keyboardType="url"
-            autoCapitalize="none"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>אודות</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={profile.bio}
-            onChangeText={(text) => setProfile({ ...profile, bio: text })}
-            placeholder="Tell us a bit about yourself..."
-            multiline
-            numberOfLines={4}
-            textAlign="left"
-            textAlignVertical="top"
-          />
-        </View>
-
-        <TouchableOpacity 
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={loading}
-        >
-          <Text style={styles.submitButtonText}>
-            {loading ? 'Updating...' : 'Save Changes'}
-          </Text>
-        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -247,77 +279,144 @@ export default function EditProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#F5F8FC',
+    direction: 'ltr',
+  },
+  topNavBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    height: 56,
+    paddingHorizontal: 16,
+    borderBottomWidth: 0,
+    marginBottom: 8,
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  navLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  navTitle: {
+    color: '#0E2657',
+    fontSize: 20,
+    fontFamily: 'Montserrat-Bold',
+    marginLeft: 4,
+    letterSpacing: 0.2,
   },
   imageSection: {
-    padding: 20,
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#222',
-    backgroundColor: '#121212',
+    marginBottom: 24,
   },
   avatarContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#F6F7FA',
+    alignItems: 'center',
+    justifyContent: 'center',
     position: 'relative',
-    marginVertical: 20,
+    marginBottom: 0,
   },
   avatar: {
     width: 120,
     height: 120,
     borderRadius: 60,
+    backgroundColor: '#F6F7FA',
   },
   defaultAvatar: {
-    backgroundColor: '#222',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   editAvatarButton: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#6C5CE7',
+    bottom: -4,
+    right: -12,
+    backgroundColor: '#0E2657',
+    width: 40,
+    height: 40,
     borderRadius: 20,
-    padding: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 4,
+    borderColor: '#fff',
+    zIndex: 2,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingHorizontal: 0,
+    paddingVertical: 24,
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
+    alignItems: 'center',
   },
   form: {
-    padding: 20,
+    paddingHorizontal: 24,
+    width: '100%',
+    marginTop: 0,
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 16,
+    width: '100%',
   },
   label: {
-    fontSize: 14,
-    color: '#fff',
-    marginBottom: 8,
+    fontSize: 15,
+    color: '#111827',
+    fontFamily: 'Montserrat-Medium',
+    marginBottom: 6,
     textAlign: 'left',
-    fontFamily: 'Heebo-Medium',
+    direction: 'ltr',
   },
   input: {
-    backgroundColor: '#222',
-    borderRadius: 8,
-    padding: 12,
+    width: '100%',
+    backgroundColor: '#F6F7FA',
+    borderRadius: 12,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     fontSize: 16,
-    fontFamily: 'Heebo-Regular',
-    color: '#fff',
-    borderWidth: 1,
-    borderColor: '#333',
+    fontFamily: 'Montserrat-Medium',
+    color: '#111827',
+    textAlign: 'left',
+    direction: 'ltr',
   },
   textArea: {
-    height: 100,
-    paddingTop: 12,
+    minHeight: 90,
+    maxHeight: 160,
+    textAlignVertical: 'top',
   },
   submitButton: {
-    backgroundColor: '#6C5CE7',
-    paddingVertical: 16,
-    borderRadius: 8,
+    backgroundColor: '#0E2657',
+    borderRadius: 24,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 32,
+    justifyContent: 'center',
+    paddingVertical: 12,
+    marginTop: 16,
+    marginBottom: 24,
+    width: '100%',
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    minHeight: 44,
   },
   submitButtonDisabled: {
     opacity: 0.6,
   },
   submitButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontFamily: 'Heebo-Medium',
+    fontSize: 17,
+    fontFamily: 'Montserrat-Bold',
+    letterSpacing: 0.5,
   },
 });
