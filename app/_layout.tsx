@@ -15,6 +15,7 @@ import { useState } from 'react';
 import { router } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import CustomText from '../components/CustomText';
+import 'react-native-reanimated';
 
 // Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();

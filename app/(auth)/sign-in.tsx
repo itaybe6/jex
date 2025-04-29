@@ -1,15 +1,16 @@
 import React from 'react';
-import { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Image, TextInput, ScrollView, Platform, ActivityIndicator, Animated, Dimensions, KeyboardAvoidingView } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, TouchableOpacity, Image, TextInput, ScrollView, Platform, ActivityIndicator, Animated, Dimensions, KeyboardAvoidingView, Easing } from 'react-native';
 import { router } from 'expo-router';
 import { Diamond, CircleAlert as AlertCircle, Eye, EyeOff } from 'lucide-react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-import { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import CustomText from '../../components/CustomText';
 import AuroraBackground from '../../components/AuroraBackground';
 import { LinearGradient } from 'expo-linear-gradient';
+import BackgroundLines from "@/components/BackgroundLines";
+import GoogleLogo from '../../components/GoogleLogo';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -21,6 +22,8 @@ type ErrorType = {
 };
 
 const { width, height } = Dimensions.get("window");
+
+const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
 export default function SignIn() {
   const [mode, setMode] = useState<AuthMode>('signin');
@@ -259,48 +262,53 @@ export default function SignIn() {
 
   if (mode === 'confirmation') {
     return (
-      <AuroraBackground>
-        <View style={[styles.container, styles.confirmationContainer]}>
-          <View style={styles.header}>
-            <Diamond size={48} color="#007AFF" />
-            <CustomText style={styles.title}>JEX</CustomText>
+      <View style={{ flex: 1, backgroundColor: "#0B1120" }}>
+        <BackgroundLines />
+        <AuroraBackground>
+          <View style={[styles.container, styles.confirmationContainer]}>
+            <View style={styles.header}>
+              <Diamond size={48} color="#007AFF" />
+              <CustomText style={styles.title}>JEX</CustomText>
+            </View>
+            <View style={styles.confirmationContent}>
+              <CustomText style={styles.confirmationTitle}>Email Verification</CustomText>
+              <CustomText style={styles.confirmationText}>{confirmationMessage}</CustomText>
+              <TouchableOpacity
+                style={[styles.button, styles.primaryButton, styles.resendButton]}
+                onPress={handleResendConfirmation}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <CustomText style={styles.buttonText}>Resend Verification Email</CustomText>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.switchModeButton}
+                onPress={() => setMode('signin')}
+              >
+                <CustomText style={styles.switchModeText}>Back to Sign In</CustomText>
+              </TouchableOpacity>
+            </View>
           </View>
-          <View style={styles.confirmationContent}>
-            <CustomText style={styles.confirmationTitle}>Email Verification</CustomText>
-            <CustomText style={styles.confirmationText}>{confirmationMessage}</CustomText>
-            <TouchableOpacity
-              style={[styles.button, styles.primaryButton, styles.resendButton]}
-              onPress={handleResendConfirmation}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <CustomText style={styles.buttonText}>Resend Verification Email</CustomText>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.switchModeButton}
-              onPress={() => setMode('signin')}
-            >
-              <CustomText style={styles.switchModeText}>Back to Sign In</CustomText>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </AuroraBackground>
+        </AuroraBackground>
+      </View>
     );
   }
 
   return (
-    <View style={styles.root}>
-      {/* רקע כחול */}
-      <LinearGradient
-        colors={["#071634", "#153E90", "#4F8EF7"]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={styles.topBackground}
-      />
-      {/* לוגו עליון */}
+    <View style={{ flex: 1, backgroundColor: "#0B1120" }}>
+  <View style={{ flex: 1 }}>
+    <BackgroundLines />
+    <LinearGradient
+  colors={["#071634CC", "#153E90CC", "#4F8EF7CC"]} // שים לב ל-CC!
+  start={{ x: 0.5, y: 0 }}
+  end={{ x: 0.5, y: 1 }}
+  style={StyleSheet.absoluteFill}
+/>
+  </View>
+
       <View style={styles.topLogoContainer}>
         <Image
           source={require('../../assets/images/logo white-08.png')}
@@ -308,16 +316,13 @@ export default function SignIn() {
           resizeMode="contain"
         />
       </View>
-      {/* כרטיס לבן */}
       <View style={styles.cardContainer}>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.cardContent}>
-            {/* Title & Subtitle */}
             <CustomText style={styles.title}>{mode === 'signup' ? 'Get started free.' : 'Welcome Back'}</CustomText>
             <CustomText style={styles.subtitle}>
               {mode === 'signup' ? 'Free forever. No credit card needed.' : 'Enter your details below'}
             </CustomText>
-            {/* Form Fields */}
             <TextInput
               style={styles.input}
               placeholder="Email Address"
@@ -369,9 +374,7 @@ export default function SignIn() {
                 autoCapitalize="none"
               />
             )}
-            {/* Error Message */}
             {error && <CustomText style={styles.errorText}>{error.message}</CustomText>}
-            {/* Sign In/Up Button */}
             <TouchableOpacity
               style={[
                 styles.button,
@@ -381,19 +384,40 @@ export default function SignIn() {
               ]}
               onPress={handleEmailAuth}
               disabled={loading}
-              activeOpacity={0.85}
+              activeOpacity={0.9}
               onPressIn={() => setIsButtonActive(true)}
               onPressOut={() => setIsButtonActive(false)}
             >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <CustomText style={styles.buttonText}>
-                  {mode === 'signup' ? 'Sign Up' : 'Sign In'}
-                </CustomText>
-              )}
+              {/* Single static gradient */}
+              <LinearGradient
+                colors={['#0E2657', '#081632']}
+                locations={[0, 1]}
+                start={{ x: 1, y: 1 }}
+                end={{ x: 0, y: 0 }}
+                style={StyleSheet.absoluteFill}
+              />
+
+              {/* Button content */}
+              <Animated.View 
+                style={[
+                  {
+                    width: '100%',
+                    alignItems: 'center',
+                    transform: [
+                      { scale: isButtonActive ? 0.98 : 1 }
+                    ]
+                  }
+                ]}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <CustomText style={[styles.buttonText, { fontSize: 16, letterSpacing: 0.5 }]}>
+                    {mode === 'signup' ? 'Sign Up' : 'Sign In'}
+                  </CustomText>
+                )}
+              </Animated.View>
             </TouchableOpacity>
-            {/* Forgot Password / Switch Mode */}
             {mode === 'signin' && (
               <TouchableOpacity onPress={() => setMode('forgot')} style={styles.linkButton}>
                 <CustomText style={styles.linkText}>Forgot your password?</CustomText>
@@ -404,10 +428,12 @@ export default function SignIn() {
               <CustomText style={styles.dividerText}>Or sign in with</CustomText>
               <View style={styles.dividerLine} />
             </View>
-            {/* Social Login */}
             <View style={styles.socialRow}>
-              <TouchableOpacity style={styles.socialButton}>
-                <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg' }} style={styles.socialIcon} />
+              <TouchableOpacity 
+                style={styles.socialButton}
+                onPress={() => promptAsync()}
+              >
+                <GoogleLogo size={22} style={{ marginRight: 8 }} />
                 <CustomText style={styles.socialText}>Google</CustomText>
               </TouchableOpacity>
               <TouchableOpacity style={styles.socialButton}>
@@ -415,7 +441,6 @@ export default function SignIn() {
                 <CustomText style={styles.socialText}>Facebook</CustomText>
               </TouchableOpacity>
             </View>
-            {/* Switch Mode */}
             <View style={styles.bottomRow}>
               <CustomText style={styles.bottomText}>
                 {mode === 'signup'
@@ -527,21 +552,19 @@ const styles = StyleSheet.create({
   },
   button: {
     width: "100%",
+    height: 48,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
+    justifyContent: "center",
     marginTop: 8,
-    shadowColor: "#0A1F44",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.13,
-    shadowRadius: 8,
-    elevation: 3,
+    overflow: 'hidden',
   },
   primaryButton: {
-    backgroundColor: "#0A1F44",
+    backgroundColor: 'transparent',
   },
   primaryButtonActive: {
-    backgroundColor: "#071634",
+    backgroundColor: 'transparent',
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -551,6 +574,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Montserrat-Medium",
     fontWeight: "500",
+    zIndex: 1,
+    textShadowColor: 'rgba(0, 0, 0, 0.1)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
   },
   errorText: {
     color: "#cc3333",
