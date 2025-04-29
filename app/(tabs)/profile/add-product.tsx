@@ -170,7 +170,9 @@ const productFieldsMap = {
     { label: "Certification", type: "select", key: "certification", options: ["GIA", "IGI", "None"] },
     { label: "Origin", type: "select", key: "origin", options: ["Natural", "Lab Grown", "Treated"] }
   ],
-  "Watches": [],
+  "Watches": [
+    { label: "Model Name", type: "text", key: "modelName" }
+  ],
   "Rough Diamonds": []
 };
 
@@ -535,6 +537,20 @@ export default function AddProductScreen() {
               keyboardType="numeric"
             />
             {dynamicErrors[field.key] && <Text style={styles.errorText}>שדה חובה/מספר לא תקין</Text>}
+          </View>
+        );
+      }
+      if (field.type === "text") {
+        return (
+          <View key={field.key} style={styles.inputGroup}>
+            <Text style={styles.label}>{field.label}</Text>
+            <TextInput
+              style={styles.input}
+              value={dynamicFields[field.key]}
+              onChangeText={text => setDynamicFields(f => ({ ...f, [field.key]: text }))}
+              placeholder={`Enter ${field.label}`}
+            />
+            {dynamicErrors[field.key] && <Text style={styles.errorText}>שדה חובה</Text>}
           </View>
         );
       }

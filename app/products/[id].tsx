@@ -245,9 +245,9 @@ export default function ProductScreen() {
           style={styles.contactButton} 
           onPress={handleContactPress}
         >
-          <MessageCircle size={24} color="#fff" strokeWidth={2.5} />
-          <Text style={styles.contactButtonText}>Contact via WhatsApp</Text>
-        </TouchableOpacity>
+        <MessageCircle size={24} color="#fff" strokeWidth={2.5} />
+        <Text style={styles.contactButtonText}>Contact via WhatsApp</Text>
+      </TouchableOpacity>
       </View>
 
       <Modal
