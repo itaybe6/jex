@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Linking, Modal } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, MessageCircle } from 'lucide-react-native';
+import { ArrowLeft, MessageCircle, Clock, X } from 'lucide-react-native';
 import { TopHeader } from '@/components/TopHeader';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '@/hooks/useAuth';
 
 type Product = {
   id: string;
@@ -28,10 +29,29 @@ type Product = {
   created_at: string;
 };
 
+const HOLD_DURATIONS = [
+  { value: 1, label: '1 Hour' },
+  { value: 2, label: '2 Hours' },
+  { value: 3, label: '3 Hours' },
+  { value: 4, label: '4 Hours' },
+  { value: 5, label: '5 Hours' },
+  { value: 6, label: '6 Hours' },
+  { value: 7, label: '7 Hours' },
+  { value: 8, label: '8 Hours' },
+  { value: 9, label: '9 Hours' },
+  { value: 10, label: '10 Hours' },
+  { value: 11, label: '11 Hours' },
+  { value: 12, label: '12 Hours' },
+];
+
 export default function ProductScreen() {
   const { id } = useLocalSearchParams();
+  const { user } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showHoldModal, setShowHoldModal] = useState(false);
+  const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchProduct();
@@ -75,6 +95,53 @@ export default function ProductScreen() {
 
   const handleBackPress = () => {
     router.back();
+  };
+
+  const handleHoldRequest = async () => {
+    if (!user || !product || !selectedDuration) return;
+    
+    setIsSubmitting(true);
+    try {
+      // Get user profile for notification
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      // Create notification for product owner
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: product.profiles.id, // Send to product owner
+          type: 'hold_request',
+          data: {
+            product_id: product.id,
+            product_title: product.title,
+            product_image_url: product.image_url,
+            requester_id: user.id,
+            requester_name: userProfile.full_name,
+            requester_avatar: userProfile.avatar_url,
+            duration_hours: selectedDuration,
+            message: `${userProfile.full_name} ביקש לשמור את המוצר '${product.title}' למשך ${selectedDuration} שעות.`
+          },
+          is_read: false
+        });
+
+      if (notificationError) throw notificationError;
+
+      // Close modal and reset state
+      setShowHoldModal(false);
+      setSelectedDuration(null);
+      alert('Hold request sent successfully');
+    } catch (error) {
+      console.error('Error sending hold request:', error);
+      alert('Failed to send hold request. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -163,10 +230,88 @@ export default function ProductScreen() {
         </View>
       </ScrollView>
 
-      <TouchableOpacity style={styles.contactButton} onPress={handleContactPress}>
-        <MessageCircle size={24} color="#fff" strokeWidth={2.5} />
-        <Text style={styles.contactButtonText}>Contact via WhatsApp</Text>
-      </TouchableOpacity>
+      <View style={styles.bottomButtons}>
+        {user?.id !== product.profiles.id && (
+          <TouchableOpacity 
+            style={styles.holdButton} 
+            onPress={() => setShowHoldModal(true)}
+          >
+            <Clock size={24} color="#fff" strokeWidth={2.5} />
+            <Text style={styles.holdButtonText}>Hold Product</Text>
+          </TouchableOpacity>
+        )}
+        
+        <TouchableOpacity 
+          style={styles.contactButton} 
+          onPress={handleContactPress}
+        >
+          <MessageCircle size={24} color="#fff" strokeWidth={2.5} />
+          <Text style={styles.contactButtonText}>Contact via WhatsApp</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Modal
+        visible={showHoldModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowHoldModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Hold Duration</Text>
+              <TouchableOpacity 
+                onPress={() => setShowHoldModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <X size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.durationList}>
+              {HOLD_DURATIONS.map((duration) => (
+                <TouchableOpacity
+                  key={duration.value}
+                  style={[
+                    styles.durationOption,
+                    selectedDuration === duration.value && styles.durationOptionSelected
+                  ]}
+                  onPress={() => setSelectedDuration(duration.value)}
+                >
+                  <Text style={[
+                    styles.durationOptionText,
+                    selectedDuration === duration.value && styles.durationOptionTextSelected
+                  ]}>
+                    {duration.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => setShowHoldModal(false)}
+              >
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  styles.modalConfirmButton,
+                  (!selectedDuration || isSubmitting) && styles.modalButtonDisabled
+                ]}
+                onPress={handleHoldRequest}
+                disabled={!selectedDuration || isSubmitting}
+              >
+                <Text style={styles.modalButtonText}>
+                  {isSubmitting ? 'Sending...' : 'Confirm'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -284,18 +429,117 @@ const styles = StyleSheet.create({
     color: '#fff',
     lineHeight: 20,
   },
-  contactButton: {
-    backgroundColor: '#6C5CE7',
+  bottomButtons: {
+    padding: 16,
+    paddingBottom: 32,
+    gap: 12,
+  },
+  holdButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#6C5CE7',
     padding: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  holdButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Heebo-Bold',
+  },
+  contactButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#25D366',
+    padding: 16,
+    borderRadius: 12,
     gap: 8,
   },
   contactButtonText: {
     color: '#fff',
     fontSize: 16,
+    fontFamily: 'Heebo-Bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#1a1a1a',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2a2a2a',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontFamily: 'Heebo-Bold',
+    color: '#fff',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  durationList: {
+    padding: 20,
+  },
+  durationOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+    backgroundColor: '#2a2a2a',
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  durationOptionSelected: {
+    backgroundColor: '#6C5CE7',
+    borderColor: '#6C5CE7',
+  },
+  durationOptionText: {
+    fontSize: 16,
     fontFamily: 'Heebo-Medium',
+    color: '#fff',
+  },
+  durationOptionTextSelected: {
+    color: '#fff',
+    fontFamily: 'Heebo-Bold',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    padding: 20,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#2a2a2a',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: '#2a2a2a',
+  },
+  modalConfirmButton: {
+    backgroundColor: '#6C5CE7',
+  },
+  modalButtonDisabled: {
+    opacity: 0.5,
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Heebo-Bold',
   },
   loadingContainer: {
     flex: 1,
@@ -305,8 +549,8 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    fontFamily: 'Heebo-Regular',
     color: '#fff',
+    fontFamily: 'Heebo-Regular',
   },
   errorContainer: {
     flex: 1,
