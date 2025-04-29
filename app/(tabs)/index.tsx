@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Alert, Modal, SafeAreaView } from 'react-native';
 import { router } from 'expo-router';
@@ -49,23 +50,115 @@ const DIAMOND_CLARITY = [
   'VS2',
 ] as const;
 
+type RingSpecs = {
+  product_id: string;
+  subcategory: string;
+  diamond_size_from: number | null;
+  diamond_size_to: number | null;
+  color: string | null;
+  clarity: string | null;
+  gold_color: string;
+  material: string;
+  gold_karat: string;
+  side_stones: boolean;
+  cut_grade: string | null;
+  certification: string | null;
+};
+
+type NecklaceSpecs = {
+  product_id: string;
+  subcategory: string;
+  material: string;
+  gold_color: string;
+  gold_karat: string;
+  length: string;
+};
+
+type EarringSpecs = {
+  product_id: string;
+  subcategory: string;
+  material: string;
+  gold_color: string;
+  gold_karat: string;
+  clarity: string | null;
+  color: string | null;
+  certification: string | null;
+};
+
+type BraceletSpecs = {
+  product_id: string;
+  subcategory: string;
+  material: string;
+  gold_color: string;
+  gold_karat: string;
+  length: string;
+  clarity: string | null;
+  color: string | null;
+};
+
+type SpecialPieceSpecs = {
+  product_id: string;
+  subcategory: string;
+  material: string;
+  gold_color: string;
+  gold_karat: string;
+  description: string;
+};
+
+type WatchSpecs = {
+  product_id: string;
+  brand: string;
+  model: string;
+  diameter: string;
+  movement: string;
+  material: string;
+  gold_color: string | null;
+  gold_karat: string | null;
+};
+
+type DiamondSpecs = {
+  product_id: string;
+  weight: string;
+  color: string;
+  clarity: string;
+  cut_grade: string;
+  certificate: string;
+};
+
+type GemSpecs = {
+  product_id: string;
+  type: string;
+  weight: string;
+  color: string;
+  clarity: string;
+  certificate: string | null;
+};
+
 type Product = {
   id: string;
   title: string;
   description: string;
-  category: string;
-  created_at: string;
-  image_url: string;
   price: number;
+  currency: string;
+  image_url: string;
+  user_id: string;
+  category: string;
+  status: string;
+  created_at: string;
   profiles: {
     full_name: string;
     avatar_url: string;
   };
+  ring_specs?: RingSpecs;
+  necklace_specs?: NecklaceSpecs;
+  earring_specs?: EarringSpecs;
+  bracelet_specs?: BraceletSpecs;
+  special_piece_specs?: SpecialPieceSpecs;
+  watch_specs?: WatchSpecs;
+  diamond_specs?: DiamondSpecs;
+  gem_specs?: GemSpecs;
   details?: {
-    weight?: string;
-    color?: string;
-    clarity?: string;
-    cut?: string;
+    [key: string]: string;
   };
 };
 
@@ -103,10 +196,86 @@ const ROUTES = {
   PRODUCT: '/(tabs)/profile/products' as const,
 } as const;
 
+type FilterParams = {
+  category?: string;
+  filters: {
+    [key: string]: string[];
+  };
+};
+
+type ProductFormState = {
+  title: string;
+  description: string;
+  price: string;
+  currency: string;
+  category: string;
+  image_url: string;
+  specs: {
+    [key: string]: any;
+  };
+};
+
+type ValidationRules = {
+  [key: string]: {
+    required: boolean;
+    min?: number;
+    max?: number;
+    pattern?: RegExp;
+  };
+};
+
+const validationRulesByCategory: { [key: string]: ValidationRules } = {
+  Ring: {
+    subcategory: { required: true },
+    material: { required: true },
+    gold_color: { required: true },
+    gold_karat: { required: true },
+  },
+  Necklace: {
+    subcategory: { required: true },
+    material: { required: true },
+    length: { required: true },
+  },
+  Earrings: {
+    subcategory: { required: true },
+    material: { required: true },
+  },
+  Bracelet: {
+    subcategory: { required: true },
+    material: { required: true },
+    length: { required: true },
+  },
+  "Special Pieces": {
+    subcategory: { required: true },
+    material: { required: true },
+  },
+  Watches: {
+    brand: { required: true },
+    model: { required: true },
+    diameter: { required: true },
+    movement: { required: true },
+    material: { required: true },
+  },
+  "Loose Diamond": {
+    weight: { required: true },
+    color: { required: true },
+    clarity: { required: true },
+    cut_grade: { required: true },
+    certificate: { required: true },
+  },
+  Gems: {
+    type: { required: true },
+    weight: { required: true },
+    color: { required: true },
+    clarity: { required: true },
+  },
+};
+
 export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedDiamondSize, setSelectedDiamondSize] = useState<string | null>(null);
   const [selectedDiamondColor, setSelectedDiamondColor] = useState<string | null>(null);
@@ -117,6 +286,29 @@ export default function HomeScreen() {
   const [selectedRequest, setSelectedRequest] = useState<DiamondRequest | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [topSellers, setTopSellers] = useState<Profile[]>([]);
+  const [activeFilters, setActiveFilters] = useState<FilterParams | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [user, setUser] = useState<any>(null);
+  
+  const [productForm, setProductForm] = useState<ProductFormState>({
+    title: '',
+    description: '',
+    price: '',
+    currency: 'USD',
+    category: '',
+    image_url: '',
+    specs: {},
+  });
+
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    getUser();
+  }, []);
 
   useEffect(() => {
     fetchProducts();
@@ -130,8 +322,12 @@ export default function HomeScreen() {
         .from('products')
         .select(`
           *,
-          profiles!products_user_id_fkey (
-            id,
+          ring_specs (*),
+          necklace_specs (*),
+          earring_specs (*),
+          bracelet_specs (*),
+          special_piece_specs (*),
+          profiles (
             full_name,
             avatar_url
           )
@@ -154,6 +350,7 @@ export default function HomeScreen() {
       setLoading(false);
     } catch (error) {
       console.error('Error fetching products:', error);
+      Alert.alert('שגיאה', 'אירעה שגיאה בטעינת המוצרים');
       setLoading(false);
     }
   };
@@ -221,55 +418,177 @@ export default function HomeScreen() {
   };
 
   const getFilteredProducts = () => {
-    let filteredProducts = { ...productsByCategory };
+    let filtered: Product[] = Object.values(productsByCategory).flat();
 
-    if (selectedCategory) {
-      // Convert category names to match the database
-      const dbCategory = selectedCategory === 'Loose Diamonds' ? 'Loose Diamond' : 
-                        selectedCategory.slice(0, -1); // Remove 's' from plural
-      filteredProducts = {
-        [dbCategory]: productsByCategory[dbCategory] || []
-      };
+    // Apply category filter
+    if (activeFilters?.category) {
+      filtered = filtered.filter(product => product.category === activeFilters.category);
     }
 
-    if (selectedDiamondSize) {
-      Object.keys(filteredProducts).forEach(category => {
-        filteredProducts[category] = filteredProducts[category].filter(product => {
-          if (!product.details?.weight) return false;
-          const weight = parseFloat(product.details.weight);
-          if (selectedDiamondSize === '3.0+') {
-            return weight >= 3.0;
-          }
-          const [min, max] = selectedDiamondSize.split('-').map(parseFloat);
-          return weight >= min && weight <= max;
+    // Apply price filter
+    if (activeFilters?.filters) {
+      const priceFrom = activeFilters.filters.price_from?.[0];
+      const priceTo = activeFilters.filters.price_to?.[0];
+      
+      if (priceFrom || priceTo) {
+        filtered = filtered.filter(product => {
+          const price = product.price;
+          if (priceFrom && price < parseFloat(priceFrom)) return false;
+          if (priceTo && price > parseFloat(priceTo)) return false;
+          return true;
         });
-      });
-    }
-
-    if (selectedDiamondColor) {
-      Object.keys(filteredProducts).forEach(category => {
-        filteredProducts[category] = filteredProducts[category].filter(product => 
-          product.details?.color === selectedDiamondColor
-        );
-      });
-    }
-
-    if (selectedDiamondClarity) {
-      Object.keys(filteredProducts).forEach(category => {
-        filteredProducts[category] = filteredProducts[category].filter(product => 
-          product.details?.clarity === selectedDiamondClarity
-        );
-      });
-    }
-
-    // Remove empty categories
-    Object.keys(filteredProducts).forEach(category => {
-      if (filteredProducts[category].length === 0) {
-        delete filteredProducts[category];
       }
+    }
+
+    // Apply specific filters based on category
+    if (activeFilters?.filters) {
+      filtered = filtered.filter(product => {
+        switch (product.category) {
+          case 'Ring':
+            return product.ring_specs && Object.entries(activeFilters.filters).every(([key, values]) => {
+              if (!values.length) return true;
+              if (key === 'price_from' || key === 'price_to') return true; // Skip price filters as they're handled above
+              switch (key) {
+                case 'subcategory':
+                  return product.ring_specs?.subcategory && values.includes(product.ring_specs.subcategory);
+                case 'material':
+                  return product.ring_specs?.material && values.includes(product.ring_specs.material);
+                case 'gold_color':
+                  return product.ring_specs?.gold_color && values.includes(product.ring_specs.gold_color);
+                case 'gold_karat':
+                  return product.ring_specs?.gold_karat && values.includes(product.ring_specs.gold_karat);
+                case 'diamond_size_from':
+                  return product.ring_specs?.diamond_size_from && values.some(size => 
+                    product.ring_specs!.diamond_size_from! >= parseFloat(size)
+                  );
+                case 'diamond_size_to':
+                  return product.ring_specs?.diamond_size_to && values.some(size => 
+                    product.ring_specs!.diamond_size_to! <= parseFloat(size)
+                  );
+                case 'color':
+                  return product.ring_specs?.color && values.includes(product.ring_specs.color);
+                case 'clarity':
+                  return product.ring_specs?.clarity && values.includes(product.ring_specs.clarity);
+                case 'cut_grade':
+                  return product.ring_specs?.cut_grade && values.includes(product.ring_specs.cut_grade);
+                case 'certification':
+                  return product.ring_specs?.certification && values.includes(product.ring_specs.certification);
+                default:
+                  return true;
+              }
+            });
+
+          case 'Necklace':
+            return product.necklace_specs && Object.entries(activeFilters.filters).every(([key, values]) => {
+              if (!values.length) return true;
+              switch (key) {
+                case 'subcategory':
+                  return product.necklace_specs?.subcategory && values.includes(product.necklace_specs.subcategory);
+                case 'material':
+                  return product.necklace_specs?.material && values.includes(product.necklace_specs.material);
+                case 'gold_color':
+                  return product.necklace_specs?.gold_color && values.includes(product.necklace_specs.gold_color);
+                case 'gold_karat':
+                  return product.necklace_specs?.gold_karat && values.includes(product.necklace_specs.gold_karat);
+                case 'length':
+                  return product.necklace_specs?.length && values.some(length => 
+                    product.necklace_specs!.length === length
+                  );
+                default:
+                  return true;
+              }
+            });
+
+          case 'Earrings':
+            return product.earring_specs && Object.entries(activeFilters.filters).every(([key, values]) => {
+              if (!values.length) return true;
+              switch (key) {
+                case 'subcategory':
+                  return product.earring_specs?.subcategory && values.includes(product.earring_specs.subcategory);
+                case 'material':
+                  return product.earring_specs?.material && values.includes(product.earring_specs.material);
+                case 'gold_color':
+                  return product.earring_specs?.gold_color && values.includes(product.earring_specs.gold_color);
+                case 'gold_karat':
+                  return product.earring_specs?.gold_karat && values.includes(product.earring_specs.gold_karat);
+                case 'color':
+                  return product.earring_specs?.color && values.includes(product.earring_specs.color);
+                case 'clarity':
+                  return product.earring_specs?.clarity && values.includes(product.earring_specs.clarity);
+                case 'certification':
+                  return product.earring_specs?.certification && values.includes(product.earring_specs.certification);
+                default:
+                  return true;
+              }
+            });
+
+          case 'Bracelet':
+            return product.bracelet_specs && Object.entries(activeFilters.filters).every(([key, values]) => {
+              if (!values.length) return true;
+              switch (key) {
+                case 'subcategory':
+                  return product.bracelet_specs?.subcategory && values.includes(product.bracelet_specs.subcategory);
+                case 'material':
+                  return product.bracelet_specs?.material && values.includes(product.bracelet_specs.material);
+                case 'gold_color':
+                  return product.bracelet_specs?.gold_color && values.includes(product.bracelet_specs.gold_color);
+                case 'gold_karat':
+                  return product.bracelet_specs?.gold_karat && values.includes(product.bracelet_specs.gold_karat);
+                case 'length':
+                  return product.bracelet_specs?.length && values.some(length => 
+                    product.bracelet_specs!.length === length
+                  );
+                case 'color':
+                  return product.bracelet_specs?.color && values.includes(product.bracelet_specs.color);
+                case 'clarity':
+                  return product.bracelet_specs?.clarity && values.includes(product.bracelet_specs.clarity);
+                default:
+                  return true;
+              }
+            });
+
+          case 'Special Pieces':
+            return product.special_piece_specs && Object.entries(activeFilters.filters).every(([key, values]) => {
+              if (!values.length) return true;
+              switch (key) {
+                case 'subcategory':
+                  return product.special_piece_specs?.subcategory && values.includes(product.special_piece_specs.subcategory);
+                case 'material':
+                  return product.special_piece_specs?.material && values.includes(product.special_piece_specs.material);
+                case 'gold_color':
+                  return product.special_piece_specs?.gold_color && values.includes(product.special_piece_specs.gold_color);
+                case 'gold_karat':
+                  return product.special_piece_specs?.gold_karat && values.includes(product.special_piece_specs.gold_karat);
+                default:
+                  return true;
+              }
+            });
+
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Apply search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(product =>
+        product.title.toLowerCase().includes(query) ||
+        product.description.toLowerCase().includes(query)
+      );
+    }
+
+    // Group filtered products by category
+    const filteredByCategory: ProductsByCategory = {};
+    filtered.forEach(product => {
+      if (!filteredByCategory[product.category]) {
+        filteredByCategory[product.category] = [];
+      }
+      filteredByCategory[product.category].push(product);
     });
 
-    return filteredProducts;
+    return filteredByCategory;
   };
 
   const getFilteredRequests = () => {
@@ -323,7 +642,9 @@ export default function HomeScreen() {
         );
       }
       // Sort by created_at descending
-      const sortedProducts = allProducts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      const sortedProducts = allProducts.sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
       return (
         <View style={styles.itemsGrid}>
           {sortedProducts.map((product) => (
@@ -359,9 +680,53 @@ export default function HomeScreen() {
                 {product.title}
                     </Text>
               <View style={styles.productDetailsRow}>
-                {product.details?.weight && (
+                {product.category === 'Ring' && product.ring_specs && (
+                  <>
+                    {product.ring_specs.diamond_size_from && (
                   <Text style={styles.gridItemWeight}>
-                    {product.details.weight} ct
+                        {product.ring_specs.diamond_size_from} ct
+                      </Text>
+                    )}
+                    <Text style={styles.gridItemSpecs}>
+                      {product.ring_specs.material} {product.ring_specs.gold_karat}
+                    </Text>
+                  </>
+                )}
+                {product.category === 'Necklace' && product.necklace_specs && (
+                  <>
+                    <Text style={styles.gridItemSpecs}>
+                      {product.necklace_specs.material} {product.necklace_specs.gold_karat}
+                    </Text>
+                    <Text style={styles.gridItemLength}>
+                      {product.necklace_specs.length}
+                    </Text>
+                  </>
+                )}
+                {product.category === 'Earrings' && product.earring_specs && (
+                  <>
+                    <Text style={styles.gridItemSpecs}>
+                      {product.earring_specs.material} {product.earring_specs.gold_karat}
+                    </Text>
+                    {product.earring_specs.color && (
+                      <Text style={styles.gridItemColor}>
+                        {product.earring_specs.color}
+                      </Text>
+                    )}
+                  </>
+                )}
+                {product.category === 'Bracelet' && product.bracelet_specs && (
+                  <>
+                    <Text style={styles.gridItemSpecs}>
+                      {product.bracelet_specs.material} {product.bracelet_specs.gold_karat}
+                    </Text>
+                    <Text style={styles.gridItemLength}>
+                      {product.bracelet_specs.length}
+                    </Text>
+                  </>
+                )}
+                {product.category === 'Special Pieces' && product.special_piece_specs && (
+                  <Text style={styles.gridItemSpecs}>
+                    {product.special_piece_specs.material} {product.special_piece_specs.gold_karat}
                   </Text>
                 )}
                 <Text style={styles.gridItemPrice}>
@@ -419,9 +784,53 @@ export default function HomeScreen() {
                 {product.title}
               </Text>
               <View style={styles.productDetailsRow}>
-                {product.details?.weight && (
+                {product.category === 'Ring' && product.ring_specs && (
+                  <>
+                    {product.ring_specs.diamond_size_from && (
                   <Text style={styles.gridItemWeight}>
-                    {product.details.weight} ct
+                        {product.ring_specs.diamond_size_from} ct
+                      </Text>
+                    )}
+                    <Text style={styles.gridItemSpecs}>
+                      {product.ring_specs.material} {product.ring_specs.gold_karat}
+                    </Text>
+                  </>
+                )}
+                {product.category === 'Necklace' && product.necklace_specs && (
+                  <>
+                    <Text style={styles.gridItemSpecs}>
+                      {product.necklace_specs.material} {product.necklace_specs.gold_karat}
+                    </Text>
+                    <Text style={styles.gridItemLength}>
+                      {product.necklace_specs.length}
+                    </Text>
+                  </>
+                )}
+                {product.category === 'Earrings' && product.earring_specs && (
+                  <>
+                    <Text style={styles.gridItemSpecs}>
+                      {product.earring_specs.material} {product.earring_specs.gold_karat}
+                    </Text>
+                    {product.earring_specs.color && (
+                      <Text style={styles.gridItemColor}>
+                        {product.earring_specs.color}
+                      </Text>
+                    )}
+                  </>
+                )}
+                {product.category === 'Bracelet' && product.bracelet_specs && (
+                  <>
+                    <Text style={styles.gridItemSpecs}>
+                      {product.bracelet_specs.material} {product.bracelet_specs.gold_karat}
+                    </Text>
+                    <Text style={styles.gridItemLength}>
+                      {product.bracelet_specs.length}
+                    </Text>
+                  </>
+                )}
+                {product.category === 'Special Pieces' && product.special_piece_specs && (
+                  <Text style={styles.gridItemSpecs}>
+                    {product.special_piece_specs.material} {product.special_piece_specs.gold_karat}
                   </Text>
                 )}
                 <Text style={styles.gridItemPrice}>
@@ -613,6 +1022,164 @@ export default function HomeScreen() {
           </View>
   );
 
+  const handleApplyFilters = (filters: FilterParams) => {
+    setActiveFilters(filters);
+  };
+
+  const validateForm = () => {
+    const errors: { [key: string]: string } = {};
+    const rules = validationRulesByCategory[productForm.category];
+
+    // Validate basic fields
+    if (!productForm.title) errors.title = 'Title is required';
+    if (!productForm.description) errors.description = 'Description is required';
+    if (!productForm.price) errors.price = 'Price is required';
+    if (!productForm.category) errors.category = 'Category is required';
+    if (!productForm.image_url) errors.image_url = 'Image is required';
+
+    // Validate category-specific fields
+    if (rules) {
+      Object.entries(rules).forEach(([field, rule]) => {
+        if (rule.required && !productForm.specs[field]) {
+          errors[field] = `${field} is required`;
+        }
+        if (rule.min !== undefined && productForm.specs[field] < rule.min) {
+          errors[field] = `${field} must be at least ${rule.min}`;
+        }
+        if (rule.max !== undefined && productForm.specs[field] > rule.max) {
+          errors[field] = `${field} must be at most ${rule.max}`;
+        }
+        if (rule.pattern && !rule.pattern.test(productForm.specs[field])) {
+          errors[field] = `${field} format is invalid`;
+        }
+      });
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleAddProduct = async () => {
+    if (!validateForm()) return;
+
+    try {
+      setLoading(true);
+
+      // Insert into products table
+      const { data: product, error: productError } = await supabase
+        .from('products')
+        .insert({
+          title: productForm.title,
+          description: productForm.description,
+          price: parseFloat(productForm.price),
+          currency: productForm.currency,
+          image_url: productForm.image_url,
+          user_id: user?.id,
+          category: productForm.category,
+          status: 'available'
+        })
+        .select()
+        .single();
+
+      if (productError) throw productError;
+
+      // Insert into the appropriate specs table
+      let specsError = null;
+      switch (productForm.category) {
+        case 'Ring':
+          const { error: ringError } = await supabase
+            .from('ring_specs')
+            .insert({
+              product_id: product.id,
+              ...productForm.specs
+            });
+          specsError = ringError;
+          break;
+
+        case 'Necklace':
+          const { error: necklaceError } = await supabase
+            .from('necklace_specs')
+            .insert({
+              product_id: product.id,
+              ...productForm.specs
+            });
+          specsError = necklaceError;
+          break;
+
+        case 'Earrings':
+          const { error: earringError } = await supabase
+            .from('earring_specs')
+            .insert({
+              product_id: product.id,
+              ...productForm.specs
+            });
+          specsError = earringError;
+          break;
+
+        case 'Bracelet':
+          const { error: braceletError } = await supabase
+            .from('bracelet_specs')
+            .insert({
+              product_id: product.id,
+              ...productForm.specs
+            });
+          specsError = braceletError;
+          break;
+
+        case 'Special Pieces':
+          const { error: specialError } = await supabase
+            .from('special_piece_specs')
+            .insert({
+              product_id: product.id,
+              ...productForm.specs
+            });
+          specsError = specialError;
+          break;
+
+        case 'Watches':
+          const { error: watchError } = await supabase
+            .from('watch_specs')
+            .insert({
+              product_id: product.id,
+              ...productForm.specs
+            });
+          specsError = watchError;
+          break;
+
+        case 'Loose Diamond':
+          const { error: diamondError } = await supabase
+            .from('diamond_specs')
+            .insert({
+              product_id: product.id,
+              ...productForm.specs
+            });
+          specsError = diamondError;
+          break;
+
+        case 'Gems':
+          const { error: gemError } = await supabase
+            .from('gem_specs')
+            .insert({
+              product_id: product.id,
+              ...productForm.specs
+            });
+          specsError = gemError;
+          break;
+      }
+
+      if (specsError) throw specsError;
+
+      Alert.alert('Success', 'Product added successfully');
+      setShowAddModal(false);
+      fetchProducts();
+    } catch (error) {
+      console.error('Error adding product:', error);
+      Alert.alert('Error', 'Failed to add product');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
@@ -655,14 +1222,7 @@ export default function HomeScreen() {
       <FilterModal
         visible={showFilterModal}
         onClose={() => setShowFilterModal(false)}
-        selectedCategory={selectedCategory}
-        onSelectCategory={setSelectedCategory}
-        selectedDiamondSize={selectedDiamondSize}
-        onSelectDiamondSize={setSelectedDiamondSize}
-        selectedDiamondColor={selectedDiamondColor}
-        onSelectDiamondColor={setSelectedDiamondColor}
-        selectedDiamondClarity={selectedDiamondClarity}
-        onSelectDiamondClarity={setSelectedDiamondClarity}
+        onApplyFilters={handleApplyFilters}
       />
       {renderDetailsModal()}
     </View>
@@ -827,6 +1387,21 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   gridItemWeight: {
+    fontSize: 14,
+    fontFamily: 'Heebo-Regular',
+    color: '#888',
+  },
+  gridItemSpecs: {
+    fontSize: 14,
+    fontFamily: 'Heebo-Regular',
+    color: '#888',
+  },
+  gridItemLength: {
+    fontSize: 14,
+    fontFamily: 'Heebo-Regular',
+    color: '#888',
+  },
+  gridItemColor: {
     fontSize: 14,
     fontFamily: 'Heebo-Regular',
     color: '#888',

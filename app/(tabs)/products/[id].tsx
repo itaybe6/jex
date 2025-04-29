@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Linking, Modal } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Linking, Modal, Alert } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { ArrowLeft, MessageCircle, Clock, X } from 'lucide-react-native';
@@ -12,15 +12,43 @@ type Product = {
   title: string;
   description: string;
   price: number;
+  currency: string;
   image_url: string;
   category: string;
-  user_id: string;
-  details?: {
-    size?: string;
-    clarity?: string;
-    color?: string;
-    weight?: string;
-  };
+  status: string;
+  watch_specs?: {
+    brand: string | null;
+    model: string | null;
+    diameter: number | null;
+  } | null;
+  diamond_specs?: {
+    shape: string | null;
+    weight: number | null;
+    color: string | null;
+    clarity: string | null;
+    cut_grade: string | null;
+    certificate: string | null;
+    origin: string | null;
+    lab_grown_type: string | null;
+    treatment_type: string | null;
+  } | null;
+  gem_specs?: {
+    type: string | null;
+    origin: string | null;
+    certification: string | null;
+  } | null;
+  jewelry_specs?: {
+    diamond_size_from: number | null;
+    diamond_size_to: number | null;
+    color: string | null;
+    clarity: string | null;
+    gold_color: string | null;
+    material: string | null;
+    gold_karat: string | null;
+    side_stones: boolean | null;
+    cut_grade: string | null;
+    certification: string | null;
+  } | null;
   profiles: {
     id: string;
     full_name: string;
@@ -64,7 +92,11 @@ export default function ProductScreen() {
         .from('products')
         .select(`
           *,
-          profiles!products_user_id_fkey (
+          watch_specs (*),
+          diamond_specs (*),
+          gem_specs (*),
+          jewelry_specs (*),
+          profiles (
             id,
             full_name,
             avatar_url,
@@ -78,6 +110,7 @@ export default function ProductScreen() {
       setProduct(data);
     } catch (error) {
       console.error('Error fetching product:', error);
+      Alert.alert('שגיאה', 'אירעה שגיאה בטעינת פרטי המוצר');
     } finally {
       setLoading(false);
     }
@@ -145,6 +178,122 @@ export default function ProductScreen() {
     }
   };
 
+  const renderSpecs = () => {
+    if (!product) return null;
+
+    switch (product.category) {
+      case 'Watch':
+        return product.watch_specs ? (
+          <View style={styles.specsContainer}>
+            <Text style={styles.specsTitle}>מפרט טכני</Text>
+            {product.watch_specs.brand && (
+              <Text style={styles.specsText}>מותג: {product.watch_specs.brand}</Text>
+            )}
+            {product.watch_specs.model && (
+              <Text style={styles.specsText}>דגם: {product.watch_specs.model}</Text>
+            )}
+            {product.watch_specs.diameter && (
+              <Text style={styles.specsText}>קוטר: {product.watch_specs.diameter} מ"מ</Text>
+            )}
+          </View>
+        ) : null;
+
+      case 'Loose Diamond':
+        return product.diamond_specs ? (
+          <View style={styles.specsContainer}>
+            <Text style={styles.specsTitle}>מפרט טכני</Text>
+            {product.diamond_specs.shape && (
+              <Text style={styles.specsText}>צורה: {product.diamond_specs.shape}</Text>
+            )}
+            {product.diamond_specs.weight && (
+              <Text style={styles.specsText}>משקל: {product.diamond_specs.weight} קראט</Text>
+            )}
+            {product.diamond_specs.color && (
+              <Text style={styles.specsText}>צבע: {product.diamond_specs.color}</Text>
+            )}
+            {product.diamond_specs.clarity && (
+              <Text style={styles.specsText}>ניקיון: {product.diamond_specs.clarity}</Text>
+            )}
+            {product.diamond_specs.cut_grade && (
+              <Text style={styles.specsText}>חיתוך: {product.diamond_specs.cut_grade}</Text>
+            )}
+            {product.diamond_specs.certificate && (
+              <Text style={styles.specsText}>תעודה: {product.diamond_specs.certificate}</Text>
+            )}
+            {product.diamond_specs.origin && (
+              <Text style={styles.specsText}>מקור: {product.diamond_specs.origin}</Text>
+            )}
+            {product.diamond_specs.lab_grown_type && (
+              <Text style={styles.specsText}>סוג גידול: {product.diamond_specs.lab_grown_type}</Text>
+            )}
+            {product.diamond_specs.treatment_type && (
+              <Text style={styles.specsText}>סוג טיפול: {product.diamond_specs.treatment_type}</Text>
+            )}
+          </View>
+        ) : null;
+
+      case 'Gems':
+        return product.gem_specs ? (
+          <View style={styles.specsContainer}>
+            <Text style={styles.specsTitle}>מפרט טכני</Text>
+            {product.gem_specs.type && (
+              <Text style={styles.specsText}>סוג אבן: {product.gem_specs.type}</Text>
+            )}
+            {product.gem_specs.origin && (
+              <Text style={styles.specsText}>מקור: {product.gem_specs.origin}</Text>
+            )}
+            {product.gem_specs.certification && (
+              <Text style={styles.specsText}>תעודה: {product.gem_specs.certification}</Text>
+            )}
+          </View>
+        ) : null;
+
+      case 'Ring':
+      case 'Necklace':
+      case 'Bracelet':
+      case 'Earrings':
+        return product.jewelry_specs ? (
+          <View style={styles.specsContainer}>
+            <Text style={styles.specsTitle}>מפרט טכני</Text>
+            {(product.jewelry_specs.diamond_size_from || product.jewelry_specs.diamond_size_to) && (
+              <Text style={styles.specsText}>
+                משקל יהלום: {product.jewelry_specs.diamond_size_from} - {product.jewelry_specs.diamond_size_to} קראט
+              </Text>
+            )}
+            {product.jewelry_specs.color && (
+              <Text style={styles.specsText}>צבע: {product.jewelry_specs.color}</Text>
+            )}
+            {product.jewelry_specs.clarity && (
+              <Text style={styles.specsText}>ניקיון: {product.jewelry_specs.clarity}</Text>
+            )}
+            {product.jewelry_specs.gold_color && (
+              <Text style={styles.specsText}>צבע זהב: {product.jewelry_specs.gold_color}</Text>
+            )}
+            {product.jewelry_specs.material && (
+              <Text style={styles.specsText}>חומר: {product.jewelry_specs.material}</Text>
+            )}
+            {product.jewelry_specs.gold_karat && (
+              <Text style={styles.specsText}>קראט: {product.jewelry_specs.gold_karat}</Text>
+            )}
+            {product.jewelry_specs.side_stones !== null && (
+              <Text style={styles.specsText}>
+                אבני צד: {product.jewelry_specs.side_stones ? 'כן' : 'לא'}
+              </Text>
+            )}
+            {product.jewelry_specs.cut_grade && (
+              <Text style={styles.specsText}>חיתוך: {product.jewelry_specs.cut_grade}</Text>
+            )}
+            {product.jewelry_specs.certification && (
+              <Text style={styles.specsText}>תעודה: {product.jewelry_specs.certification}</Text>
+            )}
+          </View>
+        ) : null;
+
+      default:
+        return null;
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -185,37 +334,7 @@ export default function ProductScreen() {
             <Text style={styles.category}>{product.category}</Text>
           </View>
 
-          {product.details && (
-            <View style={styles.specsContainer}>
-              <Text style={styles.sectionTitle}>Specifications</Text>
-              <View style={styles.specsGrid}>
-                {product.details.weight && (
-                  <View style={styles.specItem}>
-                    <Text style={styles.specLabel}>Weight</Text>
-                    <Text style={styles.specValue}>{product.details.weight} ct</Text>
-                  </View>
-                )}
-                {product.details.size && (
-                  <View style={styles.specItem}>
-                    <Text style={styles.specLabel}>Size</Text>
-                    <Text style={styles.specValue}>{product.details.size}</Text>
-                  </View>
-                )}
-                {product.details.clarity && (
-                  <View style={styles.specItem}>
-                    <Text style={styles.specLabel}>Clarity</Text>
-                    <Text style={styles.specValue}>{product.details.clarity}</Text>
-                  </View>
-                )}
-                {product.details.color && (
-                  <View style={styles.specItem}>
-                    <Text style={styles.specLabel}>Color</Text>
-                    <Text style={styles.specValue}>{product.details.color}</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          )}
+          {renderSpecs()}
 
           <View style={styles.sellerContainer}>
             <Text style={styles.sectionTitle}>Seller</Text>
@@ -405,28 +524,17 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 24,
   },
-  specsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-  },
-  specItem: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: '#23232b',
-    padding: 16,
-    borderRadius: 12,
-  },
-  specLabel: {
-    fontSize: 14,
-    fontFamily: 'Heebo-Regular',
-    color: '#888',
-    marginBottom: 4,
-  },
-  specValue: {
-    fontSize: 16,
-    fontFamily: 'Heebo-Medium',
+  specsTitle: {
+    fontSize: 20,
+    fontFamily: 'Heebo-Bold',
     color: '#fff',
+    marginBottom: 16,
+  },
+  specsText: {
+    fontSize: 16,
+    fontFamily: 'Heebo-Regular',
+    color: '#fff',
+    marginBottom: 8,
   },
   sellerContainer: {
     backgroundColor: '#1a1a1a',

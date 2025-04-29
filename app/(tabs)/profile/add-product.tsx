@@ -85,7 +85,7 @@ type ProductType = typeof PRODUCT_TYPES[number];
 type ClarityGrade = typeof CLARITY_GRADES[number];
 type ColorGrade = typeof COLOR_GRADES[number];
 
-const productOptions = {
+const productOptions: Record<string, string[]> = {
   "Ring": [
     "Wedding ring",
     "Hand Chain Ring - Bracelet",
@@ -153,7 +153,8 @@ const baseRingFields = [
   { label: "Material", type: "select", key: "material", options: ["GOLD", "PLATINUM", "SILVER"] },
   { label: "Gold Karat", type: "select", key: "goldKarat", options: ["9K", "10K", "14K", "18K", "21K", "22K", "24K"] }
 ];
-const productFieldsMap = {
+
+const productFieldsMap: Record<string, any[]> = {
   "Ring": baseRingFields,
   "Necklace": baseRingFields,
   "Earrings": baseRingFields,
@@ -161,7 +162,7 @@ const productFieldsMap = {
   "Special pieces": baseRingFields,
   "Loose Diamond": [
     { label: "Diamond Shape", type: "select", key: "diamondShape", options: ["Round", "Oval", "Princess", "Emerald", "Cushion", "Heart", "Marquise", "Asscher", "Pear", "Trapeze", "Baguette"] },
-    { label: "Certification", type: "select", key: "certification", options: ["GIA", "IGI", "HRD", "EGL", "SGL", "IGL", "AIG", "None"] },
+    { label: "Certification", type: "select", key: "certification", options: ["GIA", "IGI", "HRD", "EGL", "SGL", "CGL", "IGL", "AIG", "None"] },
     { label: "Origin", type: "select", key: "origin", options: ["Natural", "Lab Grown", "Treated"] },
     { label: "Lab Grown Type", type: "select", key: "labGrownType", options: ["CVD", "HPHT"], condition: "origin == 'Lab Grown'" },
     { label: "Treatment Type", type: "select", key: "treatmentType", options: ["Laser Drill", "Fracture Filling", "HPHT Color"], condition: "origin == 'Treated'" }
@@ -171,7 +172,9 @@ const productFieldsMap = {
     { label: "Origin", type: "select", key: "origin", options: ["Natural", "Lab Grown", "Treated"] }
   ],
   "Watches": [
-    { label: "Model Name", type: "text", key: "modelName" }
+    { label: "Brand", type: "text", key: "brand" },
+    { label: "Model", type: "text", key: "model" },
+    { label: "Diameter (mm)", type: "number", key: "diameter" }
   ],
   "Rough Diamonds": []
 };
@@ -201,9 +204,9 @@ export default function AddProductScreen() {
   const [showProductNameModal, setShowProductNameModal] = useState(false);
   const [productNameOptions, setProductNameOptions] = useState<string[]>([]);
 
-  const [dynamicFields, setDynamicFields] = useState({});
-  const [dynamicErrors, setDynamicErrors] = useState({});
-  const [showDynamicSelect, setShowDynamicSelect] = useState({}); // { [key]: boolean }
+  const [dynamicFields, setDynamicFields] = useState<Record<string, string>>({});
+  const [dynamicErrors, setDynamicErrors] = useState<Record<string, boolean>>({});
+  const [showDynamicSelect, setShowDynamicSelect] = useState<Record<string, boolean>>({});
 
   const [currency, setCurrency] = useState('ILS');
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
@@ -219,7 +222,7 @@ export default function AddProductScreen() {
 
   useEffect(() => {
     const fields = productFieldsMap[formData.category] || [];
-    const initial = {};
+    const initial: Record<string, string> = {};
     fields.forEach(f => initial[f.key] = "");
     setDynamicFields(initial);
     setDynamicErrors({});
@@ -294,130 +297,170 @@ export default function AddProductScreen() {
 
   const handleSubmit = async () => {
     try {
-      if (!user?.id) {
-        Alert.alert('Error', 'You must be logged in to add a product');
-        return;
-      }
-
       setLoading(true);
-      
-      // Reset errors
       setErrors({});
-      
-      // Validate required fields
-      const requiredFields = ['title', 'price', 'description', 'category'] as const;
-      const missingFields: string[] = [];
       const newErrors: Record<string, boolean> = {};
+      if (!formData.title && formData.category !== 'Watches') newErrors.title = true;
+      if (!formData.price) newErrors.price = true;
+      if (!formData.category) newErrors.category = true;
+      if (!imageUri) newErrors.image = true;
 
-      for (const field of requiredFields) {
-        if (!formData[field]) {
-          missingFields.push(field);
-          newErrors[field] = true;
-        }
+      // ולידציה ל-Watches
+      if (formData.category === 'Watches') {
+        if (!dynamicFields.brand) newErrors.brand = true;
+        if (!dynamicFields.model) newErrors.model = true;
+        if (!dynamicFields.diameter || isNaN(Number(dynamicFields.diameter))) newErrors.diameter = true;
       }
-
-      // Validate price
-      if (formData.price && (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0)) {
-        newErrors.price = true;
-        Alert.alert('Error', 'Please enter a valid positive price');
-        setLoading(false);
-        setErrors(newErrors);
-        return;
-      }
-
-      // Check diamond fields if it's a loose diamond
+      // ולידציה ל-Loose Diamond (קיים)
       if (formData.category === 'Loose Diamond') {
-        const diamondFields = ['weight', 'clarity', 'color', 'cut'] as const;
-        for (const field of diamondFields) {
-          if (!formData[field]) {
-            missingFields.push(field);
-            newErrors[field] = true;
-          }
-        }
+        if (!dynamicFields.weight) newErrors.weight = true;
+        if (!dynamicFields.clarity) newErrors.clarity = true;
+        if (!dynamicFields.color) newErrors.color = true;
+        if (!dynamicFields.cut) newErrors.cut = true;
       }
-
-      // Check image
-      if (!imageUri) {
-        missingFields.push('image');
-        newErrors.image = true;
-      }
-
-      // Validate dynamic fields
-      if (!validateDynamicFields()) {
-        Alert.alert('Error', 'Please fill in all required dynamic fields');
-        setLoading(false);
-        return;
-      }
-
-      if (missingFields.length > 0) {
-        const fieldNames: Record<string, string> = {
-          title: 'Product Name',
-          price: 'Price',
-          description: 'Description',
-          category: 'Product Type',
-          weight: 'Weight',
-          clarity: 'Clarity',
-          color: 'Color',
-          cut: 'Cut',
-          image: 'Image'
-        };
-        
+      if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors);
-        Alert.alert(
-          'Missing Fields',
-          `Please fill in all required fields: ${missingFields.map(field => fieldNames[field]).join(', ')}`
-        );
         setLoading(false);
         return;
       }
 
-      // Upload image first
-      const imageUrl = await uploadImage();
-      if (!imageUrl) {
-        Alert.alert('Error', 'Failed to upload image. Please try again.');
-        setLoading(false);
-        return;
+      // ננקה ערכי gold אם צריך
+      let fieldsToSend = { ...dynamicFields };
+      if (fieldsToSend.material?.toUpperCase?.() !== 'GOLD') {
+        delete fieldsToSend.goldColor;
+        delete fieldsToSend.goldKarat;
       }
 
-      // Create the product
-      const productData = {
-        title: formData.title,
-        price: parseFloat(formData.price),
-        currency: currency,
-        description: formData.description,
-        category: formData.category,
-        image_url: imageUrl,
-        user_id: user.id,
-        details: Object.keys(dynamicFields).length > 0 ? dynamicFields : null,
-        created_at: new Date().toISOString(),
-      };
+      // Upload image
+      const imagePath = `${user?.id}/${Date.now()}.jpg`;
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(imagePath, decode(imageBase64), {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
 
-      const { error } = await supabase
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(imagePath);
+
+      // Create product
+      const { data: product, error: productError } = await supabase
         .from('products')
-        .insert(productData)
+        .insert({
+          title: formData.title,
+          description: formData.description,
+          price: parseFloat(formData.price),
+          currency: currency,
+          image_url: publicUrl,
+          user_id: user?.id,
+          category: formData.category,
+          status: 'available'
+        })
         .select()
         .single();
 
-      if (error) {
-        console.error('Supabase error:', error);
-        Alert.alert('Error', 'Failed to create product. Please try again.');
-        setLoading(false);
-        return;
+      if (productError) throw productError;
+
+      // Insert category-specific specs
+      let specsError = null;
+
+      switch (formData.category) {
+        case 'Watch':
+          const { error: watchError } = await supabase
+            .from('watch_specs')
+            .insert({
+              product_id: product.id,
+              brand: dynamicFields.brand,
+              model: dynamicFields.model,
+              diameter: dynamicFields.diameter ? parseFloat(dynamicFields.diameter) : null
+            });
+          specsError = watchError;
+          break;
+
+        case 'Loose Diamond':
+          const { error: diamondError } = await supabase
+            .from('diamond_specs')
+            .insert({
+              product_id: product.id,
+              shape: dynamicFields.shape,
+              weight: dynamicFields.weight ? parseFloat(dynamicFields.weight) : null,
+              color: dynamicFields.color,
+              clarity: dynamicFields.clarity,
+              cut_grade: dynamicFields.cut_grade,
+              certificate: dynamicFields.certificate,
+              origin: dynamicFields.origin,
+              lab_grown_type: dynamicFields.lab_grown_type,
+              treatment_type: dynamicFields.treatment_type
+            });
+          specsError = diamondError;
+          break;
+
+        case 'Gems':
+          const { error: gemError } = await supabase
+            .from('gem_specs')
+            .insert({
+              product_id: product.id,
+              type: dynamicFields.type,
+              origin: dynamicFields.origin,
+              certification: dynamicFields.certification
+            });
+          specsError = gemError;
+          break;
+
+        case 'Ring':
+        case 'Necklace':
+        case 'Bracelet':
+        case 'Earrings':
+          const { error: jewelryError } = await supabase
+            .from('jewelry_specs')
+            .insert({
+              product_id: product.id,
+              diamond_size_from: dynamicFields.diamond_size_from ? parseFloat(dynamicFields.diamond_size_from) : null,
+              diamond_size_to: dynamicFields.diamond_size_to ? parseFloat(dynamicFields.diamond_size_to) : null,
+              color: dynamicFields.color,
+              clarity: dynamicFields.clarity,
+              gold_color: dynamicFields.gold_color,
+              material: dynamicFields.material,
+              gold_karat: dynamicFields.gold_karat,
+              side_stones: dynamicFields.side_stones === 'true',
+              cut_grade: dynamicFields.cut_grade,
+              certification: dynamicFields.certification
+            });
+          specsError = jewelryError;
+          break;
       }
 
-      setLoading(false);
-      router.replace('/(tabs)');
-      
+      if (specsError) throw specsError;
+
+      // עדכון עם שמירה ל-watch_specs אם מדובר בשעון
+      if (formData.category === 'Watches') {
+        const { error: watchSpecsError } = await supabase
+          .from('watch_specs')
+          .insert({
+            product_id: product.id,
+            brand: dynamicFields.brand,
+            model: dynamicFields.model,
+            diameter: dynamicFields.diameter ? parseFloat(dynamicFields.diameter) : null
+          });
+        if (watchSpecsError) throw watchSpecsError;
+      }
+
+      router.push('/profile');
     } catch (error) {
-      console.error('Error in handleSubmit:', error);
-      Alert.alert('Error', 'An error occurred while adding the product. Please try again.');
+      console.error('Error creating product:', error);
+      Alert.alert('שגיאה', 'אירעה שגיאה בעת יצירת המוצר');
+    } finally {
       setLoading(false);
     }
   };
 
   const validateDynamicFields = () => {
     const fields = productFieldsMap[formData.category] || [];
-    const errors = {};
+    const errors: Record<string, boolean> = {};
     let valid = true;
     fields.forEach(field => {
       if (!dynamicFields[field.key]) {
@@ -492,14 +535,13 @@ export default function AddProductScreen() {
 
   const renderDynamicFields = () => {
     const fields = productFieldsMap[formData.category] || [];
-    return fields.map(field => {
-      // תנאי לשדה תלוי
-      if (field.condition) {
-        const [depKey, depVal] = field.condition.split(" == ");
-        if (dynamicFields[depKey.trim()] !== depVal.replace(/'/g, "").trim()) return null;
-      }
-      if (field.type === "select") {
-        return (
+    const materialValue = dynamicFields['material']?.toUpperCase?.() || dynamicFields['material'];
+    let renderedFields: JSX.Element[] = [];
+    fields.forEach(field => {
+      if (formData.category === 'Watches' && field.key === 'brand') return;
+      if (field.key === 'material') {
+        // הצגת שדה Material
+        renderedFields.push(
           <View key={field.key} style={styles.inputGroup}>
             <Text style={styles.label}>{field.label}</Text>
             <TouchableOpacity
@@ -507,55 +549,164 @@ export default function AddProductScreen() {
               onPress={() => setShowDynamicSelect(s => ({ ...s, [field.key]: true }))}
             >
               <Text style={styles.selectButtonText}>
-                {dynamicFields[field.key] || `בחר ${field.label}`}
+                {(dynamicFields as Record<string, string>)[field.key] || `בחר ${field.label}`}
               </Text>
               <ChevronDown size={20} color="#666" />
             </TouchableOpacity>
-            {dynamicErrors[field.key] && <Text style={styles.errorText}>שדה חובה</Text>}
+            {(dynamicErrors as Record<string, boolean>)[field.key] && <Text style={styles.errorText}>שדה חובה</Text>}
             <SelectionModal
-              visible={!!showDynamicSelect[field.key]}
+              visible={!!(showDynamicSelect as Record<string, boolean>)[field.key]}
               onClose={() => setShowDynamicSelect(s => ({ ...s, [field.key]: false }))}
               title={field.label}
               options={field.options}
               onSelect={value => {
-                setDynamicFields(f => ({ ...f, [field.key]: value }));
+                setDynamicFields((f: Record<string, string>) => {
+                  if (value.toUpperCase() !== 'GOLD') {
+                    const { goldColor, goldKarat, ...rest } = f;
+                    return { ...rest, [field.key]: value };
+                  }
+                  return { ...f, [field.key]: value };
+                });
                 setShowDynamicSelect(s => ({ ...s, [field.key]: false }));
               }}
-              selected={dynamicFields[field.key]}
+              selected={(dynamicFields as Record<string, string>)[field.key] || ""}
             />
           </View>
         );
+        // אם נבחר Gold - הצג מיד אחרי Material את Gold Color
+        if (materialValue === 'GOLD') {
+          const goldColorField = fields.find(f => f.key === 'goldColor');
+          if (goldColorField) {
+            renderedFields.push(
+              <View key={goldColorField.key} style={styles.inputGroup}>
+                <Text style={styles.label}>{goldColorField.label}</Text>
+                <TouchableOpacity
+                  style={styles.selectButton}
+                  onPress={() => setShowDynamicSelect(s => ({ ...s, [goldColorField.key]: true }))}
+                >
+                  <Text style={styles.selectButtonText}>
+                    {(dynamicFields as Record<string, string>)[goldColorField.key] || `בחר ${goldColorField.label}`}
+                  </Text>
+                  <ChevronDown size={20} color="#666" />
+                </TouchableOpacity>
+                {(dynamicErrors as Record<string, boolean>)[goldColorField.key] && <Text style={styles.errorText}>שדה חובה</Text>}
+                <SelectionModal
+                  visible={!!(showDynamicSelect as Record<string, boolean>)[goldColorField.key]}
+                  onClose={() => setShowDynamicSelect(s => ({ ...s, [goldColorField.key]: false }))}
+                  title={goldColorField.label}
+                  options={goldColorField.options}
+                  onSelect={value => {
+                    setDynamicFields((f: Record<string, string>) => ({ ...f, [goldColorField.key]: value }));
+                    setShowDynamicSelect(s => ({ ...s, [goldColorField.key]: false }));
+                  }}
+                  selected={(dynamicFields as Record<string, string>)[goldColorField.key] || ""}
+                />
+              </View>
+            );
+          }
+        }
+        // אם נבחר Gold - הצג Gold Karat אחרי Gold Color
+        if (materialValue === 'GOLD') {
+          const goldKaratField = fields.find(f => f.key === 'goldKarat');
+          if (goldKaratField) {
+            renderedFields.push(
+              <View key={goldKaratField.key} style={styles.inputGroup}>
+                <Text style={styles.label}>{goldKaratField.label}</Text>
+                <TouchableOpacity
+                  style={styles.selectButton}
+                  onPress={() => setShowDynamicSelect(s => ({ ...s, [goldKaratField.key]: true }))}
+                >
+                  <Text style={styles.selectButtonText}>
+                    {(dynamicFields as Record<string, string>)[goldKaratField.key] || `בחר ${goldKaratField.label}`}
+                  </Text>
+                  <ChevronDown size={20} color="#666" />
+                </TouchableOpacity>
+                {(dynamicErrors as Record<string, boolean>)[goldKaratField.key] && <Text style={styles.errorText}>שדה חובה</Text>}
+                <SelectionModal
+                  visible={!!(showDynamicSelect as Record<string, boolean>)[goldKaratField.key]}
+                  onClose={() => setShowDynamicSelect(s => ({ ...s, [goldKaratField.key]: false }))}
+                  title={goldKaratField.label}
+                  options={goldKaratField.options}
+                  onSelect={value => {
+                    setDynamicFields((f: Record<string, string>) => ({ ...f, [goldKaratField.key]: value }));
+                    setShowDynamicSelect(s => ({ ...s, [goldKaratField.key]: false }));
+                  }}
+                  selected={(dynamicFields as Record<string, string>)[goldKaratField.key] || ""}
+                />
+              </View>
+            );
+          }
+        }
+        return;
+      }
+      // תנאי לשדה תלוי כללי
+      if (field.condition) {
+        const [depKey, depVal] = field.condition.split(" == ");
+        if ((dynamicFields as Record<string, string>)[depKey.trim()] !== depVal.replace(/'/g, "").trim()) return;
+      }
+      // דילוג על goldColor/goldKarat כי כבר טופלו
+      if ((field.key === 'goldColor' || field.key === 'goldKarat')) return;
+      if (field.type === "select") {
+        renderedFields.push(
+          <View key={field.key} style={styles.inputGroup}>
+            <Text style={styles.label}>{field.label}</Text>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => setShowDynamicSelect(s => ({ ...s, [field.key]: true }))}
+            >
+              <Text style={styles.selectButtonText}>
+                {(dynamicFields as Record<string, string>)[field.key] || `בחר ${field.label}`}
+              </Text>
+              <ChevronDown size={20} color="#666" />
+            </TouchableOpacity>
+            {(dynamicErrors as Record<string, boolean>)[field.key] && <Text style={styles.errorText}>שדה חובה</Text>}
+            <SelectionModal
+              visible={!!(showDynamicSelect as Record<string, boolean>)[field.key]}
+              onClose={() => setShowDynamicSelect(s => ({ ...s, [field.key]: false }))}
+              title={field.label}
+              options={field.options}
+              onSelect={value => {
+                setDynamicFields((f: Record<string, string>) => ({ ...f, [field.key]: value }));
+                setShowDynamicSelect(s => ({ ...s, [field.key]: false }));
+              }}
+              selected={(dynamicFields as Record<string, string>)[field.key] || ""}
+            />
+          </View>
+        );
+        return;
       }
       if (field.type === "number") {
-        return (
+        renderedFields.push(
           <View key={field.key} style={styles.inputGroup}>
             <Text style={styles.label}>{field.label}</Text>
             <TextInput
               style={styles.input}
-              value={dynamicFields[field.key]}
+              value={(dynamicFields as Record<string, string>)[field.key]}
               onChangeText={text => setDynamicFields(f => ({ ...f, [field.key]: text }))}
               keyboardType="numeric"
             />
-            {dynamicErrors[field.key] && <Text style={styles.errorText}>שדה חובה/מספר לא תקין</Text>}
+            {(dynamicErrors as Record<string, boolean>)[field.key] && <Text style={styles.errorText}>שדה חובה/מספר לא תקין</Text>}
           </View>
         );
+        return;
       }
       if (field.type === "text") {
-        return (
+        renderedFields.push(
           <View key={field.key} style={styles.inputGroup}>
             <Text style={styles.label}>{field.label}</Text>
             <TextInput
               style={styles.input}
-              value={dynamicFields[field.key]}
+              value={(dynamicFields as Record<string, string>)[field.key]}
               onChangeText={text => setDynamicFields(f => ({ ...f, [field.key]: text }))}
               placeholder={`Enter ${field.label}`}
             />
-            {dynamicErrors[field.key] && <Text style={styles.errorText}>שדה חובה</Text>}
+            {(dynamicErrors as Record<string, boolean>)[field.key] && <Text style={styles.errorText}>שדה חובה</Text>}
           </View>
         );
+        return;
       }
-      return null;
     });
+    return renderedFields;
   };
 
   return (
@@ -601,14 +752,18 @@ export default function AddProductScreen() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Product Name</Text>
+          <Text style={styles.label}>
+            {formData.category === 'Watches' ? 'Brand' : 'Product Name'}
+          </Text>
           {productNameOptions.length > 0 ? (
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setShowProductNameModal(true)}
             >
               <Text style={styles.selectButtonText}>
-                {formData.title || 'Select product name'}
+                {formData.category === 'Watches'
+                  ? (dynamicFields.brand || 'Select brand')
+                  : (formData.title || 'Select product name')}
               </Text>
               <ChevronDown size={20} color="#666" />
             </TouchableOpacity>
@@ -659,7 +814,7 @@ export default function AddProductScreen() {
               if (selected) setCurrency(selected.value);
               setShowCurrencyModal(false);
             }}
-            selected={CURRENCY_OPTIONS.find(opt => opt.value === currency)?.label}
+            selected={CURRENCY_OPTIONS.find(opt => opt.value === currency)?.label || ''}
           />
         </View>
 
@@ -741,10 +896,16 @@ export default function AddProductScreen() {
       <SelectionModal
         visible={showProductNameModal}
         onClose={() => setShowProductNameModal(false)}
-        title="Select Product Name"
+        title={formData.category === 'Watches' ? 'Select Brand' : 'Select Product Name'}
         options={productNameOptions}
-        onSelect={(value) => setFormData({ ...formData, title: value })}
-        selected={formData.title}
+        onSelect={(value) => {
+          if (formData.category === 'Watches') {
+            setDynamicFields(f => ({ ...f, brand: value }));
+          } else {
+            setFormData({ ...formData, title: value });
+          }
+        }}
+        selected={formData.category === 'Watches' ? (dynamicFields.brand || '') : (formData.title || '')}
       />
     </ScrollView>
   );

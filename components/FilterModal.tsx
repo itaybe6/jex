@@ -1,42 +1,411 @@
-import { View, Text, Modal, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, ScrollView, StyleSheet, TextInput } from 'react-native';
 import { X } from 'lucide-react-native';
+import { useState } from 'react';
 
-const CATEGORIES = ['Rings', 'Necklaces', 'Earrings', 'Bracelets', 'Loose Diamonds'];
-const DIAMOND_SIZES = ['0.3-0.5', '0.5-1.0', '1.0-2.0', '2.0-3.0', '3.0+'];
-const DIAMOND_COLORS = ['D', 'E', 'F', 'G', 'H', 'I'];
-const DIAMOND_CLARITY = ['FL', 'IF', 'VVS1', 'VVS2', 'VS1', 'VS2'];
+type FilterField = {
+  key: string;
+  type: 'range' | 'multi-select' | 'number' | 'text';
+  label: string;
+  options?: string[];
+  condition?: {
+    field: string;
+    includes: string[];
+  };
+  min?: number;
+  max?: number;
+  step?: number;
+};
+
+type FilterFieldsByCategory = {
+  [key: string]: FilterField[];
+};
+
+const filterFieldsByCategory: FilterFieldsByCategory = {
+  "Ring": [
+    {
+      key: "subcategory",
+      type: "multi-select",
+      label: "Ring Type",
+      options: [
+        "Wedding ring", "Hand Chain Ring - Bracelet", "Classic ring",
+        "Engagement ring", "Solitaire ring", "All around ring", "Band ring"
+      ]
+    },
+    { 
+      key: "diamond_size_from", 
+      type: "number", 
+      label: "Diamond Size From (Carat)",
+      min: 0,
+      step: 0.01
+    },
+    { 
+      key: "diamond_size_to", 
+      type: "number", 
+      label: "Diamond Size To (Carat)",
+      min: 0,
+      step: 0.01
+    },
+    {
+      key: "color",
+      type: "multi-select",
+      label: "Diamond Color",
+      options: ["D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N-Z"]
+    },
+    {
+      key: "clarity",
+      type: "multi-select",
+      label: "Diamond Clarity",
+      options: ["FL", "IF", "VVS1", "VVS2", "VS1", "VS2", "SI1", "SI2", "I1", "I2", "I3"]
+    },
+    {
+      key: "material",
+      type: "multi-select",
+      label: "Material",
+      options: ["Gold", "Platinum", "Silver"]
+    },
+    {
+      key: "gold_color",
+      type: "multi-select",
+      label: "Gold Color",
+      options: ["White", "Rose", "Yellow"],
+      condition: { field: "material", includes: ["Gold"] }
+    },
+    {
+      key: "gold_karat",
+      type: "multi-select",
+      label: "Gold Karat",
+      options: ["9K", "10K", "14K", "18K", "21K", "22K", "24K"],
+      condition: { field: "material", includes: ["Gold"] }
+    },
+    {
+      key: "cut_grade",
+      type: "multi-select",
+      label: "Cut Grade",
+      options: ["POOR", "FAIR", "GOOD", "VERY GOOD", "EXCELLENT"]
+    },
+    {
+      key: "certification",
+      type: "multi-select",
+      label: "Certification",
+      options: ["GIA", "IGI", "HRD", "EGL", "SGL", "CGL", "IGL", "AIG"]
+    }
+  ],
+  "Necklace": [
+    {
+      key: "subcategory",
+      type: "multi-select",
+      label: "Necklace Type",
+      options: ["Pendant", "Chain", "Cuban links"]
+    },
+    {
+      key: "material",
+      type: "multi-select",
+      label: "Material",
+      options: ["Gold", "Platinum", "Silver"]
+    },
+    {
+      key: "gold_color",
+      type: "multi-select",
+      label: "Gold Color",
+      options: ["White", "Rose", "Yellow"],
+      condition: { field: "material", includes: ["Gold"] }
+    },
+    {
+      key: "gold_karat",
+      type: "multi-select",
+      label: "Gold Karat",
+      options: ["9K", "10K", "14K", "18K", "21K", "22K", "24K"],
+      condition: { field: "material", includes: ["Gold"] }
+    },
+    { key: "length", type: "range", label: "Length (cm)" }
+  ],
+  "Earrings": [
+    {
+      key: "subcategory",
+      type: "multi-select",
+      label: "Earring Type",
+      options: ["Stud earrings", "Drop earrings", "English lock earrings", "Hoop earrings", "Chandelier earrings"]
+    },
+    {
+      key: "material",
+      type: "multi-select",
+      label: "Material",
+      options: ["Gold", "Platinum", "Silver"]
+    },
+    {
+      key: "gold_color",
+      type: "multi-select",
+      label: "Gold Color",
+      options: ["White", "Rose", "Yellow"],
+      condition: { field: "material", includes: ["Gold"] }
+    },
+    {
+      key: "gold_karat",
+      type: "multi-select",
+      label: "Gold Karat",
+      options: ["9K", "10K", "14K", "18K", "21K", "22K", "24K"],
+      condition: { field: "material", includes: ["Gold"] }
+    },
+    {
+      key: "color",
+      type: "multi-select",
+      label: "Diamond Color",
+      options: ["D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N-Z"]
+    },
+    {
+      key: "clarity",
+      type: "multi-select",
+      label: "Diamond Clarity",
+      options: ["FL", "IF", "VVS1", "VVS2", "VS1", "VS2", "SI1", "SI2", "I1", "I2", "I3"]
+    },
+    {
+      key: "certification",
+      type: "multi-select",
+      label: "Certification",
+      options: ["GIA", "IGI", "HRD", "EGL", "SGL", "CGL", "IGL", "AIG"]
+    }
+  ],
+  "Bracelet": [
+    {
+      key: "subcategory",
+      type: "multi-select",
+      label: "Bracelet Type",
+      options: ["Tennis", "Bangle", "Armlet", "Bracelet"]
+    },
+    {
+      key: "material",
+      type: "multi-select",
+      label: "Material",
+      options: ["Gold", "Platinum", "Silver"]
+    },
+    {
+      key: "gold_color",
+      type: "multi-select",
+      label: "Gold Color",
+      options: ["White", "Rose", "Yellow"],
+      condition: { field: "material", includes: ["Gold"] }
+    },
+    {
+      key: "gold_karat",
+      type: "multi-select",
+      label: "Gold Karat",
+      options: ["9K", "10K", "14K", "18K", "21K", "22K", "24K"],
+      condition: { field: "material", includes: ["Gold"] }
+    },
+    { key: "length", type: "range", label: "Length (cm)" },
+    {
+      key: "color",
+      type: "multi-select",
+      label: "Diamond Color",
+      options: ["D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N-Z"]
+    },
+    {
+      key: "clarity",
+      type: "multi-select",
+      label: "Diamond Clarity",
+      options: ["FL", "IF", "VVS1", "VVS2", "VS1", "VS2", "SI1", "SI2", "I1", "I2", "I3"]
+    }
+  ],
+  "Special Pieces": [
+    {
+      key: "subcategory",
+      type: "multi-select",
+      label: "Special Piece Type",
+      options: ["Crowns", "Cuff links", "Pins", "Belly chains"]
+    },
+    {
+      key: "material",
+      type: "multi-select",
+      label: "Material",
+      options: ["Gold", "Platinum", "Silver"]
+    },
+    {
+      key: "gold_color",
+      type: "multi-select",
+      label: "Gold Color",
+      options: ["White", "Rose", "Yellow"],
+      condition: { field: "material", includes: ["Gold"] }
+    },
+    {
+      key: "gold_karat",
+      type: "multi-select",
+      label: "Gold Karat",
+      options: ["9K", "10K", "14K", "18K", "21K", "22K", "24K"],
+      condition: { field: "material", includes: ["Gold"] }
+    }
+  ]
+};
+
+// Add price filter fields to all categories
+const priceFilterFields: FilterField[] = [
+  {
+    key: "price_from",
+    type: "number",
+    label: "Price From ($)",
+    min: 0,
+    step: 1
+  },
+  {
+    key: "price_to",
+    type: "number",
+    label: "Price To ($)",
+    min: 0,
+    step: 1
+  }
+];
+
+type FilterParams = {
+  category?: string;
+  filters: {
+    [key: string]: string[];
+  };
+};
 
 type FilterModalProps = {
   visible: boolean;
   onClose: () => void;
-  selectedCategory: string | null;
-  onSelectCategory: (category: string | null) => void;
-  selectedDiamondSize: string | null;
-  onSelectDiamondSize: (size: string | null) => void;
-  selectedDiamondColor: string | null;
-  onSelectDiamondColor: (color: string | null) => void;
-  selectedDiamondClarity: string | null;
-  onSelectDiamondClarity: (clarity: string | null) => void;
+  onApplyFilters: (filters: FilterParams) => void;
 };
 
 export default function FilterModal({
   visible,
   onClose,
-  selectedCategory,
-  onSelectCategory,
-  selectedDiamondSize,
-  onSelectDiamondSize,
-  selectedDiamondColor,
-  onSelectDiamondColor,
-  selectedDiamondClarity,
-  onSelectDiamondClarity,
+  onApplyFilters,
 }: FilterModalProps) {
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedFilters, setSelectedFilters] = useState<{ [key: string]: string[] }>({});
+
   const resetFilters = () => {
-    onSelectCategory(null);
-    onSelectDiamondSize(null);
-    onSelectDiamondColor(null);
-    onSelectDiamondClarity(null);
+    setSelectedCategory(null);
+    setSelectedFilters({});
     onClose();
+  };
+
+  const handleCategorySelect = (category: string) => {
+    setSelectedCategory(category);
+    setSelectedFilters({});
+  };
+
+  const handleFilterSelect = (fieldKey: string, value: string) => {
+    setSelectedFilters(prev => {
+      const currentValues = prev[fieldKey] || [];
+      const newValues = currentValues.includes(value)
+        ? currentValues.filter(v => v !== value)
+        : [...currentValues, value];
+      
+      return {
+        ...prev,
+        [fieldKey]: newValues,
+      };
+    });
+  };
+
+  const isFieldVisible = (field: FilterField) => {
+    if (!field.condition) return true;
+    const { field: conditionField, includes } = field.condition;
+    const selectedValues = selectedFilters[conditionField] || [];
+    return selectedValues.some(value => includes.includes(value));
+  };
+
+  const handleApplyFilters = () => {
+    if (selectedCategory) {
+      onApplyFilters({
+        category: selectedCategory,
+        filters: selectedFilters,
+      });
+    }
+    onClose();
+  };
+
+  const renderFilterFields = () => {
+    if (!selectedCategory) return null;
+
+    const fields = filterFieldsByCategory[selectedCategory] || [];
+    return (
+      <>
+        {fields.map(field => {
+          if (!isFieldVisible(field)) return null;
+
+          if (field.type === 'number') {
+            return (
+              <View key={field.key} style={styles.filterSection}>
+                <Text style={styles.filterTitle}>{field.label}</Text>
+                <TextInput
+                  style={styles.numberInput}
+                  keyboardType="numeric"
+                  value={selectedFilters[field.key]?.[0] || ''}
+                  onChangeText={(value) => {
+                    const numValue = value === '' ? '' : parseFloat(value);
+                    if (numValue === '' || (numValue >= (field.min || 0))) {
+                      setSelectedFilters(prev => ({
+                        ...prev,
+                        [field.key]: value ? [value] : []
+                      }));
+                    }
+                  }}
+                  placeholder={`Enter ${field.label.toLowerCase()}`}
+                  placeholderTextColor="#666"
+                />
+              </View>
+            );
+          }
+
+          return (
+            <View key={field.key} style={styles.filterSection}>
+              <Text style={styles.filterTitle}>{field.label}</Text>
+              <View style={styles.filterOptions}>
+                {field.options?.map(option => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.filterOption,
+                      selectedFilters[field.key]?.includes(option) && styles.filterOptionSelected,
+                    ]}
+                    onPress={() => handleFilterSelect(field.key, option)}
+                  >
+                    <Text
+                      style={[
+                        styles.filterOptionText,
+                        selectedFilters[field.key]?.includes(option) && styles.filterOptionTextSelected,
+                      ]}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          );
+        })}
+
+        {/* Add price filter fields */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterTitle}>Price Range</Text>
+          <View style={styles.priceInputContainer}>
+            {priceFilterFields.map(field => (
+              <View key={field.key} style={styles.priceInputWrapper}>
+                <TextInput
+                  style={styles.numberInput}
+                  keyboardType="numeric"
+                  value={selectedFilters[field.key]?.[0] || ''}
+                  onChangeText={(value) => {
+                    const numValue = value === '' ? '' : parseFloat(value);
+                    if (numValue === '' || (numValue >= (field.min || 0))) {
+                      setSelectedFilters(prev => ({
+                        ...prev,
+                        [field.key]: value ? [value] : []
+                      }));
+                    }
+                  }}
+                  placeholder={field.label}
+                  placeholderTextColor="#666"
+                />
+              </View>
+            ))}
+          </View>
+        </View>
+      </>
+    );
   };
 
   return (
@@ -54,18 +423,19 @@ export default function FilterModal({
               <X size={24} color="#fff" />
             </TouchableOpacity>
           </View>
+          
           <ScrollView style={styles.modalBody}>
             <View style={styles.filterSection}>
               <Text style={styles.filterTitle}>Category</Text>
               <View style={styles.filterOptions}>
-                {CATEGORIES.map((category) => (
+                {Object.keys(filterFieldsByCategory).map((category) => (
                   <TouchableOpacity
                     key={category}
                     style={[
                       styles.filterOption,
                       selectedCategory === category && styles.filterOptionSelected,
                     ]}
-                    onPress={() => onSelectCategory(selectedCategory === category ? null : category)}
+                    onPress={() => handleCategorySelect(category)}
                   >
                     <Text
                       style={[
@@ -80,85 +450,19 @@ export default function FilterModal({
               </View>
             </View>
 
-            <View style={styles.filterSection}>
-              <Text style={styles.filterTitle}>Diamond Size (Carat)</Text>
-              <View style={styles.filterOptions}>
-                {DIAMOND_SIZES.map((size) => (
-                  <TouchableOpacity
-                    key={size}
-                    style={[
-                      styles.filterOption,
-                      selectedDiamondSize === size && styles.filterOptionSelected,
-                    ]}
-                    onPress={() => onSelectDiamondSize(selectedDiamondSize === size ? null : size)}
-                  >
-                    <Text
-                      style={[
-                        styles.filterOptionText,
-                        selectedDiamondSize === size && styles.filterOptionTextSelected,
-                      ]}
-                    >
-                      {size}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.filterSection}>
-              <Text style={styles.filterTitle}>Diamond Color</Text>
-              <View style={styles.filterOptions}>
-                {DIAMOND_COLORS.map((color) => (
-                  <TouchableOpacity
-                    key={color}
-                    style={[
-                      styles.filterOption,
-                      selectedDiamondColor === color && styles.filterOptionSelected,
-                    ]}
-                    onPress={() => onSelectDiamondColor(selectedDiamondColor === color ? null : color)}
-                  >
-                    <Text
-                      style={[
-                        styles.filterOptionText,
-                        selectedDiamondColor === color && styles.filterOptionTextSelected,
-                      ]}
-                    >
-                      {color}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.filterSection}>
-              <Text style={styles.filterTitle}>Diamond Clarity</Text>
-              <View style={styles.filterOptions}>
-                {DIAMOND_CLARITY.map((clarity) => (
-                  <TouchableOpacity
-                    key={clarity}
-                    style={[
-                      styles.filterOption,
-                      selectedDiamondClarity === clarity && styles.filterOptionSelected,
-                    ]}
-                    onPress={() => onSelectDiamondClarity(selectedDiamondClarity === clarity ? null : clarity)}
-                  >
-                    <Text
-                      style={[
-                        styles.filterOptionText,
-                        selectedDiamondClarity === clarity && styles.filterOptionTextSelected,
-                      ]}
-                    >
-                      {clarity}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
+            {renderFilterFields()}
           </ScrollView>
 
           <View style={styles.modalFooter}>
             <TouchableOpacity style={styles.resetButton} onPress={resetFilters}>
               <Text style={styles.resetButtonText}>Reset All</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.applyButton, !selectedCategory && styles.applyButtonDisabled]} 
+              onPress={handleApplyFilters}
+              disabled={!selectedCategory}
+            >
+              <Text style={styles.applyButtonText}>Apply Filters</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -171,28 +475,26 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   modalContainer: {
-    width: '90%',
     backgroundColor: '#1a1a1a',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    height: '90%',
+    width: '100%',
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2a2a2a',
+    backgroundColor: '#1a1a1a',
+    zIndex: 1,
   },
   title: {
     fontSize: 20,
@@ -205,10 +507,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#2a2a2a',
   },
   modalBody: {
-    paddingBottom: 20,
+    flex: 1,
   },
   filterSection: {
-    marginBottom: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2a2a2a',
   },
   filterTitle: {
     fontSize: 16,
@@ -239,11 +544,15 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   modalFooter: {
-    paddingTop: 10,
+    padding: 16,
     borderTopWidth: 1,
     borderTopColor: '#2a2a2a',
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: '#1a1a1a',
   },
   resetButton: {
+    flex: 1,
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
@@ -253,5 +562,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Heebo-Medium',
     color: '#fff',
+  },
+  applyButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: '#6C5CE7',
+  },
+  applyButtonDisabled: {
+    opacity: 0.5,
+  },
+  applyButtonText: {
+    fontSize: 16,
+    fontFamily: 'Heebo-Medium',
+    color: '#fff',
+  },
+  numberInput: {
+    backgroundColor: '#2a2a2a',
+    borderRadius: 8,
+    padding: 12,
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: 'Heebo-Regular',
+    width: '100%',
+  },
+  priceInputContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  priceInputWrapper: {
+    flex: 1,
   },
 }); 
