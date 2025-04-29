@@ -1,9 +1,10 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Bell } from 'lucide-react-native';
 import { Link, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function TopHeader() {
   const { user } = useAuth();
@@ -31,19 +32,21 @@ export function TopHeader() {
   }, [fetchUnread]);
 
   return (
-    <View style={styles.header}>
-      <Text style={styles.logo}>Brilliant</Text>
-      <Link href="/notifications" asChild>
-        <TouchableOpacity style={styles.iconButton}>
-          <Bell size={24} color="#fff" />
-          {unreadCount > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </Link>
-    </View>
+    <SafeAreaView style={{ backgroundColor: '#0E2657' }} edges={['top', 'left', 'right']}>
+      <View style={styles.header}>
+        <Image source={require('@/assets/images/new whote head-05.png')} style={styles.logoImg} resizeMode="contain" />
+        <Link href="/notifications" asChild>
+          <TouchableOpacity style={styles.iconButton}>
+            <Bell size={26} color="#fff" />
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </Link>
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -53,20 +56,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#121212',
-    borderBottomWidth: 1,
-    borderBottomColor: '#2a2a2a',
+    paddingTop: 4,
+    paddingBottom: 4,
+    backgroundColor: '#0E2657',
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
   },
-  logo: {
-    fontSize: 24,
-    fontFamily: 'Heebo-Bold',
-    color: '#fff',
+  logoImg: {
+    height: 26,
+    width: 95,
+    marginLeft: 0,
   },
   iconButton: {
     padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#2a2a2a',
+    borderRadius: 16,
+    backgroundColor: 'transparent',
     position: 'relative',
   },
   badge: {
@@ -85,6 +93,6 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#fff',
     fontSize: 12,
-    fontFamily: 'Heebo-Bold',
+    fontFamily: 'Montserrat-Bold',
   },
 });

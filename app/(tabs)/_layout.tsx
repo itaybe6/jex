@@ -3,64 +3,66 @@ import { Home, User, Search, Plus, Settings } from 'lucide-react-native';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { TopHeader } from '@/components/TopHeader';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function TabBarIcon({ Icon, focused }: { Icon: any, focused: boolean }) {
   return (
-    <View style={{ 
+    <View style={{
+      flex: 1,
       alignItems: 'center',
-      justifyContent: 'center',
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: focused ? '#6C5CE7' : 'transparent'
+      justifyContent: 'flex-start',
+      height: '100%',
+      paddingTop: 16,
     }}>
-      <Icon size={24} color={focused ? '#fff' : '#999'} />
+      <Icon size={24} color={focused ? '#B0B6C1' : '#0E2657'} />
     </View>
   );
 }
 
 export default function TabLayout() {
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['left', 'right']}>
       <Tabs
         screenOptions={{
           header: () => <TopHeader />,
           tabBarStyle: {
-            backgroundColor: '#121212',
-            borderTopColor: '#2a2a2a',
-            borderTopWidth: 1,
-            height: 60,
-            paddingBottom: 8,
-            paddingTop: 8,
+            backgroundColor: '#fff',
+            height: 85,
+            paddingBottom: 0,
+            paddingTop: 0,
+            shadowColor: '#0E2657',
+            shadowOpacity: 0.10,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: -2 },
+            elevation: 8,
+            borderTopWidth: 0,
           },
-          tabBarActiveTintColor: '#6C5CE7',
-          tabBarInactiveTintColor: '#888',
+          tabBarActiveTintColor: '#B0B6C1',
+          tabBarInactiveTintColor: '#0E2657',
           tabBarShowLabel: false,
           headerStyle: {
-            backgroundColor: '#121212',
+            backgroundColor: '#F5F8FC',
           },
           headerShadowVisible: false,
           headerTitleStyle: {
             fontFamily: 'Heebo-Bold',
-            color: '#fff',
+            color: '#0E2657',
           },
-          headerTintColor: '#fff',
+          headerTintColor: '#0E2657',
         }}
       >
         <Tabs.Screen
           name="index"
           options={{
             title: 'Home',
-            tabBarIcon: ({ color }) => <Home size={24} color={color} />,
+            tabBarIcon: ({ focused }) => <TabBarIcon Icon={Home} focused={focused} />,
           }}
         />
         <Tabs.Screen
           name="search"
           options={{
             title: 'Search',
-            tabBarIcon: ({ focused }) => (
-              <TabBarIcon Icon={Search} focused={focused} />
-            ),
+            tabBarIcon: ({ focused }) => <TabBarIcon Icon={Search} focused={focused} />,
           }}
         />
         <Tabs.Screen
@@ -68,21 +70,21 @@ export default function TabLayout() {
           options={{
             title: 'Add',
             headerShown: false,
-            tabBarIcon: ({ color }) => <Plus size={24} color={color} />,
+            tabBarIcon: ({ focused }) => <TabBarIcon Icon={Plus} focused={focused} />,
           }}
         />
         <Tabs.Screen
           name="settings"
           options={{
             title: 'Settings',
-            tabBarIcon: ({ color }) => <Settings size={24} color={color} />,
+            tabBarIcon: ({ focused }) => <TabBarIcon Icon={Settings} focused={focused} />,
           }}
         />
         <Tabs.Screen
           name="profile"
           options={{
             title: 'Profile',
-            tabBarIcon: ({ color }) => <User size={24} color={color} />,
+            tabBarIcon: ({ focused }) => <TabBarIcon Icon={User} focused={focused} />,
           }}
         />
         <Tabs.Screen

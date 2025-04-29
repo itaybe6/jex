@@ -51,6 +51,12 @@ export default function ProfileLayout() {
           title: 'Request Details',
         }}
       />
+      <Stack.Screen
+        name="edit"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

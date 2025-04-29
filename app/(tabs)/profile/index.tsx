@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Modal } from 'react-native';
-import { Settings, Plus, Link as LinkIcon, X, ChevronRight, ClipboardList } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Modal, Linking } from 'react-native';
+import { Settings, Plus, Link as LinkIcon, X, ChevronRight, ClipboardList, Bell } from 'lucide-react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
@@ -141,6 +141,7 @@ export default function ProfileScreen() {
         return acc;
       }, {});
 
+      console.log('Loaded productsByCategory:', grouped);
       setProductsByCategory(grouped);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -207,7 +208,11 @@ export default function ProfileScreen() {
   const handleWebsitePress = async () => {
     if (profile?.website) {
       const url = profile.website.startsWith('http') ? profile.website : `https://${profile.website}`;
-      window.open(url, '_blank');
+      try {
+        await Linking.openURL(url);
+      } catch (e) {
+        // אפשר להוסיף הודעת שגיאה אם תרצה
+      }
     }
   };
 
@@ -431,10 +436,11 @@ export default function ProfileScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.content}>
-        <View style={styles.profileSection}>
-          <View style={styles.profileImageContainer}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F5F8FC' }} edges={['left', 'right']}>
+      <ScrollView style={{ backgroundColor: 'transparent', flex: 1 }} contentContainerStyle={{ paddingTop: 0 }}>
+        {/* User Card */}
+        <View style={[styles.userCard, { marginTop: 80, paddingTop: 0 }]}>
+          <View style={styles.profileImageWrapper}>
             <Image
               source={{ 
                 uri: profile.avatar_url 
@@ -444,161 +450,112 @@ export default function ProfileScreen() {
               style={styles.profileImage}
             />
           </View>
-
           <TouchableOpacity 
             style={styles.editButton}
             onPress={handleEditProfile}
           >
             <Text style={styles.editButtonText}>Edit Profile</Text>
           </TouchableOpacity>
-
           <Text style={styles.userName}>{profile.full_name}</Text>
           {profile.title ? <Text style={styles.userTitle}>{profile.title}</Text> : null}
-          <View style={styles.bioWebsiteContainer}>
-            {profile.bio ? (
-              <Text style={styles.bio}>{profile.bio}</Text>
-            ) : null}
-            {profile.website ? (
-              <TouchableOpacity 
-                style={styles.websiteButton}
-                onPress={handleWebsitePress}
-              >
-                  <LinkIcon size={16} color="#fff" />
-                <Text style={styles.websiteText}>{profile.website}</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-          <View style={styles.statsContainer}>
+          {profile.website ? (
+            <TouchableOpacity onPress={handleWebsitePress} style={styles.websiteRow}>
+              <Text style={styles.websiteText} numberOfLines={1}>
+                {profile.website}
+              </Text>
+              <LinkIcon size={16} color="#007AFF" style={{ marginRight: 4 }} />
+            </TouchableOpacity>
+          ) : null}
+          <View style={styles.statsRow}>
             <View style={styles.statItem}>
               <Text style={styles.statNumber}>{totalProducts}</Text>
               <Text style={styles.statLabel}>Products</Text>
             </View>
-            <TouchableOpacity 
-              style={styles.statItem}
-              onPress={handleShowTrustMarks}
-            >
-              <Text style={[styles.statNumber, styles.statNumberClickable]}>
-                {profile.trust_count}
-              </Text>
-              <Text style={[styles.statLabel, styles.statLabelClickable]}>
-                TrustMarks
-              </Text>
+            <TouchableOpacity style={styles.statItem} onPress={handleShowTrustMarks}>
+              <Text style={styles.statNumber}>{profile.trust_count}</Text>
+              <Text style={styles.statLabel}>TrustMarks</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.statItem}
-              onPress={() => router.push({ pathname: '/profile/transactions', params: { fromProfileType: 'self' } })}
-              >
+            <TouchableOpacity style={styles.statItem} onPress={() => router.push({ pathname: '/profile/transactions', params: { fromProfileType: 'self' } })}>
               <Text style={styles.statNumber}>{profile.sold_count}</Text>
               <Text style={styles.statLabel}>Transactions</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        <View style={styles.catalogSection}>
-          <View style={styles.tabButtonsRow}>
-            <TouchableOpacity
-              style={[styles.tabButton, activeTab === 'catalog' && styles.tabButtonActive]}
-              onPress={() => setActiveTab('catalog')}
-            >
-              <Text style={[styles.tabButtonText, activeTab === 'catalog' && styles.tabButtonTextActive]}>Catalog</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tabButton, activeTab === 'requests' && styles.tabButtonActive]}
-              onPress={() => setActiveTab('requests')}
-            >
-              <Text style={[styles.tabButtonText, activeTab === 'requests' && styles.tabButtonTextActive]}>Requests</Text>
-            </TouchableOpacity>
-          </View>
-          {activeTab === 'catalog' && (
-            <>
-              {totalProducts === 0 ? (
-                <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyText}>No products in catalog</Text>
-                  <Text style={styles.emptySubtext}>Click 'Add Product' to get started</Text>
-                </View>
-              ) : (
-                <View style={styles.categoriesContainer}>
-                  {Object.entries(productsByCategory).map(([category, products]) => (
-                    <View key={category}>
-                      {renderCategorySection(category, products)}
-                      <View style={styles.categoryDivider} />
-                    </View>
-                  ))}
-                </View>
-              )}
-              <FlatList
-                data={categories}
-                renderItem={({ item: category }) => (
-                  <View key={category.id}>
-                    <View style={styles.categorySection}>
-                      <View style={styles.categoryHeader}>
-                        <Text style={styles.categoryTitle}>{category.name}</Text>
-                        {category.products.length > 3 && (
-                          <TouchableOpacity 
-                            style={styles.showMoreButton}
-                            onPress={() => toggleCategory(category.id)}
-                          >
-                            <Text style={styles.showMoreText}>
-                              {expandedCategories.has(category.id) ? 'Show Less' : 'Show More'}
-                            </Text>
-                            <ChevronRight 
-                              size={16} 
-                              color="#6C5CE7" 
-                              style={[
-                                styles.showMoreIcon,
-                                expandedCategories.has(category.id) && styles.showMoreIconRotated
-                              ]} 
-                            />
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                      <View style={styles.gridContainer}>
-                        {expandedCategories.has(category.id) ? (
-                          category.products.map(renderProductItem)
-                        ) : (
-                          category.products.slice(0, 3).map(renderProductItem)
-                        )}
-                      </View>
-                    </View>
-                    <View style={styles.categoryDivider} />
-                  </View>
-                )}
-                keyExtractor={item => item.id}
-                scrollEnabled={false}
-                ListEmptyComponent={null}
-              />
-            </>
-          )}
-          {activeTab === 'requests' && (
-            <View style={styles.requestsSection}>
-              {loadingRequests ? (
-                <Text style={styles.loadingText}>Loading requests...</Text>
-              ) : requests.length === 0 ? (
-                <Text style={styles.emptyText}>No requests found</Text>
-              ) : (
-                requests.map((req) => (
-                  <View key={req.id} style={styles.requestCardImproved}>
-                    <View style={styles.requestHeaderImproved}>
-                      <ClipboardList size={22} color="#6C5CE7" style={{ marginRight: 10 }} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.requestTitleImproved}>{req.cut} {req.min_weight}-{req.max_weight || req.min_weight}ct, {req.clarity}, Color {req.color}</Text>
-                        {req.price && (
-                          <Text style={styles.requestPriceImproved}>Budget: {req.price} ₪</Text>
-                        )}
-                      </View>
-                      <View style={[styles.requestStatusPill, req.status === 'active' ? styles.statusActive : styles.statusOther]}>
-                        <Text style={styles.requestStatusText}>{req.status === 'active' ? 'Active' : req.status}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.requestFooterImproved}>
-                      <Text style={styles.requestDateImproved}>{new Date(req.created_at).toLocaleDateString()}</Text>
-                    </View>
-                  </View>
-                ))
-              )}
-            </View>
-          )}
+        {/* Navigation Tabs */}
+        <View style={styles.tabButtonsRow}>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'catalog' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('catalog')}
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'catalog' && styles.tabButtonTextActive]}>Catalog</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'requests' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('requests')}
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'requests' && styles.tabButtonTextActive]}>Requests</Text>
+          </TouchableOpacity>
         </View>
+
+        {/* Category/Product Cards */}
+        {activeTab === 'catalog' && (
+          totalProducts > 0 ? (
+            <View style={styles.categoriesContainer}>
+              {Object.entries(productsByCategory).map(([category, products]) => (
+                <View key={category} style={styles.categorySection}>
+                  <View style={styles.categoryHeader}>
+                    <Text style={styles.categoryTitle}>{category}</Text>
+                    <Text style={styles.categoryCount}>{products.length} {products.length === 1 ? 'item' : 'items'}</Text>
+                  </View>
+                  <View style={styles.productsRow}>
+                    {products.map(product => (
+                      <View key={product.id} style={styles.productCard}>
+                        <Image source={{ uri: product.image_url }} style={styles.productImage} resizeMode="cover" />
+                        <Text style={styles.productTitle} numberOfLines={2}>{product.title}</Text>
+                        <Text style={styles.productPrice}>${product.price.toLocaleString()}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={{ alignItems: 'center', margin: 32 }}>
+              <Text style={{ fontFamily: 'Montserrat-Bold', fontSize: 18, color: '#0E2657', marginBottom: 8 }}>No products in catalog</Text>
+              <Text style={{ fontFamily: 'Montserrat-Regular', fontSize: 14, color: '#7B8CA6', textAlign: 'center' }}>Click 'Add Product' to get started</Text>
+            </View>
+          )
+        )}
+        {activeTab === 'requests' && (
+          <View style={styles.requestsSection}>
+            {loadingRequests ? (
+              <Text style={{ fontFamily: 'Montserrat-Regular', fontSize: 16, color: '#0E2657' }}>Loading requests...</Text>
+            ) : requests.length === 0 ? (
+              <Text style={{ fontFamily: 'Montserrat-Bold', fontSize: 18, color: '#0E2657', marginTop: 32, textAlign: 'center' }}>No requests found</Text>
+            ) : (
+              requests.map((req) => (
+                <View key={req.id} style={[styles.productCard, { flexDirection: 'column', alignItems: 'flex-start', marginBottom: 16, minWidth: '100%', maxWidth: '100%' }]}> 
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <ClipboardList size={22} color="#6C5CE7" style={{ marginRight: 10 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontFamily: 'Montserrat-Bold', color: '#0E2657', fontSize: 15, marginBottom: 2 }}>{req.cut} {req.min_weight}-{req.max_weight || req.min_weight}ct, {req.clarity}, Color {req.color}</Text>
+                      {req.price && (
+                        <Text style={{ fontFamily: 'Montserrat-Medium', color: '#6C5CE7', fontSize: 14, marginBottom: 2 }}>Budget: {req.price} ₪</Text>
+                      )}
+                    </View>
+                    <View style={{ borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4, alignSelf: 'flex-start', marginLeft: 8, minWidth: 60, alignItems: 'center', backgroundColor: req.status === 'active' ? '#4CAF50' : '#888' }}>
+                      <Text style={{ color: '#fff', fontFamily: 'Montserrat-Bold', fontSize: 13 }}>{req.status === 'active' ? 'Active' : req.status}</Text>
+                    </View>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 6, width: '100%' }}>
+                    <Text style={{ color: '#7B8CA6', fontFamily: 'Montserrat-Regular', fontSize: 13 }}>{new Date(req.created_at).toLocaleDateString()}</Text>
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
+        )}
         <TrustMarksModal />
       </ScrollView>
     </SafeAreaView>
@@ -617,227 +574,187 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     color: '#fff',
-    fontFamily: 'Heebo-Regular',
+    fontFamily: 'Montserrat-Regular',
   },
   content: {
     flex: 1,
   },
-  profileSection: {
+  userCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    marginHorizontal: 20,
+    paddingTop: 0,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 4,
+    overflow: 'visible',
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
-  profileImageContainer: {
-    marginBottom: 12,
-  },
-  profileImage: {
+  profileImageWrapper: {
+    marginTop: -60,
+    marginBottom: 8,
     width: 120,
     height: 120,
     borderRadius: 60,
+    borderWidth: 4,
+    borderColor: '#fff',
+    backgroundColor: '#F5F8FC',
+    overflow: 'hidden',
+    zIndex: 2,
+    alignSelf: 'center',
+  },
+  profileImage: {
+    width: 112,
+    height: 112,
+    borderRadius: 56,
   },
   editButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#0E2657',
     borderRadius: 20,
-    marginBottom: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 8,
   },
   editButtonText: {
     color: '#fff',
+    fontFamily: 'Montserrat-Bold',
     fontSize: 14,
-    fontFamily: 'Heebo-Medium',
   },
   userName: {
-    fontSize: 24,
-    fontFamily: 'Heebo-Bold',
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 22,
+    color: '#0E2657',
+    marginTop: 4,
     marginBottom: 2,
     textAlign: 'center',
-    color: '#fff',
   },
   userTitle: {
-    fontSize: 16,
-    color: '#888',
-    fontFamily: 'Heebo-Regular',
-    marginBottom: 6,
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 15,
+    color: '#6C5CE7',
+    marginBottom: 10,
     textAlign: 'center',
   },
-  bioWebsiteContainer: {
-    alignItems: 'center',
-    gap: 2,
-  },
-  bio: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-    lineHeight: 14,
-    fontFamily: 'Heebo-Regular',
-    paddingHorizontal: 20,
-    alignSelf: 'flex-start',
-    flexGrow: 0,
-    flexShrink: 1,
-  },
-  websiteButton: {
+  statsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#2a2a2a',
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-  },
-  websiteText: {
-    color: '#fff',
-    fontSize: 14,
-    fontFamily: 'Heebo-Regular',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     width: '100%',
+    marginTop: 10,
     marginBottom: 0,
-    paddingVertical: 2,
   },
   statItem: {
     alignItems: 'center',
-    paddingHorizontal: 12,
+    flex: 1,
   },
   statNumber: {
-    fontSize: 20,
-    fontFamily: 'Heebo-Bold',
-    color: '#6C5CE7',
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 16,
+    color: '#0E2657',
   },
   statLabel: {
-    fontSize: 14,
-    color: '#888',
-    fontFamily: 'Heebo-Regular',
-  },
-  statNumberClickable: {
-    textDecorationLine: 'underline',
-    color: '#6C5CE7',
-  },
-  statLabelClickable: {
-    color: '#6C5CE7',
-  },
-  catalogSection: {
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#2a2a2a',
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 13,
+    color: '#7B8CA6',
   },
   tabButtonsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 8,
+    marginTop: 24,
+    marginBottom: 12,
     gap: 8,
+    paddingHorizontal: 20,
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 10,
-    backgroundColor: '#23232b',
+    paddingVertical: 12,
+    backgroundColor: '#E3EAF3',
     borderRadius: 16,
-    marginHorizontal: 6,
+    marginHorizontal: 4,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#444',
   },
   tabButtonActive: {
-    backgroundColor: '#6C5CE7',
-    borderColor: '#6C5CE7',
+    backgroundColor: '#0E2657',
   },
   tabButtonText: {
-    color: '#fff',
+    color: '#0E2657',
+    fontFamily: 'Montserrat-Medium',
     fontSize: 16,
-    fontFamily: 'Heebo-Medium',
   },
   tabButtonTextActive: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontFamily: 'Montserrat-Bold',
+  },
+  categoriesContainer: {
+    gap: 32,
+    paddingHorizontal: 20,
+    marginTop: 8,
+  },
+  categorySection: {
+    marginBottom: 16,
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  categoryTitle: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 18,
+    color: '#0E2657',
+  },
+  categoryCount: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 13,
+    color: '#7B8CA6',
+  },
+  productsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  productCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    flex: 1,
+    alignItems: 'center',
+    padding: 10,
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    minWidth: 90,
+    maxWidth: 110,
+  },
+  productImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: '#E3EAF3',
+  },
+  productTitle: {
+    fontFamily: 'Montserrat-Medium',
+    fontSize: 13,
+    color: '#0E2657',
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  productPrice: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 13,
+    color: '#6C5CE7',
+    textAlign: 'center',
   },
   requestsSection: {
     paddingHorizontal: 20,
     marginTop: 12,
-  },
-  requestCardImproved: {
-    backgroundColor: '#23232b',
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#444',
-    shadowColor: '#000',
-    shadowOpacity: 0.10,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  requestHeaderImproved: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  requestTitleImproved: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  requestPriceImproved: {
-    color: '#6C5CE7',
-    fontSize: 15,
-    marginBottom: 2,
-    fontWeight: '500',
-  },
-  requestStatusPill: {
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    alignSelf: 'flex-start',
-    marginLeft: 8,
-    minWidth: 60,
-    alignItems: 'center',
-  },
-  statusActive: {
-    backgroundColor: '#4CAF50',
-  },
-  statusOther: {
-    backgroundColor: '#888',
-  },
-  requestStatusText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: 'bold',
-  },
-  requestFooterImproved: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 6,
-  },
-  requestDateImproved: {
-    color: '#888',
-    fontSize: 13,
-  },
-  emptyContainer: {
-    margin: 20,
-    padding: 40,
-    alignItems: 'center',
-    backgroundColor: '#2a2a2a',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#444',
-    borderStyle: 'dashed',
-  },
-  emptyText: {
-    fontSize: 18,
-    fontFamily: 'Heebo-Bold',
-    marginBottom: 8,
-    color: '#fff',
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#888',
-    fontFamily: 'Heebo-Regular',
-    textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,
@@ -860,7 +777,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontFamily: 'Heebo-Bold',
+    fontFamily: 'Montserrat-Bold',
     color: '#fff',
   },
   modalCloseButton: {
@@ -876,7 +793,7 @@ const styles = StyleSheet.create({
   modalLoadingText: {
     fontSize: 16,
     color: '#888',
-    fontFamily: 'Heebo-Regular',
+    fontFamily: 'Montserrat-Regular',
   },
   modalEmptyContainer: {
     padding: 40,
@@ -885,7 +802,7 @@ const styles = StyleSheet.create({
   modalEmptyText: {
     fontSize: 16,
     color: '#888',
-    fontFamily: 'Heebo-Regular',
+    fontFamily: 'Montserrat-Regular',
   },
   trustMarkItem: {
     flexDirection: 'row',
@@ -905,14 +822,14 @@ const styles = StyleSheet.create({
   },
   trustMarkName: {
     fontSize: 16,
-    fontFamily: 'Heebo-Medium',
+    fontFamily: 'Montserrat-Medium',
     marginBottom: 2,
     color: '#fff',
   },
   trustMarkTitle: {
     fontSize: 14,
     color: '#888',
-    fontFamily: 'Heebo-Regular',
+    fontFamily: 'Montserrat-Regular',
   },
   showMoreButton: {
     flexDirection: 'row',
@@ -921,7 +838,7 @@ const styles = StyleSheet.create({
   },
   showMoreText: {
     fontSize: 14,
-    fontFamily: 'Heebo-Medium',
+    fontFamily: 'Montserrat-Medium',
     color: '#6C5CE7',
   },
   showMoreIcon: {
@@ -934,33 +851,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: GRID_SPACING,
-  },
-  categoriesContainer: {
-    gap: 24,
-  },
-  categorySection: {
-    paddingHorizontal: 20,
-  },
-  categoryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  categoryTitle: {
-    fontSize: 20,
-    fontFamily: 'Heebo-Bold',
-    color: '#fff',
-  },
-  categoryCount: {
-    fontSize: 14,
-    fontFamily: 'Heebo-Regular',
-    color: '#888',
-  },
-  categoryDivider: {
-    height: 1,
-    backgroundColor: '#2a2a2a',
-    marginTop: 24,
   },
   gridContainer: {
     width: '100%',
@@ -987,12 +877,27 @@ const styles = StyleSheet.create({
   },
   gridItemTitle: {
     fontSize: 14,
-    fontFamily: 'Heebo-Bold',
+    fontFamily: 'Montserrat-Bold',
     color: '#fff',
   },
   gridItemPrice: {
     fontSize: 12,
-    fontFamily: 'Heebo-Regular',
+    fontFamily: 'Montserrat-Regular',
     color: '#fff',
+  },
+  websiteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    marginBottom: 2,
+    gap: 4,
+  },
+  websiteText: {
+    color: '#007AFF',
+    fontSize: 15,
+    fontFamily: 'Montserrat-Medium',
+    textDecorationLine: 'underline',
+    maxWidth: 200,
   },
 });
