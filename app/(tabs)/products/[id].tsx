@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Linking, Modal } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Linking, Modal, Alert } from 'react-native';
+import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, MessageCircle, Clock, X } from 'lucide-react-native';
-import { TopHeader } from '@/components/TopHeader';
+import { ArrowLeft, MessageCircle, Clock, X, Edit, Trash, CheckCircle } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/hooks/useAuth';
+import ImageViewer from 'react-native-image-zoom-viewer';
 
 type Product = {
   id: string;
@@ -15,6 +15,7 @@ type Product = {
   image_url: string;
   category: string;
   user_id: string;
+  status: 'available' | 'sold';
   details?: {
     size?: string;
     clarity?: string;
@@ -53,6 +54,7 @@ export default function ProductScreen() {
   const [showHoldModal, setShowHoldModal] = useState(false);
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showImageViewer, setShowImageViewer] = useState(false);
 
   useEffect(() => {
     fetchProduct();
@@ -145,6 +147,84 @@ export default function ProductScreen() {
     }
   };
 
+  const handleEditPress = () => {
+    if (!product) return;
+    router.push({
+      pathname: "/profile/product/[id]",
+      params: { id: product.id }
+    });
+  };
+
+  const handleDeletePress = async () => {
+    if (!product || !user) return;
+
+    Alert.alert(
+      'Delete Product',
+      'Are you sure you want to delete this product?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('products')
+                .delete()
+                .eq('id', product.id)
+                .eq('user_id', user.id);
+
+              if (error) throw error;
+              router.back();
+            } catch (error) {
+              console.error('Error deleting product:', error);
+              Alert.alert('Error', 'Failed to delete product');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleMarkAsSold = async () => {
+    if (!product || !user) return;
+
+    Alert.alert(
+      'Mark as Sold',
+      'Are you sure you want to mark this product as sold? It will be removed from the catalog.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Mark as Sold',
+          style: 'default',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('products')
+                .update({ status: 'sold' })
+                .eq('id', product.id)
+                .eq('user_id', user.id);
+
+              if (error) throw error;
+              
+              Alert.alert('Success', 'Product marked as sold');
+              router.back();
+            } catch (error) {
+              console.error('Error marking product as sold:', error);
+              Alert.alert('Error', 'Failed to mark product as sold');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -161,28 +241,61 @@ export default function ProductScreen() {
     );
   }
 
+  const isOwner = user?.id === product.user_id;
+
   return (
-    <View style={styles.container}>
-      <TopHeader />
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <Stack.Screen
+        options={{
+          headerStyle: {
+            backgroundColor: '#0E2657',
+          },
+          headerTintColor: '#fff',
+          headerTitle: 'Product',
+          headerTitleStyle: {
+            fontWeight: '600',
+          },
+          headerShadowVisible: false,
+        }}
+      />
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
           <ArrowLeft size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{product.title}</Text>
+        {isOwner && (
+          <View style={styles.ownerActions}>
+            <TouchableOpacity onPress={handleMarkAsSold} style={[styles.actionButton, styles.soldButton]}>
+              <CheckCircle size={20} color="#4CAF50" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleEditPress} style={styles.actionButton}>
+              <Edit size={20} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleDeletePress} style={[styles.actionButton, styles.deleteButton]}>
+              <Trash size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       <ScrollView 
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.imageContainer}>
+        <TouchableOpacity 
+          style={styles.imageContainer}
+          onPress={() => setShowImageViewer(true)}
+        >
           <Image source={{ uri: product.image_url }} style={styles.image} />
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.detailsContainer}>
           <View style={styles.priceSection}>
-            <Text style={styles.price}>${product.price?.toLocaleString()}</Text>
-            <Text style={styles.category}>{product.category}</Text>
+            <View style={styles.priceRow}>
+              <Text style={styles.category}>{product.category}</Text>
+              <Text style={styles.price}>${product.price?.toLocaleString()}</Text>
+            </View>
           </View>
 
           {product.details && (
@@ -218,7 +331,6 @@ export default function ProductScreen() {
           )}
 
           <View style={styles.sellerContainer}>
-            <Text style={styles.sectionTitle}>Seller</Text>
             <TouchableOpacity 
               style={styles.sellerContent}
               onPress={() => router.push(`/user/${product.profiles.id}`)}
@@ -228,6 +340,7 @@ export default function ProductScreen() {
                 style={styles.sellerAvatar}
               />
               <View style={styles.sellerInfo}>
+                <Text style={styles.sellerLabel}>Seller</Text>
                 <Text style={styles.sellerName}>{product.profiles.full_name}</Text>
               </View>
             </TouchableOpacity>
@@ -239,16 +352,12 @@ export default function ProductScreen() {
               <Text style={styles.description}>{product.description}</Text>
             </View>
           )}
-          
-          {/* Extra padding to prevent content from being hidden behind buttons */}
-          <View style={styles.bottomPadding} />
         </View>
       </ScrollView>
 
-      {/* Fixed bottom buttons */}
-      <View style={styles.bottomButtonsContainer}>
-        <View style={styles.bottomButtons}>
-          {user?.id !== product.user_id && (
+      {!isOwner && (
+        <View style={styles.bottomButtonsContainer}>
+          <View style={styles.bottomButtons}>
             <TouchableOpacity 
               style={styles.holdButton} 
               onPress={() => setShowHoldModal(true)}
@@ -256,17 +365,17 @@ export default function ProductScreen() {
               <Clock size={24} color="#fff" strokeWidth={2.5} />
               <Text style={styles.holdButtonText}>Hold Product</Text>
             </TouchableOpacity>
-          )}
-          
-          <TouchableOpacity 
-            style={styles.contactButton} 
-            onPress={handleContactPress}
-          >
-            <MessageCircle size={24} color="#fff" strokeWidth={2.5} />
-            <Text style={styles.contactButtonText}>Contact via WhatsApp</Text>
-          </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.contactButton}
+              onPress={handleContactPress}
+            >
+              <MessageCircle size={20} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.contactButtonText}>Contact via WhatsApp</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      )}
 
       <Modal
         visible={showHoldModal}
@@ -282,7 +391,7 @@ export default function ProductScreen() {
                 onPress={() => setShowHoldModal(false)}
                 style={styles.modalCloseButton}
               >
-                <X size={24} color="#fff" />
+                <X size={24} color="#0E2657" />
               </TouchableOpacity>
             </View>
 
@@ -330,152 +439,205 @@ export default function ProductScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+
+      {/* Image Viewer Modal */}
+      <Modal visible={showImageViewer} transparent={true}>
+        <View style={styles.imageViewerContainer}>
+          <ImageViewer
+            imageUrls={[{ url: product?.image_url || '' }]}
+            enableSwipeDown
+            onSwipeDown={() => setShowImageViewer(false)}
+            backgroundColor="rgba(0, 0, 0, 0.9)"
+            renderHeader={() => (
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setShowImageViewer(false)}
+              >
+                <X size={24} color="#fff" />
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2a2a2a',
-    backgroundColor: '#121212',
-  },
-  backButton: {
-    marginRight: 16,
-    padding: 8,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#0E2657',
   },
   headerTitle: {
-    fontSize: 20,
-    fontFamily: 'Heebo-Bold',
-    flex: 1,
+    fontSize: 18,
+    fontWeight: '600',
     color: '#fff',
+    flex: 1,
+    marginLeft: 12,
+  },
+  backButton: {
+    padding: 8,
+  },
+  actionButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
+  deleteButton: {
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+    borderRadius: 8,
+  },
+  ownerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  soldButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
   },
   content: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#F5F8FC',
   },
   contentContainer: {
-    paddingBottom: 120, // Extra padding for bottom buttons
+    paddingBottom: 16,
   },
   imageContainer: {
-    backgroundColor: '#1a1a1a',
-    padding: 16,
+    width: '100%',
+    height: 300,
+    backgroundColor: '#fff',
   },
   image: {
     width: '100%',
-    height: undefined,
-    aspectRatio: 1,
+    height: '100%',
     resizeMode: 'contain',
-    borderRadius: 16,
   },
   detailsContainer: {
-    padding: 24,
-    backgroundColor: '#121212',
+    padding: 16,
   },
   priceSection: {
     marginBottom: 24,
   },
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   price: {
-    fontSize: 32,
-    fontFamily: 'Heebo-Bold',
-    color: '#6C5CE7',
-    marginBottom: 8,
+    color: '#0E2657',
+    fontSize: 24,
+    fontFamily: 'Montserrat-Bold',
   },
   category: {
-    fontSize: 18,
-    fontFamily: 'Heebo-Medium',
-    color: '#888',
+    color: '#7B8CA6',
+    fontSize: 16,
+    fontFamily: 'Montserrat-Regular',
   },
   sectionTitle: {
-    fontSize: 20,
-    fontFamily: 'Heebo-Bold',
-    color: '#fff',
-    marginBottom: 16,
-  },
-  specsContainer: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-  },
-  specsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-  },
-  specItem: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: '#23232b',
-    padding: 16,
-    borderRadius: 12,
-  },
-  specLabel: {
+    color: '#0E2657',
     fontSize: 14,
-    fontFamily: 'Heebo-Regular',
-    color: '#888',
+    fontFamily: 'Montserrat-Medium',
     marginBottom: 4,
   },
+  specsContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
+  },
+  specsGrid: {
+    gap: 12,
+  },
+  specItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  specLabel: {
+    color: '#7B8CA6',
+    fontSize: 14,
+    fontFamily: 'Montserrat-Regular',
+  },
   specValue: {
-    fontSize: 16,
-    fontFamily: 'Heebo-Medium',
-    color: '#fff',
+    color: '#0E2657',
+    fontSize: 14,
+    fontFamily: 'Montserrat-Medium',
   },
   sellerContainer: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
     marginBottom: 24,
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
   sellerContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   sellerAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    marginRight: 16,
-    backgroundColor: '#2a2a2a',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 12,
+    backgroundColor: '#E3EAF3',
   },
   sellerInfo: {
     flex: 1,
+    justifyContent: 'center',
+  },
+  sellerLabel: {
+    fontSize: 16,
+    color: '#0E2657',
+    fontFamily: 'Montserrat-Bold',
+    marginBottom: 2,
   },
   sellerName: {
-    fontSize: 18,
-    fontFamily: 'Heebo-Medium',
-    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Montserrat-Regular',
+    color: '#0E2657',
   },
   descriptionContainer: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 20,
+    padding: 16,
     marginBottom: 24,
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
   description: {
+    color: '#0E2657',
     fontSize: 16,
-    fontFamily: 'Heebo-Regular',
-    color: '#fff',
+    fontFamily: 'Montserrat-Regular',
     lineHeight: 24,
-  },
-  bottomPadding: {
-    height: 32,
   },
   bottomButtonsContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(18, 18, 18, 0.95)',
+    backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: '#2a2a2a',
+    borderTopColor: '#E3EAF3',
     paddingTop: 12,
     paddingBottom: 32,
     paddingHorizontal: 16,
@@ -491,43 +653,32 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
     gap: 8,
-    shadowColor: '#6C5CE7',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
   holdButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontFamily: 'Heebo-Bold',
+    fontFamily: 'Montserrat-Bold',
   },
   contactButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#25D366',
-    padding: 16,
+    backgroundColor: '#6C5CE7',
     borderRadius: 16,
-    gap: 8,
-    shadowColor: '#25D366',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    padding: 16,
   },
   contactButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontFamily: 'Heebo-Bold',
+    fontFamily: 'Montserrat-Bold',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(14, 38, 87, 0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#fff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '80%',
@@ -538,12 +689,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#2a2a2a',
+    borderBottomColor: '#E3EAF3',
   },
   modalTitle: {
     fontSize: 20,
-    fontFamily: 'Heebo-Bold',
-    color: '#fff',
+    fontFamily: 'Montserrat-Bold',
+    color: '#0E2657',
   },
   modalCloseButton: {
     padding: 4,
@@ -556,9 +707,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     marginBottom: 8,
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#F5F8FC',
     borderWidth: 1,
-    borderColor: '#444',
+    borderColor: '#E3EAF3',
   },
   durationOptionSelected: {
     backgroundColor: '#6C5CE7',
@@ -566,19 +717,19 @@ const styles = StyleSheet.create({
   },
   durationOptionText: {
     fontSize: 16,
-    fontFamily: 'Heebo-Medium',
-    color: '#fff',
+    fontFamily: 'Montserrat-Medium',
+    color: '#0E2657',
   },
   durationOptionTextSelected: {
     color: '#fff',
-    fontFamily: 'Heebo-Bold',
+    fontFamily: 'Montserrat-Bold',
   },
   modalActions: {
     flexDirection: 'row',
     padding: 20,
     gap: 12,
     borderTopWidth: 1,
-    borderTopColor: '#2a2a2a',
+    borderTopColor: '#E3EAF3',
   },
   modalButton: {
     flex: 1,
@@ -587,7 +738,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalCancelButton: {
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#E3EAF3',
   },
   modalConfirmButton: {
     backgroundColor: '#6C5CE7',
@@ -596,30 +747,41 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   modalButtonText: {
-    color: '#fff',
+    color: '#0E2657',
     fontSize: 16,
-    fontFamily: 'Heebo-Bold',
+    fontFamily: 'Montserrat-Bold',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#121212',
+    backgroundColor: '#F5F8FC',
   },
   loadingText: {
+    color: '#0E2657',
     fontSize: 16,
-    color: '#fff',
-    fontFamily: 'Heebo-Regular',
+    fontFamily: 'Montserrat-Regular',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#121212',
+    backgroundColor: '#F5F8FC',
   },
   errorText: {
+    color: '#0E2657',
     fontSize: 16,
-    fontFamily: 'Heebo-Regular',
-    color: '#fff',
+    fontFamily: 'Montserrat-Regular',
+  },
+  imageViewerContainer: {
+    flex: 1,
+    backgroundColor: 'black',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 1,
+    padding: 8,
   },
 }); 

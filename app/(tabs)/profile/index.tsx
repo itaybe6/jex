@@ -202,7 +202,10 @@ export default function ProfileScreen() {
   };
 
   const handleProductPress = (productId: string) => {
-    router.push(`/profile/product/${productId}`);
+    router.push({
+      pathname: "/profile/product/[id]",
+      params: { id: productId }
+    });
   };
 
   const handleWebsitePress = async () => {
@@ -510,11 +513,15 @@ export default function ProfileScreen() {
                   </View>
                   <View style={styles.productsRow}>
                     {products.map(product => (
-                      <View key={product.id} style={styles.productCard}>
+                      <TouchableOpacity
+                        key={product.id}
+                        style={styles.productCard}
+                        onPress={() => handleProductPress(product.id)}
+                      >
                         <Image source={{ uri: product.image_url }} style={styles.productImage} resizeMode="cover" />
                         <Text style={styles.productTitle} numberOfLines={2}>{product.title}</Text>
                         <Text style={styles.productPrice}>${product.price.toLocaleString()}</Text>
-                      </View>
+                      </TouchableOpacity>
                     ))}
                   </View>
                 </View>

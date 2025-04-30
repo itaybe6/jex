@@ -102,7 +102,10 @@ export default function TabLayout() {
         <Tabs.Screen
           name="products/[id]"
           options={{
-            href: null
+            href: null,
+            headerShown: false,
+            tabBarStyle: { display: 'none' },
+            header: () => null
           }}
         />
       </Tabs>
@@ -113,7 +116,7 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#fff',
   },
   addButtonContainer: {
     position: 'relative',

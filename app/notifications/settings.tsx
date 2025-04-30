@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Icon } from '../../components/Icon';
+import React from 'react';
 
 const DIAMOND_CUTS = [
   'Round',
@@ -64,6 +65,14 @@ export default function NotificationSettingsScreen() {
       fetchPreferences();
     }
   }, [user]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user) {
+        fetchPreferences();
+      }
+    }, [user])
+  );
 
   const fetchPreferences = async () => {
     try {

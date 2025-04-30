@@ -82,6 +82,7 @@ export default function AddFilterScreen() {
 
       const newFilter = {
         id: Math.random().toString(36).substr(2, 9),
+        type: 'product',
         cut: filter.cut,
         clarity: filter.clarity,
         color: filter.color,
@@ -100,7 +101,7 @@ export default function AddFilterScreen() {
         const { error } = await supabase
           .from('notification_preferences')
           .update({
-            specific_filters: [...existingData.specific_filters, newFilter],
+            specific_filters: [...(existingData.specific_filters || []), newFilter],
             enabled_types: filter.notifyOn
           })
           .eq('user_id', user.id);

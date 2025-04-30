@@ -3,7 +3,10 @@ import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, Touchable
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight, ArrowLeft, Camera, DollarSign, Check, X, Trash2, Tag } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
+import { decode } from 'base64-arraybuffer';
 
 type ProductDetails = {
   id: string;
@@ -12,666 +15,535 @@ type ProductDetails = {
   image_url: string;
   description: string;
   user_id: string;
-  details: {
-    weight?: string;
-    clarity?: string;
-    color?: string;
-    cut?: string;
-    [key: string]: string | undefined;
-  } | null;
-  category: string;
 };
 
-export default function ProductScreen() {
-  const params = useLocalSearchParams();
-  const productId = typeof params.id === 'string' ? params.id : '';
+const CATEGORIES = [
+  'Watches',
+  'Jewelry',
+  'Diamonds',
+  'Gold',
+  'Other'
+];
+
+export default function EditProductScreen() {
+  const { id } = useLocalSearchParams();
   const { user } = useAuth();
-  const [product, setProduct] = useState<ProductDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [markingAsSold, setMarkingAsSold] = useState(false);
-  const [buyerModalVisible, setBuyerModalVisible] = useState(false);
-  const [users, setUsers] = useState<any[]>([]);
-  const [usersLoading, setUsersLoading] = useState(false);
-  const [selectedBuyer, setSelectedBuyer] = useState<any | null>(null);
-  const [buyerError, setBuyerError] = useState<string | null>(null);
-  const [dealLoading, setDealLoading] = useState(false);
-  const [dealError, setDealError] = useState<string | null>(null);
-  const [dealSuccess, setDealSuccess] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [dealPrice, setDealPrice] = useState<string>('');
+  const [saving, setSaving] = useState(false);
+  const [product, setProduct] = useState<ProductDetails | null>(null);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [price, setPrice] = useState('');
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [showCategories, setShowCategories] = useState(false);
 
   useEffect(() => {
-    if (productId) {
-      fetchProduct();
-    }
-  }, [productId]);
+    fetchProduct();
+  }, [id]);
+
+  useEffect(() => {
+    console.log('Current imageUrls state:', imageUrls);
+  }, [imageUrls]);
 
   const fetchProduct = async () => {
     try {
-      setLoading(true);
-      setError(null);
+      if (!id) {
+        console.error('No product ID provided');
+        Alert.alert('Error', 'No product ID provided');
+        return;
+      }
 
+      console.log('Attempting to fetch product with ID:', id);
+      
       const { data, error } = await supabase
         .from('products')
-        .select('*')
-        .eq('id', productId)
+        .select(`
+          id,
+          title,
+          description,
+          price,
+          image_url,
+          user_id
+        `)
+        .eq('id', id)
         .single();
 
-      if (error) throw error;
-      if (!data) throw new Error('Product not found');
+      if (error) {
+        console.error('Supabase error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        throw error;
+      }
 
+      if (!data) {
+        console.error('No data returned from Supabase');
+        Alert.alert('Error', 'Product not found');
+        return;
+      }
+      
+      console.log('Successfully fetched product data:', {
+        id: data.id,
+        title: data.title,
+        hasDescription: !!data.description,
+        hasImageUrl: !!data.image_url
+      });
+      
       setProduct(data);
-    } catch (error: any) {
-      console.error('Error fetching product:', error);
-      setError(error.message);
+      setTitle(data.title || '');
+      setDescription(data.description || '');
+      setPrice(data.price ? data.price.toString() : '');
+      setImageUrls(data.image_url ? [data.image_url] : []);
+      
+      console.log('Set image URLs state:', data.image_url ? [data.image_url] : []);
+    } catch (error) {
+      console.error('Detailed error when fetching product:', error);
+      Alert.alert(
+        'Error',
+        'Failed to load product. Please check your connection and try again.'
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleMarkAsSold = async () => {
-    if (!product || !user) return;
-    setMarkingAsSold(true);
+  const handleImagePick = async () => {
     try {
-      const canDelete = await canDeleteProduct();
-      if (!canDelete) {
-        Alert.alert('Cannot delete', 'This product is pending seller approval and cannot be deleted until the process is complete.');
-        setMarkingAsSold(false);
-        return;
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        const base64Image = result.assets[0].base64;
+        const filePath = `products/${user?.id}/${Date.now()}.jpg`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('products')
+          .upload(filePath, decode(base64Image), {
+            contentType: 'image/jpeg',
+            upsert: true,
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('products')
+          .getPublicUrl(filePath);
+
+        setImageUrls([publicUrl]);
       }
-      // Find the transaction in waiting_seller_approval
-      const { data: transaction, error: txError } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('product_id', product.id)
-        .eq('status', 'waiting_seller_approval')
-        .maybeSingle();
-      if (txError) throw txError;
-      if (transaction) {
-        // Update status to 'completed'
-        const { error: updateError } = await supabase
-          .from('transactions')
-          .update({ status: 'completed' })
-          .eq('id', transaction.id);
-        if (updateError) throw updateError;
-      }
-      // Now delete the product
-      const { error: deleteError } = await supabase
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to upload image');
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setImageUrls(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSave = async () => {
+    if (!user || !product) return;
+
+    if (!title.trim() || !price.trim() || imageUrls.length === 0) {
+      Alert.alert('Error', 'Please fill in all required fields and add at least one image');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
         .from('products')
-        .delete()
+        .update({
+          title: title.trim(),
+          description: description.trim(),
+          price: parseFloat(price),
+          image_url: imageUrls[0],
+        })
         .eq('id', product.id)
         .eq('user_id', user.id);
-      if (deleteError) throw deleteError;
-      Alert.alert(
-        'Success',
-        'The product has been marked as sold and removed from the catalog',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.replace(`/(tabs)/profile`)
-          }
-        ]
-      );
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'An error occurred while marking the product as sold');
-    } finally {
-      setMarkingAsSold(false);
-    }
-  };
 
-  const loadUsers = async () => {
-    if (!user) {
-      setBuyerError('You must be logged in to load users');
-      setUsersLoading(false);
-      return;
-    }
-    setUsersLoading(true);
-    setBuyerError(null);
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, avatar_url, title')
-        .neq('id', user.id);
       if (error) throw error;
-      setUsers(data || []);
-    } catch (err: any) {
-      setBuyerError('Failed to load users');
+
+      Alert.alert('Success', 'Product updated successfully');
+      router.back();
+    } catch (error) {
+      console.error('Error updating product:', error);
+      Alert.alert('Error', 'Failed to update product');
     } finally {
-      setUsersLoading(false);
+      setSaving(false);
     }
   };
 
-  const openBuyerModal = () => {
-    loadUsers();
-    setBuyerModalVisible(true);
-  };
-  const closeBuyerModal = () => {
-    setBuyerModalVisible(false);
-    setSelectedBuyer(null);
+  const handleDelete = async () => {
+    if (!user || !product) return;
+
+    Alert.alert(
+      'Delete Product',
+      'Are you sure you want to delete this product? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('products')
+                .delete()
+                .eq('id', product.id)
+                .eq('user_id', user.id);
+
+              if (error) throw error;
+
+              Alert.alert('Success', 'Product deleted successfully');
+              router.back();
+            } catch (error) {
+              console.error('Error deleting product:', error);
+              Alert.alert('Error', 'Failed to delete product');
+            }
+          }
+        }
+      ]
+    );
   };
 
-  const confirmMarkAsSold = () => {
-    if (!product || !user) return;
-    openBuyerModal();
-  };
+  const handleMarkAsSold = async () => {
+    if (!user || !product) return;
 
-  const handleBackToSeller = () => {
-    if (product) {
-      router.push(`/user/${product.user_id}`);
-    }
-  };
+    Alert.alert(
+      'Mark as Sold',
+      'Are you sure you want to mark this product as sold? This will remove it from your catalog.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Mark as Sold',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('products')
+                .update({ status: 'sold' })
+                .eq('id', product.id)
+                .eq('user_id', user.id);
 
-  const sendDealRequest = async () => {
-    if (!product || !user || !selectedBuyer) return;
-    if (!dealPrice || isNaN(Number(dealPrice)) || Number(dealPrice) <= 0) {
-      setDealError('Please enter a valid price');
-      return;
-    }
-    setDealLoading(true);
-    setDealError(null);
-    try {
-      // Fetch sender profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, avatar_url')
-        .eq('id', user.id)
-        .single();
-      // 1. Create transaction with status 'pending'
-      const { data: transaction, error: transactionError } = await supabase
-        .from('transactions')
-        .insert({
-          product_id: product.id,
-          seller_id: user.id,
-          buyer_id: selectedBuyer.id,
-          price: Number(dealPrice),
-          status: 'pending',
-        })
-        .select()
-        .single();
-      if (transactionError) throw transactionError;
-      // Notification logic remains
-      let baseNotificationData: any = {};
-      if (transaction && transaction.data) {
-        baseNotificationData = { ...transaction.data };
-      }
-      const notificationData = {
-        ...baseNotificationData,
-        transaction_id: transaction.id,
-        product_id: product.id,
-        seller_id: user.id,
-        sender_id: user.id,
-        sender_name: profile?.full_name || user.email || 'User',
-        sender_avatar: profile?.avatar_url || null,
-        price: Number(dealPrice),
-        product_title: product.title,
-        product_image_url: product.image_url,
-        product_description: product.description,
-      };
-      const { error: notifError } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: selectedBuyer.id,
-          type: 'deal_request',
-          data: notificationData,
-          read: false,
-        });
-      if (notifError) throw notifError;
-      setDealSuccess(true);
-      setTimeout(() => {
-        setDealSuccess(false);
-        closeBuyerModal();
-        setDealPrice('');
-      }, 1500);
-    } catch (err: any) {
-      setDealError(err.message || 'Failed to send deal request');
-    } finally {
-      setDealLoading(false);
-    }
-  };
+              if (error) throw error;
 
-  const filteredUsers = users.filter(
-    (u) =>
-      u.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.title?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+              Alert.alert('Success', 'Product marked as sold');
+              router.back();
+            } catch (error) {
+              console.error('Error marking product as sold:', error);
+              Alert.alert('Error', 'Failed to mark product as sold');
+            }
+          }
+        }
+      ]
+    );
+  };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#0E2657" />
       </View>
     );
   }
-
-  if (error || !product) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error || 'Product not found'}</Text>
-      </View>
-    );
-  }
-
-  const formatPrice = (price: number) => {
-    return `$${price.toLocaleString()}`;
-  };
-
-  const renderDetails = () => {
-    if (!product.details) return null;
-
-    const detailsToShow = [
-      { label: 'Weight', value: product.details.weight ? `${product.details.weight} ct` : undefined },
-      { label: 'Clarity', value: product.details.clarity },
-      { label: 'Color', value: product.details.color },
-      { label: 'Cut', value: product.details.cut },
-    ].filter(detail => detail.value);
-
-    if (detailsToShow.length === 0) return null;
-
-    return (
-      <View style={styles.detailsContainer}>
-        <Text style={styles.detailsTitle}>Specifications</Text>
-        <View style={styles.detailsGrid}>
-          {detailsToShow.map((detail, index) => (
-            <View key={index} style={styles.detailItem}>
-              <Text style={styles.detailLabel}>{detail.label}</Text>
-              <Text style={styles.detailValue}>{detail.value}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-    );
-  };
-
-  const isOwner = user?.id === product.user_id;
-
-  // Prevent manual deletion if transaction is in 'waiting_seller_approval'
-  const canDeleteProduct = async () => {
-    if (!product) return true;
-    // Check if there is a transaction for this product in 'waiting_seller_approval'
-    const { data, error } = await supabase
-      .from('transactions')
-      .select('id')
-      .eq('product_id', product.id)
-      .eq('status', 'waiting_seller_approval')
-      .maybeSingle();
-    if (error) return true;
-    return !data;
-  };
 
   return (
-    <>
-    <ScrollView style={styles.container}>
-      <Image source={{ uri: product.image_url }} style={styles.image} />
-      
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>{product.title}</Text>
-          <Text style={styles.price}>{formatPrice(product.price)}</Text>
-        </View>
-
-        <View style={styles.categoryContainer}>
-            <Text style={styles.categoryLabel}>Category:</Text>
-          <Text style={styles.categoryValue}>{product.category}</Text>
-        </View>
-
-        <Text style={styles.description}>{product.description}</Text>
-
-        {renderDetails()}
-
-        {isOwner && (
-          <TouchableOpacity
-            style={[styles.soldButton, markingAsSold && styles.soldButtonDisabled]}
-            onPress={confirmMarkAsSold}
-            disabled={markingAsSold}
-          >
-            <Text style={styles.soldButtonText}>
-                {markingAsSold ? 'Marking as sold...' : 'Mark as Sold'}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </ScrollView>
-      {/* Buyer Selection Modal */}
-      <Modal
-        visible={buyerModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={closeBuyerModal}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Buyer</Text>
-            <View style={{ width: '100%', marginBottom: 12 }}>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search users..."
-                placeholderTextColor="#aaa"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <Stack.Screen
+        options={{
+          headerStyle: {
+            backgroundColor: '#fff',
+          },
+          headerTintColor: '#0E2657',
+          headerTitle: 'Edit Product',
+          headerTitleStyle: {
+            color: '#0E2657',
+            fontSize: 18,
+            fontWeight: '600',
+          },
+          headerShadowVisible: true,
+          headerRight: () => (
+            <View style={styles.headerButtons}>
+              <TouchableOpacity 
+                onPress={handleMarkAsSold}
+                style={styles.headerButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Tag size={20} color="#4CAF50" strokeWidth={2} />
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                onPress={handleDelete}
+                style={styles.headerButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Trash2 size={20} color="#DC2626" strokeWidth={2} />
+              </TouchableOpacity>
             </View>
-            <View style={{ width: '100%', marginBottom: 12 }}>
-              <Text style={styles.priceInputLabel}>Enter Price</Text>
+          ),
+        }}
+      />
+      <ScrollView 
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.imagesContainer}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.imagesScrollContainer}
+          >
+            {imageUrls && imageUrls.length > 0 ? (
+              imageUrls.map((url, index) => (
+                <View key={url} style={styles.imageWrapper}>
+                  <Image 
+                    source={{ uri: url }} 
+                    style={styles.image} 
+                    onError={(error) => console.log('Image loading error:', error)}
+                  />
+                  <TouchableOpacity 
+                    style={styles.removeImageButton}
+                    onPress={() => handleRemoveImage(index)}
+                  >
+                    <X size={16} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              ))
+            ) : null}
+            <TouchableOpacity 
+              style={styles.addImageButton}
+              onPress={handleImagePick}
+            >
+              <Camera size={32} color="#7B8CA6" />
+              <Text style={styles.addImageText}>Add Photo</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+
+        <View style={styles.formContainer}>
+          <View style={styles.formSection}>
+            <Text style={styles.label}>Product Name</Text>
+            <TextInput
+              style={styles.input}
+              value={title}
+              onChangeText={setTitle}
+              placeholder="Enter product name"
+              placeholderTextColor="#7B8CA6"
+            />
+          </View>
+
+          <View style={styles.formSection}>
+            <Text style={styles.label}>Description</Text>
+            <TextInput
+              style={[styles.input, styles.descriptionInput]}
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Enter product description"
+              placeholderTextColor="#7B8CA6"
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+          </View>
+
+          <View style={styles.formSection}>
+            <Text style={styles.label}>Price</Text>
+            <View style={styles.priceInputContainer}>
+              <DollarSign size={20} color="#7B8CA6" style={styles.priceIcon} />
               <TextInput
                 style={styles.priceInput}
-                placeholder="Enter price..."
-                placeholderTextColor="#aaa"
-                value={dealPrice}
-                onChangeText={setDealPrice}
-                keyboardType="numeric"
+                value={price}
+                onChangeText={setPrice}
+                placeholder="0.00"
+                placeholderTextColor="#7B8CA6"
+                keyboardType="decimal-pad"
               />
             </View>
-            {usersLoading ? (
-              <ActivityIndicator color="#6C5CE7" />
-            ) : buyerError ? (
-              <Text style={{ color: 'red' }}>{buyerError}</Text>
-            ) : (
-              <FlatList
-                data={filteredUsers}
-                keyExtractor={item => item.id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[
-                      styles.buyerItem,
-                      selectedBuyer?.id === item.id && styles.buyerItemSelected
-                    ]}
-                    onPress={() => setSelectedBuyer(item)}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Image
-                        source={{ uri: item.avatar_url || 'https://via.placeholder.com/40' }}
-                        style={styles.buyerAvatar}
-                      />
-                      <Text style={styles.buyerName}>{item.full_name || item.title}</Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
-                style={{ maxHeight: 250, marginBottom: 16 }}
-              />
-            )}
-            <View style={styles.buttonRow}>
-              <TouchableOpacity onPress={closeBuyerModal} style={styles.cancelButton}> 
-                <Text style={styles.soldButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={sendDealRequest}
-                style={[styles.sendButton, (!selectedBuyer || dealLoading) && styles.sendButtonDisabled]}
-                disabled={!selectedBuyer || dealLoading}
-              >
-                {dealLoading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.soldButtonText}>Send Deal Request</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-            {dealError && <Text style={{ color: 'red', marginBottom: 8 }}>{dealError}</Text>}
-            {dealSuccess && <Text style={{ color: 'green', marginBottom: 8 }}>Deal request sent!</Text>}
           </View>
         </View>
-      </Modal>
-    </>
+      </ScrollView>
+      
+      <View style={styles.bottomContainer}>
+        <TouchableOpacity 
+          onPress={handleSave}
+          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+          disabled={saving}
+        >
+          <Check size={22} color="#fff" style={styles.saveIcon} strokeWidth={2.5} />
+          <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save'}</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }
-
-// Add navigation options to hide the header
-ProductScreen.getNavigation = () => {
-  return (
-    <Stack.Screen
-      options={{
-        headerShown: false
-      }}
-    />
-  );
-};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#fff',
+  },
+  content: {
+    flex: 1,
+  },
+  contentContainer: {
+    padding: 16,
+    paddingBottom: 100,
+  },
+  imagesContainer: {
+    marginBottom: 20,
+  },
+  imagesScrollContainer: {
+    gap: 12,
+  },
+  imageWrapper: {
+    position: 'relative',
+    width: 120,
+    height: 120,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 12,
+    padding: 4,
+  },
+  addImageButton: {
+    width: 120,
+    height: 120,
+    backgroundColor: '#F5F8FC',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addImageText: {
+    color: '#7B8CA6',
+    fontSize: 14,
+    marginTop: 8,
+  },
+  bottomContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 20,
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  actionButton: {
+    padding: 4,
+  },
+  saveButton: {
+    backgroundColor: '#0E2657',
+    paddingVertical: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButtonDisabled: {
+    opacity: 0.5,
+  },
+  saveIcon: {
+    marginRight: 8,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  formContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    gap: 20,
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
+  },
+  formSection: {
+    gap: 8,
+  },
+  label: {
+    color: '#0E2657',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  input: {
+    backgroundColor: '#F5F8FC',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: '#0E2657',
+  },
+  descriptionInput: {
+    height: 120,
+    textAlignVertical: 'top',
+  },
+  priceInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F8FC',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+  },
+  priceIcon: {
+    marginRight: 8,
+  },
+  priceInput: {
+    flex: 1,
+    padding: 16,
+    fontSize: 16,
+    color: '#0E2657',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#fff',
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#1a1a1a',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#FF3B30',
-    textAlign: 'center',
-    fontFamily: 'Heebo-Regular',
-  },
-  image: {
-    width: '100%',
-    height: 300,
-    backgroundColor: '#2a2a2a',
-  },
-  content: {
-    padding: 20,
-    backgroundColor: '#1a1a1a',
-  },
-  header: {
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontFamily: 'Heebo-Bold',
-    marginBottom: 8,
-    textAlign: 'right',
-    color: '#fff',
-  },
-  price: {
-    fontSize: 20,
-    color: '#007AFF',
-    fontFamily: 'Heebo-Bold',
-    textAlign: 'right',
-  },
-  categoryContainer: {
+  headerButtons: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginBottom: 16,
-    backgroundColor: '#2a2a2a',
-    padding: 8,
-    borderRadius: 8,
-  },
-  categoryLabel: {
-    fontSize: 14,
-    color: '#888',
-    fontFamily: 'Heebo-Regular',
-    marginLeft: 8,
-  },
-  categoryValue: {
-    fontSize: 14,
-    color: '#fff',
-    fontFamily: 'Heebo-Medium',
-  },
-  description: {
-    fontSize: 16,
-    color: '#888',
-    lineHeight: 24,
-    marginBottom: 24,
-    textAlign: 'right',
-    fontFamily: 'Heebo-Regular',
-  },
-  detailsContainer: {
-    marginBottom: 24,
-  },
-  detailsTitle: {
-    fontSize: 18,
-    fontFamily: 'Heebo-Bold',
-    marginBottom: 16,
-    textAlign: 'right',
-    color: '#fff',
-  },
-  detailsGrid: {
-    flexDirection: 'row-reverse',
-    flexWrap: 'wrap',
     gap: 16,
+    paddingRight: 8,
   },
-  detailItem: {
-    width: '45%',
-    backgroundColor: '#2a2a2a',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'flex-end',
-  },
-  detailLabel: {
-    fontSize: 14,
-    color: '#888',
-    marginBottom: 4,
-    fontFamily: 'Heebo-Regular',
-  },
-  detailValue: {
-    fontSize: 16,
-    color: '#fff',
-    fontFamily: 'Heebo-Medium',
-  },
-  soldButton: {
-    backgroundColor: '#FF3B30',
-    paddingVertical: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  soldButtonDisabled: {
-    opacity: 0.6,
-  },
-  soldButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontFamily: 'Heebo-Bold',
-    textAlign: 'center',
-    letterSpacing: 0.5,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#23232b',
-    borderRadius: 24,
-    padding: 32,
-    width: '95%',
-    maxWidth: 500,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  modalTitle: {
-    fontSize: 24,
-    color: '#fff',
-    fontFamily: 'Heebo-Bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  searchInput: {
-    width: '100%',
-    backgroundColor: '#2a2a2a',
-    color: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 18,
-    fontFamily: 'Heebo-Regular',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  buyerItem: {
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    backgroundColor: '#333',
-    marginBottom: 12,
-    width: '100%',
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    alignSelf: 'center',
-  },
-  buyerItemSelected: {
-    backgroundColor: '#6C5CE7',
-  },
-  buyerAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#444',
-    marginRight: 14,
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  buyerName: {
-    color: '#fff',
-    fontSize: 18,
-    fontFamily: 'Heebo-Medium',
-    alignSelf: 'center',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 24,
-    gap: 16,
-  },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: '#888',
-    paddingVertical: 16,
-    borderRadius: 18,
-    alignItems: 'center',
-    marginRight: 8,
-    elevation: 2,
-    justifyContent: 'center',
-    minWidth: 120,
-  },
-  sendButton: {
-    flex: 1,
-    backgroundColor: '#FF3B30',
-    paddingVertical: 16,
-    borderRadius: 18,
-    alignItems: 'center',
-    marginLeft: 8,
-    elevation: 2,
-    opacity: 1,
-    justifyContent: 'center',
-    minWidth: 120,
-  },
-  sendButtonDisabled: {
-    backgroundColor: '#a15a56',
-    opacity: 0.7,
-  },
-  priceInputLabel: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'Heebo-Medium',
-    marginBottom: 4,
-    marginLeft: 4,
-  },
-  priceInput: {
-    width: '100%',
-    backgroundColor: '#2a2a2a',
-    color: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 18,
-    fontFamily: 'Heebo-Regular',
-    marginBottom: 0,
-    borderWidth: 1,
-    borderColor: '#333',
+  headerButton: {
+    padding: 4,
   },
 });

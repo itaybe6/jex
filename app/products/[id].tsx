@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Linking, Modal } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Linking, Modal, Alert } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, MessageCircle, Clock, X } from 'lucide-react-native';
-import { TopHeader } from '@/components/TopHeader';
+import { ArrowLeft, MessageCircle, Clock, X, Edit, Trash } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -14,6 +13,7 @@ type Product = {
   price: number;
   image_url: string;
   category: string;
+  user_id: string;
   details?: {
     size?: string;
     clarity?: string;
@@ -97,6 +97,48 @@ export default function ProductScreen() {
     router.back();
   };
 
+  const handleEditPress = () => {
+    if (!product) return;
+    router.push({
+      pathname: "/profile/product/[id]",
+      params: { id: product.id }
+    });
+  };
+
+  const handleDeletePress = async () => {
+    if (!product || !user) return;
+
+    Alert.alert(
+      'Delete Product',
+      'Are you sure you want to delete this product?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('products')
+                .delete()
+                .eq('id', product.id)
+                .eq('user_id', user.id);
+
+              if (error) throw error;
+              router.back();
+            } catch (error) {
+              console.error('Error deleting product:', error);
+              Alert.alert('Error', 'Failed to delete product');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const handleHoldRequest = async () => {
     if (!user || !product || !selectedDuration) return;
     
@@ -115,7 +157,7 @@ export default function ProductScreen() {
       const { error: notificationError } = await supabase
         .from('notifications')
         .insert({
-          user_id: product.profiles.id, // Send to product owner
+          user_id: product.profiles.id,
           type: 'hold_request',
           data: {
             product_id: product.id,
@@ -132,7 +174,6 @@ export default function ProductScreen() {
 
       if (notificationError) throw notificationError;
 
-      // Close modal and reset state
       setShowHoldModal(false);
       setSelectedDuration(null);
       alert('Hold request sent successfully');
@@ -160,16 +201,27 @@ export default function ProductScreen() {
     );
   }
 
+  const isOwner = user?.id === product.user_id;
+
   return (
-    <View style={styles.container}>
-      <TopHeader />
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
           <ArrowLeft size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{product.title}</Text>
+        {isOwner && (
+          <View style={styles.ownerActions}>
+            <TouchableOpacity onPress={handleEditPress} style={styles.actionButton}>
+              <Edit size={20} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleDeletePress} style={[styles.actionButton, styles.deleteButton]}>
+              <Trash size={20} color="#FF3B30" />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
-
+      
       <ScrollView style={styles.content}>
         <Image source={{ uri: product.image_url }} style={styles.image} />
 
@@ -206,170 +258,117 @@ export default function ProductScreen() {
             </View>
           )}
 
-          <View style={styles.sellerContainer}>
-            <TouchableOpacity 
-              style={styles.sellerContent}
-              onPress={() => router.push(`/user/${product.profiles.id}`)}
-            >
-              <Image
-                source={{ uri: product.profiles.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }}
-                style={styles.sellerAvatar}
-              />
-              <View style={styles.sellerInfo}>
-                <Text style={styles.sellerName}>{product.profiles.full_name}</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-
           {product.description && (
             <View style={styles.descriptionContainer}>
               <Text style={styles.descriptionTitle}>Description</Text>
-              <Text style={styles.description}>{product.description}</Text>
+              <Text style={styles.descriptionText}>{product.description}</Text>
             </View>
+          )}
+
+          {!isOwner && (
+            <TouchableOpacity 
+              style={styles.contactButton}
+              onPress={handleContactPress}
+            >
+              <MessageCircle size={20} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.contactButtonText}>Contact via WhatsApp</Text>
+            </TouchableOpacity>
           )}
         </View>
       </ScrollView>
-
-      <View style={styles.bottomButtons}>
-        {user?.id !== product.profiles.id && (
-          <TouchableOpacity 
-            style={styles.holdButton} 
-            onPress={() => setShowHoldModal(true)}
-          >
-            <Clock size={24} color="#fff" strokeWidth={2.5} />
-            <Text style={styles.holdButtonText}>Hold Product</Text>
-          </TouchableOpacity>
-        )}
-        
-        <TouchableOpacity 
-          style={styles.contactButton} 
-          onPress={handleContactPress}
-        >
-        <MessageCircle size={24} color="#fff" strokeWidth={2.5} />
-        <Text style={styles.contactButtonText}>Contact via WhatsApp</Text>
-      </TouchableOpacity>
-      </View>
-
-      <Modal
-        visible={showHoldModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowHoldModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Hold Duration</Text>
-              <TouchableOpacity 
-                onPress={() => setShowHoldModal(false)}
-                style={styles.modalCloseButton}
-              >
-                <X size={24} color="#fff" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.durationList}>
-              {HOLD_DURATIONS.map((duration) => (
-                <TouchableOpacity
-                  key={duration.value}
-                  style={[
-                    styles.durationOption,
-                    selectedDuration === duration.value && styles.durationOptionSelected
-                  ]}
-                  onPress={() => setSelectedDuration(duration.value)}
-                >
-                  <Text style={[
-                    styles.durationOptionText,
-                    selectedDuration === duration.value && styles.durationOptionTextSelected
-                  ]}>
-                    {duration.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalCancelButton]}
-                onPress={() => setShowHoldModal(false)}
-              >
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.modalButton,
-                  styles.modalConfirmButton,
-                  (!selectedDuration || isSubmitting) && styles.modalButtonDisabled
-                ]}
-                onPress={handleHoldRequest}
-                disabled={!selectedDuration || isSubmitting}
-              >
-                <Text style={styles.modalButtonText}>
-                  {isSubmitting ? 'Sending...' : 'Confirm'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#1a1a1a',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+  },
+  loadingText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Montserrat-Regular',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+  },
+  errorText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Montserrat-Regular',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#1a1a1a',
     borderBottomWidth: 1,
     borderBottomColor: '#2a2a2a',
-    backgroundColor: '#121212',
+    zIndex: 1,
   },
   backButton: {
-    marginRight: 16,
+    padding: 8,
+    marginRight: 12,
   },
   headerTitle: {
-    fontSize: 20,
-    fontFamily: 'Heebo-Bold',
     flex: 1,
     color: '#fff',
+    fontSize: 18,
+    fontFamily: 'Montserrat-Bold',
+  },
+  ownerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#2a2a2a',
+  },
+  deleteButton: {
+    backgroundColor: '#2a2a2a',
   },
   content: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#1a1a1a',
   },
   image: {
     width: '100%',
-    height: undefined,
-    aspectRatio: 1,
-    resizeMode: 'contain',
-    backgroundColor: '#1a1a1a',
+    height: 300,
+    backgroundColor: '#2a2a2a',
   },
   detailsContainer: {
     padding: 16,
-    backgroundColor: '#121212',
   },
   price: {
+    color: '#fff',
     fontSize: 24,
-    fontFamily: 'Heebo-Bold',
-    color: '#6C5CE7',
+    fontFamily: 'Montserrat-Bold',
     marginBottom: 8,
   },
   category: {
-    fontSize: 16,
-    fontFamily: 'Heebo-Medium',
     color: '#888',
+    fontSize: 16,
+    fontFamily: 'Montserrat-Regular',
     marginBottom: 16,
   },
   specsContainer: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#2a2a2a',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   specItem: {
     flexDirection: 'row',
@@ -377,190 +376,41 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   specLabel: {
-    fontSize: 14,
-    fontFamily: 'Heebo-Regular',
     color: '#888',
+    fontSize: 14,
+    fontFamily: 'Montserrat-Regular',
   },
   specValue: {
+    color: '#fff',
     fontSize: 14,
-    fontFamily: 'Heebo-Medium',
-    color: '#fff',
-  },
-  sellerContainer: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-  },
-  sellerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sellerAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    marginRight: 12,
-    backgroundColor: '#2a2a2a',
-  },
-  sellerInfo: {
-    flex: 1,
-  },
-  sellerName: {
-    fontSize: 16,
-    fontFamily: 'Heebo-Medium',
-    color: '#fff',
+    fontFamily: 'Montserrat-Medium',
   },
   descriptionContainer: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
+    marginTop: 16,
   },
   descriptionTitle: {
-    fontSize: 18,
-    fontFamily: 'Heebo-Bold',
     color: '#fff',
+    fontSize: 18,
+    fontFamily: 'Montserrat-Bold',
     marginBottom: 8,
   },
-  description: {
-    fontSize: 14,
-    fontFamily: 'Heebo-Regular',
-    color: '#fff',
-    lineHeight: 20,
-  },
-  bottomButtons: {
-    padding: 16,
-    paddingBottom: 32,
-    gap: 12,
-  },
-  holdButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#6C5CE7',
-    padding: 16,
-    borderRadius: 12,
-    gap: 8,
-  },
-  holdButtonText: {
+  descriptionText: {
     color: '#fff',
     fontSize: 16,
-    fontFamily: 'Heebo-Bold',
+    fontFamily: 'Montserrat-Regular',
   },
   contactButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#25D366',
-    padding: 16,
+    backgroundColor: '#6C5CE7',
     borderRadius: 12,
-    gap: 8,
+    padding: 16,
+    marginTop: 16,
   },
   contactButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontFamily: 'Heebo-Bold',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#1a1a1a',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2a2a2a',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontFamily: 'Heebo-Bold',
-    color: '#fff',
-  },
-  modalCloseButton: {
-    padding: 4,
-  },
-  durationList: {
-    padding: 20,
-  },
-  durationOption: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: '#2a2a2a',
-    borderWidth: 1,
-    borderColor: '#444',
-  },
-  durationOptionSelected: {
-    backgroundColor: '#6C5CE7',
-    borderColor: '#6C5CE7',
-  },
-  durationOptionText: {
-    fontSize: 16,
-    fontFamily: 'Heebo-Medium',
-    color: '#fff',
-  },
-  durationOptionTextSelected: {
-    color: '#fff',
-    fontFamily: 'Heebo-Bold',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    padding: 20,
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#2a2a2a',
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  modalCancelButton: {
-    backgroundColor: '#2a2a2a',
-  },
-  modalConfirmButton: {
-    backgroundColor: '#6C5CE7',
-  },
-  modalButtonDisabled: {
-    opacity: 0.5,
-  },
-  modalButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'Heebo-Bold',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#121212',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#fff',
-    fontFamily: 'Heebo-Regular',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#121212',
-  },
-  errorText: {
-    fontSize: 16,
-    fontFamily: 'Heebo-Regular',
-    color: '#fff',
-  },
+    fontFamily: 'Montserrat-Bold',
+  }
 }); 
