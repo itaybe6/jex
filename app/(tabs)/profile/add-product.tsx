@@ -74,17 +74,6 @@ const PRODUCT_TYPES = [
 
 const WEIGHT_OPTIONS = Array.from({ length: 46 }, (_, i) => (0.5 + i * 0.1).toFixed(1));
 
-const CURRENCY_OPTIONS = [
-  { label: '₪', value: 'ILS' },
-  { label: '$', value: 'USD' },
-  { label: '€', value: 'EUR' },
-];
-
-type DiamondCut = typeof DIAMOND_CUTS[number];
-type ProductType = typeof PRODUCT_TYPES[number];
-type ClarityGrade = typeof CLARITY_GRADES[number];
-type ColorGrade = typeof COLOR_GRADES[number];
-
 const productOptions: Record<string, string[]> = {
   "Ring": [
     "Wedding ring",
@@ -207,9 +196,6 @@ export default function AddProductScreen() {
   const [dynamicFields, setDynamicFields] = useState<Record<string, string>>({});
   const [dynamicErrors, setDynamicErrors] = useState<Record<string, boolean>>({});
   const [showDynamicSelect, setShowDynamicSelect] = useState<Record<string, boolean>>({});
-
-  const [currency, setCurrency] = useState('ILS');
-  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
 
   const isLooseDiamond = formData.category === 'Loose Diamond';
 
@@ -354,7 +340,6 @@ export default function AddProductScreen() {
           title: formData.title,
           description: formData.description,
           price: parseFloat(formData.price),
-          currency: currency,
           image_url: publicUrl,
           user_id: user?.id,
           category: formData.category,
@@ -793,29 +778,8 @@ export default function AddProductScreen() {
               keyboardType="numeric"
               textAlign="left"
             />
-            <TouchableOpacity
-              style={styles.currencyButton}
-              onPress={() => setShowCurrencyModal(true)}
-            >
-              <Text style={styles.currencyButtonText}>
-                {CURRENCY_OPTIONS.find(opt => opt.value === currency)?.label || '₪'}
-              </Text>
-              <ChevronDown size={16} color="#666" />
-            </TouchableOpacity>
           </View>
           {errors.price && <Text style={styles.errorText}>Price is required and must be a positive number</Text>}
-          <SelectionModal
-            visible={showCurrencyModal}
-            onClose={() => setShowCurrencyModal(false)}
-            title="Select Currency"
-            options={CURRENCY_OPTIONS.map(opt => opt.label)}
-            onSelect={label => {
-              const selected = CURRENCY_OPTIONS.find(opt => opt.label === label);
-              if (selected) setCurrency(selected.value);
-              setShowCurrencyModal(false);
-            }}
-            selected={CURRENCY_OPTIONS.find(opt => opt.value === currency)?.label || ''}
-          />
         </View>
 
         <View style={styles.inputGroup}>
@@ -1082,21 +1046,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
     fontFamily: 'Heebo-Regular',
-  },
-  currencyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2a2a2a',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: '#444',
-  },
-  currencyButtonText: {
-    fontSize: 18,
-    color: '#fff',
-    marginRight: 4,
-    fontFamily: 'Heebo-Medium',
   },
 });

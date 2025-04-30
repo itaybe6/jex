@@ -12,10 +12,10 @@ type Product = {
   title: string;
   description: string;
   price: number;
-  currency: string;
   image_url: string;
   category: string;
   status: string;
+  user_id: string;
   watch_specs?: {
     brand: string | null;
     model: string | null;

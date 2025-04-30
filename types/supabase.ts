@@ -17,7 +17,6 @@ export interface Database {
           title: string
           description: string
           price: number
-          currency: string
           image_url: string
           thumbnail_url: string | null
           user_id: string
@@ -31,7 +30,6 @@ export interface Database {
           title: string
           description: string
           price: number
-          currency?: string
           image_url: string
           thumbnail_url?: string | null
           user_id: string
@@ -45,7 +43,6 @@ export interface Database {
           title?: string
           description?: string
           price?: number
-          currency?: string
           image_url?: string
           thumbnail_url?: string | null
           user_id?: string

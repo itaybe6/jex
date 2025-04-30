@@ -139,7 +139,6 @@ type Product = {
   title: string;
   description: string;
   price: number;
-  currency: string;
   image_url: string;
   user_id: string;
   category: string;
@@ -207,7 +206,6 @@ type ProductFormState = {
   title: string;
   description: string;
   price: string;
-  currency: string;
   category: string;
   image_url: string;
   specs: {
@@ -294,7 +292,6 @@ export default function HomeScreen() {
     title: '',
     description: '',
     price: '',
-    currency: 'USD',
     category: '',
     image_url: '',
     specs: {},
@@ -1072,7 +1069,6 @@ export default function HomeScreen() {
           title: productForm.title,
           description: productForm.description,
           price: parseFloat(productForm.price),
-          currency: productForm.currency,
           image_url: productForm.image_url,
           user_id: user?.id,
           category: productForm.category,
