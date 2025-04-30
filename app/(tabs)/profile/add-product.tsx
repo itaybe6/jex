@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
+import watchModels from '@/lib/watch-models.json';
 
 const DIAMOND_CUTS = [
   'Round',
@@ -159,12 +160,12 @@ export default function AddProductScreen() {
   const [imageUri, setImageUri] = useState('');
   const [imageBase64, setImageBase64] = useState('');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [showProductNameModal, setShowProductNameModal] = useState(false);
-  const [productNameOptions, setProductNameOptions] = useState<string[]>([]);
+  const [showBrandModal, setShowBrandModal] = useState(false);
+  const [showModelModal, setShowModelModal] = useState(false);
+  const [showDynamicModals, setShowDynamicModals] = useState<Record<string, boolean>>({});
 
   const [dynamicFields, setDynamicFields] = useState<Record<string, string>>({});
   const [dynamicErrors, setDynamicErrors] = useState<Record<string, boolean>>({});
-  const [showDynamicSelect, setShowDynamicSelect] = useState<Record<string, boolean>>({});
 
   const [hasDiamond, setHasDiamond] = useState(false);
 
@@ -172,8 +173,6 @@ export default function AddProductScreen() {
 
   useEffect(() => {
     const options = productOptions[formData.category] || [];
-    setProductNameOptions(options);
-    // Reset product name if type changes
     setFormData((prev) => ({ ...prev, title: "" }));
   }, [formData.category]);
 
@@ -183,7 +182,6 @@ export default function AddProductScreen() {
     fields.forEach(f => initial[f.key] = "");
     setDynamicFields(initial);
     setDynamicErrors({});
-    setShowDynamicSelect({});
   }, [formData.category]);
 
   const pickImage = async () => {
@@ -281,6 +279,7 @@ export default function AddProductScreen() {
 
       if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors);
+        setDynamicErrors(newErrors);
         setLoading(false);
         return;
       }
@@ -301,11 +300,13 @@ export default function AddProductScreen() {
         .from('product-images')
         .getPublicUrl(imagePath);
 
-      // Create product
+      // Create product with the correct title based on product type
+      const productTitle = formData.category === 'Watches' ? dynamicFields.brand : formData.title;
+      
       const { data: product, error: productError } = await supabase
         .from('products')
         .insert({
-          title: formData.category === 'Watches' ? dynamicFields.brand : formData.title,
+          title: productTitle,
           description: formData.description,
           price: parseFloat(formData.price),
           image_url: publicUrl,
@@ -397,6 +398,10 @@ export default function AddProductScreen() {
     return valid;
   };
 
+  const toggleDynamicModal = (field: string, value: boolean) => {
+    setShowDynamicModals(prev => ({ ...prev, [field]: value }));
+  };
+
   const SelectionModal = ({ 
     visible, 
     onClose, 
@@ -457,23 +462,63 @@ export default function AddProductScreen() {
 
   const renderDynamicFields = () => {
     const fields = productFieldsMap[formData.category] || [];
-    const materialValue = dynamicFields['material']?.toUpperCase?.() || dynamicFields['material'];
     let renderedFields: JSX.Element[] = [];
 
     if (formData.category === 'Watches') {
-      // Model field for watches
+      // Brand field for watches
       renderedFields.push(
-        <View key="model" style={styles.inputGroup}>
-          <Text style={styles.label}>Model</Text>
-          <TextInput
-            style={styles.input}
-            value={dynamicFields.model || ''}
-            onChangeText={text => setDynamicFields(f => ({ ...f, model: text }))}
-            placeholder="Enter watch model"
-          />
-          {dynamicErrors.model && <Text style={styles.errorText}>Required field</Text>}
+        <View key="brand" style={styles.inputGroup}>
+          <Text style={styles.label}>Brand</Text>
+          <TouchableOpacity
+            style={styles.selectButton}
+            onPress={() => setShowBrandModal(true)}
+          >
+            <Text style={styles.selectButtonText}>
+              {dynamicFields.brand || 'Select brand'}
+            </Text>
+            <ChevronDown size={20} color="#666" />
+          </TouchableOpacity>
+          {dynamicErrors.brand && <Text style={styles.errorText}>Required field</Text>}
         </View>
       );
+
+      // Model field for watches - only show after brand is selected
+      if (dynamicFields.brand) {
+        const brandModels = watchModels[dynamicFields.brand as keyof typeof watchModels];
+        
+        if (brandModels) {
+          // Brand exists in our JSON - show select
+          renderedFields.push(
+            <View key="model" style={styles.inputGroup}>
+              <Text style={styles.label}>Model</Text>
+              <TouchableOpacity
+                style={styles.selectButton}
+                onPress={() => setShowModelModal(true)}
+              >
+                <Text style={styles.selectButtonText}>
+                  {dynamicFields.model || 'Select model'}
+                </Text>
+                <ChevronDown size={20} color="#666" />
+              </TouchableOpacity>
+              {dynamicErrors.model && <Text style={styles.errorText}>Required field</Text>}
+            </View>
+          );
+        } else {
+          // Brand doesn't exist in our JSON - show text input
+          renderedFields.push(
+            <View key="model" style={styles.inputGroup}>
+              <Text style={styles.label}>Model</Text>
+              <TextInput
+                style={styles.input}
+                value={dynamicFields.model || ''}
+                onChangeText={text => setDynamicFields(f => ({ ...f, model: text }))}
+                placeholder="Enter watch model"
+              />
+              {dynamicErrors.model && <Text style={styles.errorText}>Required field</Text>}
+            </View>
+          );
+        }
+      }
 
       // Diameter field for watches
       renderedFields.push(
@@ -483,11 +528,10 @@ export default function AddProductScreen() {
             style={styles.input}
             value={dynamicFields.diameter || ''}
             onChangeText={text => {
-              // Allow only positive numbers with up to one decimal place
               const sanitized = text.replace(/[^0-9.]/g, '');
               const parts = sanitized.split('.');
-              if (parts.length > 2) return; // Don't allow multiple decimal points
-              if (parts[1]?.length > 1) return; // Don't allow more than one decimal place
+              if (parts.length > 2) return;
+              if (parts[1]?.length > 1) return;
               setDynamicFields(f => ({ ...f, diameter: sanitized }));
             }}
             keyboardType="numeric"
@@ -497,7 +541,6 @@ export default function AddProductScreen() {
         </View>
       );
 
-      // Return early for watches - don't show other fields
       return renderedFields;
     }
 
@@ -524,7 +567,7 @@ export default function AddProductScreen() {
           <Text style={styles.label}>{materialField.label}</Text>
           <TouchableOpacity
             style={styles.selectButton}
-            onPress={() => setShowDynamicSelect(s => ({ ...s, [materialField.key]: true }))}
+            onPress={() => toggleDynamicModal(materialField.key, true)}
           >
             <Text style={styles.selectButtonText}>
               {dynamicFields[materialField.key] || `Select ${materialField.label}`}
@@ -533,19 +576,13 @@ export default function AddProductScreen() {
           </TouchableOpacity>
           {dynamicErrors[materialField.key] && <Text style={styles.errorText}>Required field</Text>}
           <SelectionModal
-            visible={!!showDynamicSelect[materialField.key]}
-            onClose={() => setShowDynamicSelect(s => ({ ...s, [materialField.key]: false }))}
+            visible={!!showDynamicModals[materialField.key]}
+            onClose={() => toggleDynamicModal(materialField.key, false)}
             title={`Select ${materialField.label}`}
             options={materialField.options}
-            onSelect={value => {
-              setDynamicFields(f => {
-                if (value.toUpperCase() !== 'GOLD') {
-                  const { goldKarat, ...rest } = f;
-                  return { ...rest, [materialField.key]: value };
-                }
-                return { ...f, [materialField.key]: value };
-              });
-              setShowDynamicSelect(s => ({ ...s, [materialField.key]: false }));
+            onSelect={(value) => {
+              setDynamicFields(prev => ({ ...prev, [materialField.key]: value }));
+              toggleDynamicModal(materialField.key, false);
             }}
             selected={dynamicFields[materialField.key] || ""}
           />
@@ -554,13 +591,13 @@ export default function AddProductScreen() {
     }
 
     // Gold Karat only if Gold is selected
-    if (materialValue === 'GOLD') {
+    if (materialField && materialField.options.includes('GOLD')) {
       renderedFields.push(
         <View key="goldKarat" style={styles.inputGroup}>
           <Text style={styles.label}>Gold Karat</Text>
           <TouchableOpacity
             style={styles.selectButton}
-            onPress={() => setShowDynamicSelect(s => ({ ...s, goldKarat: true }))}
+            onPress={() => toggleDynamicModal('goldKarat', true)}
           >
             <Text style={styles.selectButtonText}>
               {dynamicFields.goldKarat || 'Select Gold Karat'}
@@ -569,11 +606,14 @@ export default function AddProductScreen() {
           </TouchableOpacity>
           {dynamicErrors.goldKarat && <Text style={styles.errorText}>Required field</Text>}
           <SelectionModal
-            visible={!!showDynamicSelect.goldKarat}
-            onClose={() => setShowDynamicSelect(s => ({ ...s, goldKarat: false }))}
+            visible={!!showDynamicModals['goldKarat']}
+            onClose={() => toggleDynamicModal('goldKarat', false)}
             title="Select Gold Karat"
             options={["9K", "10K", "14K", "18K", "21K", "22K", "24K"]}
-            onSelect={value => setDynamicFields(f => ({ ...f, goldKarat: value }))}
+            onSelect={(value) => {
+              setDynamicFields(prev => ({ ...prev, goldKarat: value }));
+              toggleDynamicModal('goldKarat', false);
+            }}
             selected={dynamicFields.goldKarat || ""}
           />
         </View>
@@ -611,101 +651,61 @@ export default function AddProductScreen() {
             <Text style={styles.label}>Diamond Color</Text>
             <TouchableOpacity
               style={styles.selectButton}
-              onPress={() => setShowDynamicSelect(s => ({ ...s, diamond_color: true }))}
+              onPress={() => toggleDynamicModal('diamond_color', true)}
             >
               <Text style={styles.selectButtonText}>
                 {dynamicFields.diamond_color || 'Select Diamond Color'}
               </Text>
               <ChevronDown size={20} color="#666" />
             </TouchableOpacity>
-            <SelectionModal
-              visible={!!showDynamicSelect.diamond_color}
-              onClose={() => setShowDynamicSelect(s => ({ ...s, diamond_color: false }))}
-              title="Select Diamond Color"
-              options={COLOR_GRADES}
-              onSelect={value => setDynamicFields(f => ({ ...f, diamond_color: value }))}
-              selected={dynamicFields.diamond_color || ""}
-            />
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Clarity</Text>
             <TouchableOpacity
               style={styles.selectButton}
-              onPress={() => setShowDynamicSelect(s => ({ ...s, clarity: true }))}
+              onPress={() => toggleDynamicModal('clarity', true)}
             >
               <Text style={styles.selectButtonText}>
                 {dynamicFields.clarity || 'Select Clarity'}
               </Text>
               <ChevronDown size={20} color="#666" />
             </TouchableOpacity>
-            <SelectionModal
-              visible={!!showDynamicSelect.clarity}
-              onClose={() => setShowDynamicSelect(s => ({ ...s, clarity: false }))}
-              title="Select Clarity"
-              options={["I3", "I2", "I1", "SI2", "SI1", "VS2", "VS1", "VVS2", "VVS1", "INTERNALLY"]}
-              onSelect={value => setDynamicFields(f => ({ ...f, clarity: value }))}
-              selected={dynamicFields.clarity || ""}
-            />
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Cut Grade</Text>
             <TouchableOpacity
               style={styles.selectButton}
-              onPress={() => setShowDynamicSelect(s => ({ ...s, cut_grade: true }))}
+              onPress={() => toggleDynamicModal('cut_grade', true)}
             >
               <Text style={styles.selectButtonText}>
                 {dynamicFields.cut_grade || 'Select Cut Grade'}
               </Text>
               <ChevronDown size={20} color="#666" />
             </TouchableOpacity>
-            <SelectionModal
-              visible={!!showDynamicSelect.cut_grade}
-              onClose={() => setShowDynamicSelect(s => ({ ...s, cut_grade: false }))}
-              title="Select Cut Grade"
-              options={["POOR", "FAIR", "GOOD", "VERY GOOD", "EXCELLENT"]}
-              onSelect={value => setDynamicFields(f => ({ ...f, cut_grade: value }))}
-              selected={dynamicFields.cut_grade || ""}
-            />
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Certification</Text>
             <TouchableOpacity
               style={styles.selectButton}
-              onPress={() => setShowDynamicSelect(s => ({ ...s, certification: true }))}
+              onPress={() => toggleDynamicModal('certification', true)}
             >
               <Text style={styles.selectButtonText}>
                 {dynamicFields.certification || 'Select Certification'}
               </Text>
               <ChevronDown size={20} color="#666" />
             </TouchableOpacity>
-            <SelectionModal
-              visible={!!showDynamicSelect.certification}
-              onClose={() => setShowDynamicSelect(s => ({ ...s, certification: false }))}
-              title="Select Certification"
-              options={["GIA", "IGI", "HRD", "EGL", "SGL", "CGL", "IGL", "AIG"]}
-              onSelect={value => setDynamicFields(f => ({ ...f, certification: value }))}
-              selected={dynamicFields.certification || ""}
-            />
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Side Stones</Text>
             <TouchableOpacity
               style={styles.selectButton}
-              onPress={() => setShowDynamicSelect(s => ({ ...s, side_stones: true }))}
+              onPress={() => toggleDynamicModal('side_stones', true)}
             >
               <Text style={styles.selectButtonText}>
                 {dynamicFields.side_stones || 'Select Side Stones'}
               </Text>
               <ChevronDown size={20} color="#666" />
             </TouchableOpacity>
-            <SelectionModal
-              visible={!!showDynamicSelect.side_stones}
-              onClose={() => setShowDynamicSelect(s => ({ ...s, side_stones: false }))}
-              title="Select Side Stones"
-              options={["With Side Stones", "Without Side Stones"]}
-              onSelect={value => setDynamicFields(f => ({ ...f, side_stones: value }))}
-              selected={dynamicFields.side_stones || ""}
-            />
           </View>
         </View>
       );
@@ -757,42 +757,16 @@ export default function AddProductScreen() {
           {errors.category && <Text style={styles.errorText}>Required field</Text>}
         </View>
 
-        {formData.category === 'Watches' ? (
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Brand</Text>
-            <TouchableOpacity
-              style={styles.selectButton}
-              onPress={() => setShowProductNameModal(true)}
-            >
-              <Text style={styles.selectButtonText}>
-                {dynamicFields.brand || 'Select brand'}
-              </Text>
-              <ChevronDown size={20} color="#666" />
-            </TouchableOpacity>
-            {errors.brand && <Text style={styles.errorText}>Required field</Text>}
-          </View>
-        ) : (
+        {formData.category !== 'Watches' && (
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Product Name</Text>
-            {productNameOptions.length > 0 ? (
-              <TouchableOpacity
-                style={styles.selectButton}
-                onPress={() => setShowProductNameModal(true)}
-              >
-                <Text style={styles.selectButtonText}>
-                  {formData.title || 'Select product name'}
-                </Text>
-                <ChevronDown size={20} color="#666" />
-              </TouchableOpacity>
-            ) : (
-              <TextInput
-                style={styles.input}
-                value={formData.title}
-                onChangeText={(text) => setFormData({ ...formData, title: text })}
-                placeholder="Enter product name"
-                textAlign="left"
-              />
-            )}
+            <TextInput
+              style={styles.input}
+              value={formData.title}
+              onChangeText={(text) => setFormData({ ...formData, title: text })}
+              placeholder="Enter product name"
+              textAlign="left"
+            />
             {errors.title && <Text style={styles.errorText}>Required field</Text>}
           </View>
         )}
@@ -849,24 +823,41 @@ export default function AddProductScreen() {
         onClose={() => setShowCategoryModal(false)}
         title="Select Product Type"
         options={PRODUCT_TYPES}
-        onSelect={(value) => setFormData({ ...formData, category: value })}
+        onSelect={(value) => {
+          setFormData({ ...formData, category: value });
+          if (value === 'Watches') {
+            // Reset any watch-specific fields when changing to watches
+            setDynamicFields({});
+          }
+        }}
         selected={formData.category}
       />
 
       <SelectionModal
-        visible={showProductNameModal}
-        onClose={() => setShowProductNameModal(false)}
-        title={formData.category === 'Watches' ? 'Select Brand' : 'Select Product Name'}
-        options={productNameOptions}
+        visible={showBrandModal}
+        onClose={() => setShowBrandModal(false)}
+        title="Select Brand"
+        options={Object.keys(watchModels)}
         onSelect={(value) => {
-          if (formData.category === 'Watches') {
-            setDynamicFields(f => ({ ...f, brand: value }));
-          } else {
-            setFormData({ ...formData, title: value });
-          }
+          setDynamicFields(f => ({ ...f, brand: value, model: '' }));
+          setShowBrandModal(false);
         }}
-        selected={formData.category === 'Watches' ? (dynamicFields.brand || '') : (formData.title || '')}
+        selected={dynamicFields.brand || ""}
       />
+
+      {dynamicFields.brand && (
+        <SelectionModal
+          visible={showModelModal}
+          onClose={() => setShowModelModal(false)}
+          title="Select Model"
+          options={watchModels[dynamicFields.brand as keyof typeof watchModels] || []}
+          onSelect={(value) => {
+            setDynamicFields(f => ({ ...f, model: value }));
+            setShowModelModal(false);
+          }}
+          selected={dynamicFields.model || ""}
+        />
+      )}
     </ScrollView>
   );
 }
