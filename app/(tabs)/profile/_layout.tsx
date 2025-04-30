@@ -5,17 +5,9 @@ export default function ProfileLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: {
-          backgroundColor: '#121212',
-        },
-        headerShadowVisible: false,
-        headerTitleStyle: {
-          fontFamily: 'Heebo-Bold',
-          color: '#fff',
-        },
-        headerTintColor: '#fff',
+        headerShown: false,
         contentStyle: {
-          backgroundColor: '#121212',
+          backgroundColor: '#fff',
         },
       }}
     >
@@ -28,27 +20,67 @@ export default function ProfileLayout() {
       <Stack.Screen
         name="add-product"
         options={{
+          headerShown: true,
           title: 'Add Product',
           presentation: 'modal',
+          headerStyle: {
+            backgroundColor: '#0E2657',
+          },
+          headerTintColor: '#fff',
+          headerTitleStyle: {
+            fontFamily: 'Heebo-Bold',
+          },
         }}
       />
       <Stack.Screen
         name="add-request"
         options={{
+          headerShown: true,
           title: 'Add Request',
           presentation: 'modal',
+          headerStyle: {
+            backgroundColor: '#0E2657',
+          },
+          headerTintColor: '#fff',
+          headerTitleStyle: {
+            fontFamily: 'Heebo-Bold',
+          },
         }}
       />
       <Stack.Screen
-        name="products/[id]"
+        name="product/[id]"
         options={{
-          title: 'Product Details',
+          headerShown: true,
+          title: 'Product',
+          headerStyle: {
+            backgroundColor: '#fff',
+          },
+          headerTintColor: '#0E2657',
+          headerTitleStyle: {
+            fontFamily: 'Heebo-Bold',
+            color: '#0E2657',
+          },
+          headerRight: () => null,
         }}
       />
       <Stack.Screen
         name="requests/[id]"
         options={{
+          headerShown: true,
           title: 'Request Details',
+          headerStyle: {
+            backgroundColor: '#0E2657',
+          },
+          headerTintColor: '#fff',
+          headerTitleStyle: {
+            fontFamily: 'Heebo-Bold',
+          },
+        }}
+      />
+      <Stack.Screen
+        name="edit"
+        options={{
+          headerShown: false,
         }}
       />
     </Stack>

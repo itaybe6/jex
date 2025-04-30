@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { router } from 'expo-router';
-import { Picker } from '@react-native-picker/picker';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft } from 'lucide-react-native';
+import { Icon } from '../../components/Icon';
+import { Select } from '../../components/Select';
 
 const DIAMOND_CUTS = [
   'Round',
@@ -39,14 +39,36 @@ const COLOR_GRADES = [
   'X', 'Y', 'Z',
 ] as const;
 
+const DIAMOND_WEIGHTS = [
+  '0.25', '0.30', '0.40', '0.50', '0.60', '0.70', '0.75',
+  '0.80', '0.90', '1.00', '1.20', '1.50', '2.00', '2.50',
+  '3.00', '4.00', '5.00'
+] as const;
+
+type DiamondCut = typeof DIAMOND_CUTS[number];
+type ClarityGrade = typeof CLARITY_GRADES[number];
+type ColorGrade = typeof COLOR_GRADES[number];
+type DiamondWeight = typeof DIAMOND_WEIGHTS[number];
+
+type FilterState = {
+  type: string;
+  cut: DiamondCut;
+  clarity: ClarityGrade;
+  color: ColorGrade;
+  weight: DiamondWeight;
+  notifyOn: string[];
+};
+
+type SelectValue = string;
+
 export default function AddFilterScreen() {
   const { user } = useAuth();
-  const [filter, setFilter] = useState({
+  const [filter, setFilter] = useState<FilterState>({
     type: 'product',
     cut: DIAMOND_CUTS[0],
     clarity: CLARITY_GRADES[0],
     color: COLOR_GRADES[0],
-    weight: '',
+    weight: DIAMOND_WEIGHTS[0],
     notifyOn: ['new_product', 'new_request']
   });
 
@@ -60,6 +82,7 @@ export default function AddFilterScreen() {
 
       const newFilter = {
         id: Math.random().toString(36).substr(2, 9),
+        type: 'product',
         cut: filter.cut,
         clarity: filter.clarity,
         color: filter.color,
@@ -78,7 +101,7 @@ export default function AddFilterScreen() {
         const { error } = await supabase
           .from('notification_preferences')
           .update({
-            specific_filters: [...existingData.specific_filters, newFilter],
+            specific_filters: [...(existingData.specific_filters || []), newFilter],
             enabled_types: filter.notifyOn
           })
           .eq('user_id', user.id);
@@ -113,6 +136,10 @@ export default function AddFilterScreen() {
     }));
   };
 
+  const cutOptions = DIAMOND_CUTS.map(cut => ({ key: cut, value: cut }));
+  const clarityOptions = CLARITY_GRADES.map(clarity => ({ key: clarity, value: clarity }));
+  const colorOptions = COLOR_GRADES.map(color => ({ key: color, value: color }));
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -120,9 +147,9 @@ export default function AddFilterScreen() {
           onPress={() => router.back()}
           style={styles.backButton}
         >
-          <ArrowLeft size={24} color="#fff" />
+          <Icon name="arrow-left" size={24} color="#0E2657" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Notification Filter</Text>
+        <Text style={styles.headerTitle}>Add Filter</Text>
       </View>
 
       <ScrollView style={styles.content}>
@@ -138,7 +165,7 @@ export default function AddFilterScreen() {
             <Text style={[
               styles.typeButtonText,
               filter.notifyOn.includes('new_product') && styles.typeButtonTextActive
-            ]}>New Product Listed</Text>
+            ]}>Product Listed</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
@@ -151,7 +178,7 @@ export default function AddFilterScreen() {
             <Text style={[
               styles.typeButtonText,
               filter.notifyOn.includes('new_request') && styles.typeButtonTextActive
-            ]}>New Request Posted</Text>
+            ]}>Request Posted</Text>
           </TouchableOpacity>
         </View>
 
@@ -159,73 +186,59 @@ export default function AddFilterScreen() {
         
         <View style={styles.field}>
           <Text style={styles.label}>Cut</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={filter.cut}
-              onValueChange={(value) => setFilter(prev => ({ ...prev, cut: value }))}
-              style={styles.picker}
-              dropdownIconColor="#888"
-              itemStyle={{ color: '#888', backgroundColor: '#1a1a1a' }}
-            >
-              {DIAMOND_CUTS.map((cut) => (
-                <Picker.Item key={cut} label={cut} value={cut} color="#888" />
-              ))}
-            </Picker>
-          </View>
+          <Select<DiamondCut>
+            data={DIAMOND_CUTS}
+            value={filter.cut}
+            onSelect={(value) => setFilter(prev => ({ ...prev, cut: value }))}
+            placeholder="Select cut"
+            style={styles.select}
+          />
         </View>
 
         <View style={styles.field}>
           <Text style={styles.label}>Weight (carats)</Text>
-          <TextInput
-            style={styles.input}
+          <Select<DiamondWeight>
+            data={DIAMOND_WEIGHTS}
             value={filter.weight}
-            onChangeText={(value) => setFilter(prev => ({ ...prev, weight: value }))}
-            placeholder="Enter weight in carats"
-            placeholderTextColor="#666"
-            keyboardType="decimal-pad"
+            onSelect={(value) => setFilter(prev => ({ ...prev, weight: value }))}
+            placeholder="Select weight"
+            style={styles.select}
           />
         </View>
 
         <View style={styles.field}>
           <Text style={styles.label}>Clarity</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={filter.clarity}
-              onValueChange={(value) => setFilter(prev => ({ ...prev, clarity: value }))}
-              style={styles.picker}
-              dropdownIconColor="#888"
-              itemStyle={{ color: '#888', backgroundColor: '#1a1a1a' }}
-            >
-              {CLARITY_GRADES.map((clarity) => (
-                <Picker.Item key={clarity} label={clarity} value={clarity} color="#888" />
-              ))}
-            </Picker>
-          </View>
+          <Select<ClarityGrade>
+            data={CLARITY_GRADES}
+            value={filter.clarity}
+            onSelect={(value) => setFilter(prev => ({ ...prev, clarity: value }))}
+            placeholder="Select clarity"
+            style={styles.select}
+          />
         </View>
 
         <View style={styles.field}>
           <Text style={styles.label}>Color</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={filter.color}
-              onValueChange={(value) => setFilter(prev => ({ ...prev, color: value }))}
-              style={styles.picker}
-              dropdownIconColor="#888"
-              itemStyle={{ color: '#888', backgroundColor: '#1a1a1a' }}
-            >
-              {COLOR_GRADES.map((color) => (
-                <Picker.Item key={color} label={color} value={color} color="#888" />
-              ))}
-            </Picker>
-          </View>
+          <Select<ColorGrade>
+            data={COLOR_GRADES}
+            value={filter.color}
+            onSelect={(value) => setFilter(prev => ({ ...prev, color: value }))}
+            placeholder="Select color"
+            style={styles.select}
+          />
         </View>
-      </ScrollView>
 
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+        <TouchableOpacity 
+          style={[
+            styles.saveButton,
+            (!filter.cut || !filter.weight || !filter.color || !filter.clarity || !filter.notifyOn.length) && styles.saveButtonDisabled
+          ]}
+          onPress={handleSave}
+          disabled={!filter.cut || !filter.weight || !filter.color || !filter.clarity || !filter.notifyOn.length}
+        >
           <Text style={styles.saveButtonText}>Save Filter</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -233,42 +246,51 @@ export default function AddFilterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#F5F8FC',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    paddingTop: 60,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2a2a2a',
-    backgroundColor: '#121212',
+    paddingHorizontal: 20,
+    paddingVertical: 6,
+    paddingTop: 72,
+    marginBottom: 0,
+    backgroundColor: '#F5F8FC',
   },
   backButton: {
     marginRight: 16,
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   headerTitle: {
-    fontSize: 20,
-    fontFamily: 'Heebo-Bold',
-    color: '#fff',
+    fontSize: 24,
+    fontFamily: 'Montserrat-Bold',
+    color: '#111827',
   },
   content: {
     flex: 1,
-    padding: 16,
-    backgroundColor: '#121212',
+    backgroundColor: '#F5F8FC',
+    padding: 20,
+    paddingBottom: 96,
   },
   sectionTitle: {
     fontSize: 18,
-    fontFamily: 'Heebo-Bold',
+    fontFamily: 'Montserrat-SemiBold',
+    color: '#111827',
     marginBottom: 16,
-    marginTop: 24,
-    color: '#fff',
+    marginTop: 12,
   },
   notificationTypes: {
     flexDirection: 'row',
@@ -277,70 +299,62 @@ const styles = StyleSheet.create({
   },
   typeButton: {
     flex: 1,
-    padding: 16,
+    backgroundColor: '#FFFFFF',
+    padding: 12,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#2a2a2a',
     alignItems: 'center',
-    backgroundColor: '#2a2a2a',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   typeButtonActive: {
-    backgroundColor: '#007AFF20',
-    borderColor: '#007AFF',
+    backgroundColor: '#0E2657',
   },
   typeButtonText: {
     fontSize: 14,
-    fontFamily: 'Heebo-Medium',
-    color: '#888',
+    fontFamily: 'Montserrat-SemiBold',
+    color: '#6B7280',
     textAlign: 'center',
   },
   typeButtonTextActive: {
-    color: '#007AFF',
+    color: '#FFFFFF',
   },
   field: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   label: {
-    fontSize: 16,
-    fontFamily: 'Heebo-Medium',
+    fontSize: 14,
+    fontFamily: 'Montserrat-Medium',
+    color: '#111827',
     marginBottom: 8,
-    color: '#fff',
   },
-  pickerContainer: {
+  select: {
     borderWidth: 1,
-    borderColor: '#2a2a2a',
-    borderRadius: 12,
-    backgroundColor: '#1a1a1a',
-  },
-  picker: {
-    height: 50,
-    color: '#888',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#2a2a2a',
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#1a1a1a',
-    color: '#888',
-    fontFamily: 'Heebo-Regular',
-  },
-  footer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#2a2a2a',
-    backgroundColor: '#121212',
+    borderColor: '#E3EAF3',
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 16,
   },
   saveButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#0E2657',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
+    marginBottom: 48,
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#E5E7EB',
   },
   saveButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
-    fontFamily: 'Heebo-Bold',
+    fontFamily: 'Montserrat-SemiBold',
   },
 }); 

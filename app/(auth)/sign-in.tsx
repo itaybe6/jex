@@ -25,6 +25,8 @@ const { width, height } = Dimensions.get("window");
 
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
+const MemoizedBackgroundLines = React.memo(BackgroundLines);
+
 export default function SignIn() {
   const [mode, setMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
@@ -263,7 +265,7 @@ export default function SignIn() {
   if (mode === 'confirmation') {
     return (
       <View style={{ flex: 1, backgroundColor: "#0B1120" }}>
-        <BackgroundLines />
+        <MemoizedBackgroundLines />
         <AuroraBackground>
           <View style={[styles.container, styles.confirmationContainer]}>
             <View style={styles.header}>
@@ -299,15 +301,15 @@ export default function SignIn() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#0B1120" }}>
-  <View style={{ flex: 1 }}>
-    <BackgroundLines />
-    <LinearGradient
-  colors={["#071634CC", "#153E90CC", "#4F8EF7CC"]} // שים לב ל-CC!
-  start={{ x: 0.5, y: 0 }}
-  end={{ x: 0.5, y: 1 }}
-  style={StyleSheet.absoluteFill}
-/>
-  </View>
+      <View style={{ flex: 1 }}>
+        <MemoizedBackgroundLines />
+        <LinearGradient
+          colors={["#071634CC", "#153E90CC", "#4F8EF7CC"]} // שים לב ל-CC!
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
 
       <View style={styles.topLogoContainer}>
         <Image
@@ -343,13 +345,18 @@ export default function SignIn() {
             )}
             <View style={styles.passwordRow}>
               <TextInput
-                style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                style={[styles.input, { flex: 1, marginBottom: 0, textAlign: 'left', textAlignVertical: 'center' }]}
                 placeholder="Password"
                 placeholderTextColor="#888"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
+                textContentType="password"
+                autoCorrect={false}
+                autoComplete="off"
+                importantForAutofill="no"
+                keyboardType="default"
               />
               <TouchableOpacity
                 style={styles.eyeButton}

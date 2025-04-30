@@ -92,11 +92,12 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
-              name="products/[id]"
+              name="profile/product/[id]"
               options={{
-                headerShown: true,
-                headerTitle: "Product Details",
-                headerBackTitle: "Back"
+                headerShown: false,
+                contentStyle: {
+                  backgroundColor: '#fff'
+                }
               }}
             />
           </>
