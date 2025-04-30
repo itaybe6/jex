@@ -12,9 +12,12 @@ type ProductDetails = {
   id: string;
   title: string;
   price: number;
-  image_url: string;
   description: string;
   user_id: string;
+  product_images?: {
+    id: string;
+    image_url: string;
+  }[];
 };
 
 const CATEGORIES = [
@@ -62,8 +65,11 @@ export default function EditProductScreen() {
           title,
           description,
           price,
-          image_url,
-          user_id
+          user_id,
+          product_images (
+            id,
+            image_url
+          )
         `)
         .eq('id', id)
         .single();
@@ -87,16 +93,19 @@ export default function EditProductScreen() {
         id: data.id,
         title: data.title,
         hasDescription: !!data.description,
-        hasImageUrl: !!data.image_url
+        hasImages: data.product_images?.length > 0
       });
       
       setProduct(data);
       setTitle(data.title || '');
       setDescription(data.description || '');
       setPrice(data.price ? data.price.toString() : '');
-      setImageUrls(data.image_url ? [data.image_url] : []);
       
-      console.log('Set image URLs state:', data.image_url ? [data.image_url] : []);
+      // Get image URLs from product_images
+      const imageUrls = data.product_images?.map(img => img.image_url) || [];
+      setImageUrls(imageUrls);
+      
+      console.log('Set image URLs state:', imageUrls);
     } catch (error) {
       console.error('Detailed error when fetching product:', error);
       Alert.alert(
@@ -157,18 +166,39 @@ export default function EditProductScreen() {
 
     setSaving(true);
     try {
-      const { error } = await supabase
+      // First update the product details
+      const { error: productError } = await supabase
         .from('products')
         .update({
           title: title.trim(),
           description: description.trim(),
           price: parseFloat(price),
-          image_url: imageUrls[0],
         })
         .eq('id', product.id)
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (productError) throw productError;
+
+      // Then update the product images
+      // First delete all existing images
+      const { error: deleteError } = await supabase
+        .from('product_images')
+        .delete()
+        .eq('product_id', product.id);
+
+      if (deleteError) throw deleteError;
+
+      // Then insert new images
+      const { error: insertError } = await supabase
+        .from('product_images')
+        .insert(
+          imageUrls.map(url => ({
+            product_id: product.id,
+            image_url: url
+          }))
+        );
+
+      if (insertError) throw insertError;
 
       Alert.alert('Success', 'Product updated successfully');
       router.back();
