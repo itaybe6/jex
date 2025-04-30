@@ -4,6 +4,15 @@ import { useAuth } from '@/hooks/useAuth';
 import { decode } from 'base64-arraybuffer';
 import watchModels from '@/lib/watch-models.json';
 import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+
+interface ImageData {
+  uri: string;
+  base64: string;
+}
+
+// Define watch models type
+type WatchModelsType = typeof watchModels;
 
 const PRODUCT_TYPES = [
   'Ring', 'Necklace', 'Bracelet', 'Earrings', 'Special pieces', 'Watches', 'Gems'
@@ -43,8 +52,7 @@ export default function useProductForm() {
   const [dynamicErrors, setDynamicErrors] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [hasDiamond, setHasDiamond] = useState(false);
-  const [imageUri, setImageUri] = useState('');
-  const [imageBase64, setImageBase64] = useState('');
+  const [images, setImages] = useState<ImageData[]>([]);
   const [loading, setLoading] = useState(false);
   const [showBrandModal, setShowBrandModal] = useState(false);
   const [showModelModal, setShowModelModal] = useState(false);
@@ -54,7 +62,10 @@ export default function useProductForm() {
   // Options
   const productTypeOptions = PRODUCT_TYPES;
   const brandOptions = formData.category && productOptions[formData.category] ? productOptions[formData.category] : [];
-  const modelOptions = (formData.category === 'Watches' && dynamicFields.brand && watchModels[dynamicFields.brand]) ? watchModels[dynamicFields.brand] : [];
+  const modelOptions = (formData.category === 'Watches' && dynamicFields.brand && 
+    (watchModels as WatchModelsType)[dynamicFields.brand as keyof WatchModelsType]) 
+    ? (watchModels as WatchModelsType)[dynamicFields.brand as keyof WatchModelsType] 
+    : [];
 
   // Reset dynamic fields on category change
   useEffect(() => {
@@ -80,41 +91,55 @@ export default function useProductForm() {
   };
   const handleImageChange = async () => {
     try {
-      const ImagePicker = await import('expo-image-picker');
       if (typeof window === 'undefined') return;
+      
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         alert('We need access to your gallery to upload images');
         return;
       }
+
       let result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
         base64: true,
+        allowsMultipleSelection: true,
+        selectionLimit: 5,
       });
-      if (!result.canceled) {
-        const asset = result.assets[0];
-        if (asset.base64) {
-          setImageUri(asset.uri);
-          setImageBase64(asset.base64);
-        } else {
-          throw new Error('Could not get base64 data');
-        }
+
+      if (!result.canceled && result.assets) {
+        const newImages = result.assets
+          .filter(asset => asset.base64)
+          .map(asset => ({
+            uri: asset.uri,
+            base64: asset.base64!
+          }));
+        
+        setImages(prev => [...prev, ...newImages]);
       }
     } catch (error) {
-      alert('An error occurred while selecting the image. Please try again.');
+      alert('An error occurred while selecting images. Please try again.');
     }
+  };
+
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
   };
 
   // Validation (simplified for brevity)
   const validate = () => {
     const newErrors: Record<string, boolean> = {};
+    
     if (!formData.category) newErrors.category = true;
-    if (!imageUri) newErrors.image = true;
     if (!formData.price) newErrors.price = true;
     if (!formData.description) newErrors.description = true;
+    
+    if (images.length === 0) {
+      newErrors.images = true;
+    }
+
     if (formData.category === 'Watches') {
       if (!dynamicFields.brand) newErrors.brand = true;
       if (!dynamicFields.model) newErrors.model = true;
@@ -145,13 +170,11 @@ export default function useProductForm() {
         if (!dynamicFields.certification) newErrors.certification = true;
       }
     }
+
     setErrors(newErrors);
     setDynamicErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) {
-      console.log('Validation failed:', newErrors, {formData, dynamicFields, hasDiamond});
-      return false;
-    }
-    return true;
+    
+    return Object.keys(newErrors).length === 0;
   };
 
   // Submit
@@ -159,20 +182,8 @@ export default function useProductForm() {
     if (!validate()) return;
     try {
       setLoading(true);
-      // Upload image
-      const imagePath = `${user?.id}/${Date.now()}.jpg`;
-      const { error: uploadError } = await supabase.storage
-        .from('product-images')
-        .upload(imagePath, decode(imageBase64), {
-          contentType: 'image/jpeg',
-          upsert: true
-        });
-      if (uploadError) throw uploadError;
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(imagePath);
-      // Create product (always first)
+      
+      // Create product first (without image_url)
       const productType = formData.category;
       const productTitle = productType === 'Watches' ? dynamicFields.brand : formData.title;
       const productInsertObj = {
@@ -180,131 +191,47 @@ export default function useProductForm() {
         description: formData.description,
         price: parseFloat(formData.price),
         category: productType,
-        image_url: publicUrl,
         user_id: user?.id
       };
-      console.log('PRODUCT INSERT:', productInsertObj);
+
       const { data: product, error: productError } = await supabase
         .from('products')
         .insert(productInsertObj)
         .select()
         .single();
+
       if (productError || !product) throw productError || new Error('Product insert failed');
-      // Insert category-specific specs
-      let specsError = null;
-      switch (productType) {
-        case 'Ring':
-          ({ error: specsError } = await supabase.from('ring_specs').insert({
+
+      // Upload all images and create product_images records
+      for (const image of images) {
+        const imagePath = `${user?.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
+        
+        // Upload image to storage
+        const { error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(imagePath, decode(image.base64), {
+            contentType: 'image/jpeg',
+            upsert: true
+          });
+        
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(imagePath);
+
+        // Create product_images record
+        const { error: imageRecordError } = await supabase
+          .from('product_images')
+          .insert({
             product_id: product.id,
-            subcategory: formData.title,
-            color: dynamicFields.color,
-            clarity: dynamicFields.clarity,
-            gold_color: dynamicFields.goldColor,
-            material: dynamicFields.material,
-            side_stones: dynamicFields.side_stones === 'With Side Stones',
-            cut_grade: dynamicFields.cut_grade,
-            certification: dynamicFields.certification,
-            weight: dynamicFields.weight ? parseFloat(dynamicFields.weight) : null,
-            has_diamond: hasDiamond,
-            diamond_weight: dynamicFields.diamond_weight ? parseFloat(dynamicFields.diamond_weight) : null,
-            gold_karat: dynamicFields.goldKarat,
-          }));
-          break;
-        case 'Bracelet':
-          ({ error: specsError } = await supabase.from('bracelet_specs').insert({
-            product_id: product.id,
-            subcategory: formData.title,
-            material: dynamicFields.material,
-            gold_color: dynamicFields.goldColor,
-            length: dynamicFields.length ? parseFloat(dynamicFields.length) : null,
-            clarity: dynamicFields.clarity,
-            color: dynamicFields.diamond_color,
-            weight: dynamicFields.weight ? parseFloat(dynamicFields.weight) : null,
-            has_diamond: hasDiamond,
-            diamond_weight: dynamicFields.diamond_weight ? parseFloat(dynamicFields.diamond_weight) : null,
-            gold_karat: dynamicFields.goldKarat,
-          }));
-          break;
-        case 'Necklace':
-          ({ error: specsError } = await supabase.from('necklace_specs').insert({
-            product_id: product.id,
-            subcategory: formData.title,
-            material: dynamicFields.material,
-            gold_color: dynamicFields.goldColor,
-            length: dynamicFields.length ? parseFloat(dynamicFields.length) : null,
-            weight: dynamicFields.weight ? parseFloat(dynamicFields.weight) : null,
-            has_diamond: hasDiamond,
-            diamond_weight: dynamicFields.diamond_weight ? parseFloat(dynamicFields.diamond_weight) : null,
-            gold_karat: dynamicFields.goldKarat,
-            color: dynamicFields.diamond_color,
-            clarity: dynamicFields.clarity,
-            cut_grade: dynamicFields.cut_grade,
-            certification: dynamicFields.certification
-          }));
-          break;
-        case 'Earrings':
-          ({ error: specsError } = await supabase.from('earring_specs').insert({
-            product_id: product.id,
-            subcategory: formData.title,
-            material: dynamicFields.material,
-            gold_color: dynamicFields.goldColor,
-            clarity: dynamicFields.clarity,
-            color: dynamicFields.diamond_color,
-            certification: dynamicFields.certification,
-            weight: dynamicFields.weight ? parseFloat(dynamicFields.weight) : null,
-            has_diamond: hasDiamond,
-            diamond_weight: dynamicFields.diamond_weight ? parseFloat(dynamicFields.diamond_weight) : null,
-            gold_karat: dynamicFields.goldKarat,
-            cut_grade: dynamicFields.cut_grade,
-          }));
-          break;
-        case 'Special pieces':
-          ({ error: specsError } = await supabase.from('special_piece_specs').insert({
-            product_id: product.id,
-            subcategory: formData.title,
-            material: dynamicFields.material,
-            gold_color: dynamicFields.goldColor,
-            description: formData.description,
-            weight: dynamicFields.weight ? parseFloat(dynamicFields.weight) : null,
-            has_diamond: hasDiamond,
-            diamond_weight: dynamicFields.diamond_weight ? parseFloat(dynamicFields.diamond_weight) : null,
-            gold_karat: dynamicFields.goldKarat,
-          }));
-          break;
-        case 'Watches':
-        case 'Watch':
-          ({ error: specsError } = await supabase.from('watch_specs').insert({
-            product_id: product.id,
-            brand: dynamicFields.brand,
-            model: dynamicFields.model,
-            diameter: dynamicFields.diameter ? parseFloat(dynamicFields.diameter) : null,
-          }));
-          break;
-        case 'Gems':
-          ({ error: specsError } = await supabase.from('gem_specs').insert({
-            product_id: product.id,
-            type: dynamicFields.type,
-            origin: dynamicFields.origin,
-            certification: dynamicFields.certification,
-          }));
-          break;
-        case 'Diamonds':
-        case 'Diamond':
-          ({ error: specsError } = await supabase.from('diamond_specs').insert({
-            product_id: product.id,
-            shape: dynamicFields.shape,
-            weight: dynamicFields.weight ? parseFloat(dynamicFields.weight) : null,
-            color: dynamicFields.color,
-            clarity: dynamicFields.clarity,
-            cut_grade: dynamicFields.cut_grade,
-            certificate: dynamicFields.certificate,
-            origin: dynamicFields.origin,
-            lab_grown_type: dynamicFields.lab_grown_type,
-            treatment_type: dynamicFields.treatment_type,
-          }));
-          break;
+            image_url: publicUrl
+          });
+
+        if (imageRecordError) throw imageRecordError;
       }
-      if (specsError) throw specsError;
+
       // Success - reset form
       resetForm();
       router.replace('/');
@@ -321,8 +248,7 @@ export default function useProductForm() {
     setDynamicErrors({});
     setErrors({});
     setHasDiamond(false);
-    setImageUri('');
-    setImageBase64('');
+    setImages([]);
     setShowBrandModal(false);
     setShowModelModal(false);
     setShowCategoryModal(false);
@@ -341,7 +267,8 @@ export default function useProductForm() {
     handleDiamondToggle,
     handleImageChange,
     handleSubmit,
-    imageUri,
+    images,
+    removeImage,
     productTypeOptions,
     brandOptions,
     modelOptions,

@@ -1,3 +1,4 @@
+import React, { Fragment } from 'react';
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Linking, Modal, Alert } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -6,12 +7,30 @@ import { ArrowLeft, MessageCircle, Clock, X, Edit, Trash } from 'lucide-react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/hooks/useAuth';
 
+type SpecsType = {
+  weight?: number;
+  clarity?: string;
+  color?: string;
+  gold_color?: string;
+  material?: string;
+  gold_karat?: string;
+  certification?: string;
+  diamond_weight?: number;
+  cut_grade?: string;
+  brand?: string;
+  model?: string;
+  type?: string;
+  origin?: string;
+  length?: number;
+  diameter?: number;
+  size?: string;
+};
+
 type Product = {
   id: string;
   title: string;
   description: string;
   price: number;
-  image_url: string;
   category: string;
   user_id: string;
   details?: {
@@ -27,6 +46,16 @@ type Product = {
     phone: string | null;
   };
   created_at: string;
+  product_images: {
+    image_url: string;
+  }[];
+  ring_specs?: SpecsType[];
+  bracelet_specs?: SpecsType[];
+  necklace_specs?: SpecsType[];
+  earring_specs?: SpecsType[];
+  special_piece_specs?: SpecsType[];
+  watch_specs?: SpecsType[];
+  gem_specs?: SpecsType[];
 };
 
 const HOLD_DURATIONS = [
@@ -52,6 +81,7 @@ export default function ProductScreen() {
   const [showHoldModal, setShowHoldModal] = useState(false);
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
     fetchProduct();
@@ -59,26 +89,117 @@ export default function ProductScreen() {
 
   const fetchProduct = async () => {
     try {
+      // First, get the product category
+      const { data: productData, error: productError } = await supabase
+        .from('products')
+        .select('category')
+        .eq('id', id)
+        .single();
+
+      if (productError) throw productError;
+
+      // Build the query based on the category
+      let query = `
+        *,
+        profiles!products_user_id_fkey (
+          id,
+          full_name,
+          avatar_url,
+          phone
+        ),
+        product_images (
+          image_url
+        )`;
+
+      // Add the appropriate specs table based on category
+      switch (productData.category) {
+        case 'Ring':
+          query += `, ring_specs(*)`;
+          break;
+        case 'Bracelet':
+          query += `, bracelet_specs(*)`;
+          break;
+        case 'Necklace':
+          query += `, necklace_specs(*)`;
+          break;
+        case 'Earrings':
+          query += `, earring_specs(*)`;
+          break;
+        case 'Special pieces':
+          query += `, special_piece_specs(*)`;
+          break;
+        case 'Watches':
+          query += `, watch_specs(*)`;
+          break;
+        case 'Gems':
+          query += `, gem_specs(*)`;
+          break;
+      }
+
+      // Get the full product data with the appropriate specs
       const { data, error } = await supabase
         .from('products')
-        .select(`
-          *,
-          profiles!products_user_id_fkey (
-            id,
-            full_name,
-            avatar_url,
-            phone
-          )
-        `)
+        .select(query)
         .eq('id', id)
         .single();
 
       if (error) throw error;
-      setProduct(data);
+
+      // Get the specs based on the category
+      const getSpecs = (data: Product): SpecsType | undefined => {
+        switch (productData.category) {
+          case 'Ring':
+            return data.ring_specs?.[0];
+          case 'Bracelet':
+            return data.bracelet_specs?.[0];
+          case 'Necklace':
+            return data.necklace_specs?.[0];
+          case 'Earrings':
+            return data.earring_specs?.[0];
+          case 'Special pieces':
+            return data.special_piece_specs?.[0];
+          case 'Watches':
+            return data.watch_specs?.[0];
+          case 'Gems':
+            return data.gem_specs?.[0];
+          default:
+            return undefined;
+        }
+      };
+
+      const specs = getSpecs(data as Product);
+
+      const productWithDetails: Product = {
+        ...data as Product,
+        details: {
+          weight: specs?.weight?.toString(),
+          clarity: specs?.clarity,
+          color: specs?.color || specs?.gold_color,
+          size: specs?.size || specs?.diameter?.toString(),
+        }
+      };
+
+      setProduct(productWithDetails);
     } catch (error) {
       console.error('Error fetching product:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleNextImage = () => {
+    if (product?.product_images) {
+      setCurrentImageIndex((prev) => 
+        prev === product.product_images.length - 1 ? 0 : prev + 1
+      );
+    }
+  };
+
+  const handlePrevImage = () => {
+    if (product?.product_images) {
+      setCurrentImageIndex((prev) => 
+        prev === 0 ? product.product_images.length - 1 : prev - 1
+      );
     }
   };
 
@@ -162,7 +283,7 @@ export default function ProductScreen() {
           data: {
             product_id: product.id,
             product_title: product.title,
-            product_image_url: product.image_url,
+            product_image_url: product.product_images[currentImageIndex].image_url,
             requester_id: user.id,
             requester_name: userProfile.full_name,
             requester_avatar: userProfile.avatar_url,
@@ -205,25 +326,51 @@ export default function ProductScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-          <ArrowLeft size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{product.title}</Text>
-        {isOwner && (
-          <View style={styles.ownerActions}>
-            <TouchableOpacity onPress={handleEditPress} style={styles.actionButton}>
-              <Edit size={20} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleDeletePress} style={[styles.actionButton, styles.deleteButton]}>
-              <Trash size={20} color="#FF3B30" />
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-      
-      <ScrollView style={styles.content}>
-        <Image source={{ uri: product.image_url }} style={styles.image} />
+      <ScrollView>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+            <ArrowLeft color="#fff" />
+          </TouchableOpacity>
+          {user?.id === product.user_id && (
+            <View style={styles.actionButtons}>
+              <TouchableOpacity onPress={handleEditPress} style={styles.actionButton}>
+                <Edit color="#fff" size={20} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleDeletePress} style={styles.actionButton}>
+                <Trash color="#ff4444" size={20} />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.imageContainer}>
+          {product.product_images && product.product_images.length > 0 ? (
+            <Fragment>
+              <Image
+                source={{ uri: product.product_images[currentImageIndex].image_url }}
+                style={styles.image}
+                resizeMode="cover"
+              />
+              {product.product_images.length > 1 && (
+                <View style={styles.imageNavigation}>
+                  <TouchableOpacity onPress={handlePrevImage} style={styles.navButton}>
+                    <Text style={styles.navButtonText}>{'<'}</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.imageCounter}>
+                    {currentImageIndex + 1} / {product.product_images.length}
+                  </Text>
+                  <TouchableOpacity onPress={handleNextImage} style={styles.navButton}>
+                    <Text style={styles.navButtonText}>{'>'}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </Fragment>
+          ) : (
+            <View style={styles.noImageContainer}>
+              <Text style={styles.noImageText}>No images available</Text>
+            </View>
+          )}
+        </View>
 
         <View style={styles.detailsContainer}>
           <Text style={styles.price}>${product.price?.toLocaleString()}</Text>
@@ -327,7 +474,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: 'Montserrat-Bold',
   },
-  ownerActions: {
+  actionButtons: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -344,10 +491,50 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#1a1a1a',
   },
-  image: {
+  imageContainer: {
     width: '100%',
     height: 300,
-    backgroundColor: '#2a2a2a',
+    position: 'relative',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  imageNavigation: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  navButton: {
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 10,
+    borderRadius: 20,
+    marginHorizontal: 10,
+  },
+  navButtonText: {
+    color: '#fff',
+    fontSize: 18,
+  },
+  imageCounter: {
+    color: '#fff',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 5,
+    borderRadius: 10,
+  },
+  noImageContainer: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noImageText: {
+    color: '#666',
+    fontSize: 16,
   },
   detailsContainer: {
     padding: 16,

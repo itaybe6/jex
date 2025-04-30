@@ -1,35 +1,13 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Linking, Modal } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Linking, Modal, Alert } from 'react-native';
+import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { ArrowLeft, MessageCircle, Clock, X, Edit, Trash, CheckCircle } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/hooks/useAuth';
 import ImageViewer from 'react-native-image-zoom-viewer';
-
-type Product = {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  image_url: string;
-  category: string;
-  status: string;
-  user_id: string;
-  details?: {
-    size?: string;
-    clarity?: string;
-    color?: string;
-    weight?: string;
-  };
-  profiles: {
-    id: string;
-    full_name: string;
-    avatar_url: string | null;
-    phone: string | null;
-  };
-  created_at: string;
-};
+import { Product } from '@/types/product';
+import { showAlert } from '@/utils/alert';
 
 const HOLD_DURATIONS = [
   { value: 1, label: '1 Hour' },
@@ -46,6 +24,17 @@ const HOLD_DURATIONS = [
   { value: 12, label: '12 Hours' },
 ];
 
+// Map category to specs table name
+const CATEGORY_TO_SPECS_TABLE: { [key: string]: string } = {
+  'ring': 'ring_specs',
+  'necklace': 'necklace_specs',
+  'bracelet': 'bracelet_specs',
+  'earring': 'earring_specs',
+  'watch': 'watch_specs',
+  'gem': 'gem_specs',
+  'special_piece': 'special_piece_specs'
+};
+
 export default function ProductScreen() {
   const { id } = useLocalSearchParams();
   const { user } = useAuth();
@@ -55,6 +44,8 @@ export default function ProductScreen() {
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showImageViewer, setShowImageViewer] = useState(false);
+  const [productImages, setProductImages] = useState<string[]>([]);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   useEffect(() => {
     fetchProduct();
@@ -62,29 +53,70 @@ export default function ProductScreen() {
 
   const fetchProduct = async () => {
     try {
-      const { data, error } = await supabase
+      // First, fetch the product with basic info
+      const { data: productData, error: productError } = await supabase
         .from('products')
         .select(`
           *,
-          watch_specs (*),
-          diamond_specs (*),
-          gem_specs (*),
-          jewelry_specs (*),
           profiles (
             id,
             full_name,
             avatar_url,
             phone
+          ),
+          product_images (
+            image_url
           )
         `)
         .eq('id', id)
         .single();
 
-      if (error) throw error;
-      setProduct(data);
+      if (productError) throw productError;
+
+      if (!productData) {
+        showAlert('שגיאה', 'המוצר לא נמצא');
+        return;
+      }
+
+      // Extract image URLs
+      const images = productData.product_images || [];
+      const imageUrls = images.map((img: { image_url: string }) => img.image_url);
+      
+      // If no images in product_images, use the legacy image_url
+      if (imageUrls.length === 0 && productData.image_url) {
+        imageUrls.push(productData.image_url);
+      }
+      
+      setProductImages(imageUrls);
+
+      // Get the specs table name based on the product category
+      const specsTable = CATEGORY_TO_SPECS_TABLE[productData.category.toLowerCase()];
+      
+      // If we have a specs table for this category, fetch the specs
+      if (specsTable) {
+        const { data: specsData, error: specsError } = await supabase
+          .from(specsTable)
+          .select('*')
+          .eq('product_id', productData.id)
+          .single();
+
+        if (specsError && specsError.code !== 'PGRST116') {
+          // PGRST116 means no data found, which is fine
+          throw specsError;
+        }
+
+        // Combine product data with specs
+        setProduct({
+          ...productData,
+          specs: specsData || null
+        } as Product);
+      } else {
+        // If no specs table exists for this category, just use the product data
+        setProduct(productData as Product);
+      }
     } catch (error) {
       console.error('Error fetching product:', error);
-      Alert.alert('שגיאה', 'אירעה שגיאה בטעינת פרטי המוצר');
+      showAlert('שגיאה', 'אירעה שגיאה בטעינת פרטי המוצר');
     } finally {
       setLoading(false);
     }
@@ -98,11 +130,88 @@ export default function ProductScreen() {
       const message = `היי, אני מעוניין במוצר "${product.title}" שפרסמת ב-JEX`;
       const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
       Linking.openURL(whatsappUrl);
+    } else {
+      Alert.alert('שגיאה', 'מספר טלפון לא זמין');
     }
   };
 
   const handleBackPress = () => {
     router.back();
+  };
+
+  const handleMarkAsSold = async () => {
+    if (!product) return;
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ status: 'sold' })
+        .eq('id', product.id);
+      
+      if (error) throw error;
+      await fetchProduct();
+    } catch (error) {
+      console.error('Error marking product as sold:', error);
+      Alert.alert('שגיאה', 'אירעה שגיאה בעדכון סטטוס המוצר');
+    }
+  };
+
+  const handleEditPress = () => {
+    router.push(`/profile/product/${product?.id}`);
+  };
+
+  const handleDeletePress = async () => {
+    if (!product) return;
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', product.id);
+      
+      if (error) throw error;
+      router.back();
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      Alert.alert('שגיאה', 'אירעה שגיאה במחיקת המוצר');
+    }
+  };
+
+  const renderSpecs = () => {
+    if (!product?.specs) return null;
+
+    return (
+      <View style={styles.specsContainer}>
+        {Object.entries(product.specs).map(([key, value]) => {
+          // Skip internal fields and null values
+          if (
+            value === null || 
+            key === 'product_id' || 
+            key === 'created_at' || 
+            key === 'updated_at'
+          ) return null;
+
+          // Format the value based on its type
+          let displayValue = '';
+          if (typeof value === 'boolean') {
+            displayValue = value ? 'כן' : 'לא';
+          } else if (typeof value === 'number') {
+            displayValue = value.toString();
+          } else if (typeof value === 'string') {
+            displayValue = value;
+          } else if (typeof value === 'object') {
+            displayValue = JSON.stringify(value);
+          }
+
+          return (
+            <View key={key} style={styles.specRow}>
+              <Text style={styles.specLabel}>
+                {key.replace(/_/g, ' ').toUpperCase()}
+              </Text>
+              <Text style={styles.specValue}>{displayValue}</Text>
+            </View>
+          );
+        })}
+      </View>
+    );
   };
 
   const handleHoldRequest = async () => {
@@ -210,12 +319,24 @@ export default function ProductScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        <TouchableOpacity 
-          style={styles.imageContainer}
-          onPress={() => setShowImageViewer(true)}
-        >
-          <Image source={{ uri: product.image_url }} style={styles.image} />
-        </TouchableOpacity>
+        {productImages.length > 0 && (
+          <TouchableOpacity 
+            style={styles.imageContainer}
+            onPress={() => {
+              setSelectedImageIndex(0);
+              setShowImageViewer(true);
+            }}
+          >
+            <Image source={{ uri: productImages[0] }} style={styles.image} />
+            {productImages.length > 1 && (
+              <View style={styles.imageCounter}>
+                <Text style={styles.imageCounterText}>
+                  +{productImages.length - 1}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
 
         <View style={styles.detailsContainer}>
           <View style={styles.priceSection}>
@@ -341,7 +462,8 @@ export default function ProductScreen() {
       <Modal visible={showImageViewer} transparent={true}>
         <View style={styles.imageViewerContainer}>
           <ImageViewer
-            imageUrls={[{ url: product?.image_url || '' }]}
+            imageUrls={productImages.map(url => ({ url }))}
+            index={selectedImageIndex}
             enableSwipeDown
             onSwipeDown={() => setShowImageViewer(false)}
             backgroundColor="rgba(0, 0, 0, 0.9)"
@@ -455,23 +577,16 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 2,
   },
-  specsGrid: {
+  specRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-  },
-  specItem: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: '#23232b',
-    padding: 16,
-    borderRadius: 12,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   specLabel: {
     fontSize: 14,
     fontFamily: 'Heebo-Regular',
     color: '#888',
-    marginBottom: 4,
   },
   specValue: {
     fontSize: 16,
@@ -685,5 +800,19 @@ const styles = StyleSheet.create({
     right: 20,
     zIndex: 1,
     padding: 8,
+  },
+  imageCounter: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 12,
+    padding: 6,
+    paddingHorizontal: 10,
+  },
+  imageCounterText: {
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: 'Montserrat-Bold',
   },
 }); 

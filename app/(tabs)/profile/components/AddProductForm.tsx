@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Alert, TextInput, Text } from 'react-native';
+import { ScrollView, View, Alert, TextInput, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import ProductTypeSelect from './fields/ProductTypeSelect';
 import BrandSelect from './fields/BrandSelect';
 import ModelSelect from './fields/ModelSelect';
@@ -12,9 +12,9 @@ import DiamondCheckbox from './fields/DiamondCheckbox';
 import DiamondFields from './fields/DiamondFields';
 import WatchFields from './fields/WatchFields';
 import SubmitButton from './fields/SubmitButton';
-import PreviewImageUploader from './fields/PreviewImageUploader';
 import useProductForm from '../hooks/useProductForm';
 import { Select } from '@/components/Select';
+import ImagePreview from './ImagePreview';
 
 const AddProductForm = () => {
   const {
@@ -29,7 +29,6 @@ const AddProductForm = () => {
     handleDiamondToggle,
     handleImageChange,
     handleSubmit,
-    imageUri,
     productTypeOptions,
     brandOptions,
     modelOptions,
@@ -41,15 +40,13 @@ const AddProductForm = () => {
     setShowCategoryModal,
     showDynamicModals,
     setShowDynamicModals,
-    resetForm
+    resetForm,
+    images,
+    removeImage
   } = useProductForm();
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
-      <PreviewImageUploader
-        imageUri={imageUri}
-        onImageChange={handleImageChange}
-      />
       <View style={{ padding: 20 }}>
         <ProductTypeSelect
           value={formData.category}
@@ -166,6 +163,28 @@ const AddProductForm = () => {
             )}
           </>
         )}
+        <TouchableOpacity 
+          style={[
+            styles.imageButton,
+            errors.images && styles.errorButton
+          ]} 
+          onPress={handleImageChange}
+        >
+          <Text style={{ color: errors.images ? '#ff4444' : '#000' }}>
+            Add Images (up to 5)
+          </Text>
+        </TouchableOpacity>
+        {errors.images && (
+          <Text style={styles.errorText}>Please add at least one image</Text>
+        )}
+
+        {images.length > 0 && (
+          <ImagePreview 
+            images={images} 
+            onRemove={removeImage} 
+          />
+        )}
+
         <SubmitButton
           loading={loading}
           onPress={handleSubmit}
@@ -174,5 +193,26 @@ const AddProductForm = () => {
     </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  imageButton: {
+    backgroundColor: '#f0f0f0',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  errorButton: {
+    backgroundColor: '#ffeeee',
+    borderColor: '#ff4444',
+    borderWidth: 1,
+  },
+  errorText: {
+    color: '#ff4444',
+    fontSize: 12,
+    marginTop: -8,
+    marginBottom: 8,
+  },
+});
 
 export default AddProductForm; 
