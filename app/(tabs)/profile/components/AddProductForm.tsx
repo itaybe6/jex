@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Alert } from 'react-native';
+import { ScrollView, View, Alert, TextInput, Text } from 'react-native';
 import ProductTypeSelect from './fields/ProductTypeSelect';
 import BrandSelect from './fields/BrandSelect';
 import ModelSelect from './fields/ModelSelect';
@@ -14,6 +14,7 @@ import WatchFields from './fields/WatchFields';
 import SubmitButton from './fields/SubmitButton';
 import PreviewImageUploader from './fields/PreviewImageUploader';
 import useProductForm from '../hooks/useProductForm';
+import { Select } from '@/components/Select';
 
 const AddProductForm = () => {
   const {
@@ -84,6 +85,36 @@ const AddProductForm = () => {
             setShowModelModal={setShowModelModal}
             errors={dynamicErrors}
           />
+        ) : formData.category === 'Gems' ? (
+          <>
+            <Text style={{ color: '#fff', fontSize: 16, marginBottom: 8 }}>Gem Type</Text>
+            <Select
+              data={[
+                'Alexandrite', 'Amber', 'Amethyst', 'Ametrine', 'Aquamarine', 'Citrine', 'Diamond', 'Fancy Color Diamond', 'Emerald', 'Garnet', 'Iolite', 'Jade', 'Kunzite', 'Lapis Lazuli', 'Moonstone', 'Morganite', 'Opal', 'Pearl', 'Peridot', 'Rose Quartz', 'Ruby', 'Sapphire', 'Spinel', 'Sunstone', 'Tanzanite', 'Topaz', 'Tourmaline', 'Turquoise', 'Zircon'
+              ]}
+              value={dynamicFields.type || ''}
+              onSelect={value => handleDynamicChange('type', value)}
+              placeholder="Select Gem Type"
+            />
+            {dynamicErrors.type && <Text style={{ color: 'red', marginBottom: 8 }}>Required</Text>}
+            <Text style={{ color: '#fff', fontSize: 16, marginBottom: 8, marginTop: 16 }}>Origin</Text>
+            <Select
+              data={['Certificated', 'None Certificated', 'Natural', 'Lab Grown', 'Treated']}
+              value={dynamicFields.origin || ''}
+              onSelect={value => handleDynamicChange('origin', value)}
+              placeholder="Select Origin"
+            />
+            {dynamicErrors.origin && <Text style={{ color: 'red', marginBottom: 8 }}>Required</Text>}
+            <Text style={{ color: '#fff', fontSize: 16, marginBottom: 8, marginTop: 16 }}>Certification</Text>
+            <TextInput
+              style={{ backgroundColor: '#2a2a2a', color: '#fff', borderRadius: 8, padding: 12, marginBottom: 8 }}
+              value={dynamicFields.certification || ''}
+              onChangeText={text => handleDynamicChange('certification', text)}
+              placeholder="Enter certification"
+              placeholderTextColor="#888"
+            />
+            {dynamicErrors.certification && <Text style={{ color: 'red', marginBottom: 8 }}>Required</Text>}
+          </>
         ) : (
           <>
             <BrandSelect

@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { decode } from 'base64-arraybuffer';
 import watchModels from '@/lib/watch-models.json';
+import { router } from 'expo-router';
 
 const PRODUCT_TYPES = [
   'Ring', 'Necklace', 'Bracelet', 'Earrings', 'Special pieces', 'Watches', 'Gems'
@@ -121,6 +122,10 @@ export default function useProductForm() {
       if (!dynamicFields.diameter || isNaN(diameter) || diameter <= 0 || !(/^\d+(\.\d)?$/).test(dynamicFields.diameter)) {
         newErrors.diameter = true;
       }
+    } else if (formData.category === 'Gems') {
+      if (!dynamicFields.type) newErrors.type = true;
+      if (!dynamicFields.origin) newErrors.origin = true;
+      if (!dynamicFields.certification) newErrors.certification = true;
     } else {
       if (!formData.title) newErrors.title = true;
       if (!dynamicFields.material) newErrors.material = true;
@@ -213,7 +218,7 @@ export default function useProductForm() {
             gold_color: dynamicFields.goldColor,
             length: dynamicFields.length ? parseFloat(dynamicFields.length) : null,
             clarity: dynamicFields.clarity,
-            color: dynamicFields.color,
+            color: dynamicFields.diamond_color,
             weight: dynamicFields.weight ? parseFloat(dynamicFields.weight) : null,
             has_diamond: hasDiamond,
             diamond_weight: dynamicFields.diamond_weight ? parseFloat(dynamicFields.diamond_weight) : null,
@@ -244,12 +249,13 @@ export default function useProductForm() {
             material: dynamicFields.material,
             gold_color: dynamicFields.goldColor,
             clarity: dynamicFields.clarity,
-            color: dynamicFields.color,
+            color: dynamicFields.diamond_color,
             certification: dynamicFields.certification,
             weight: dynamicFields.weight ? parseFloat(dynamicFields.weight) : null,
             has_diamond: hasDiamond,
             diamond_weight: dynamicFields.diamond_weight ? parseFloat(dynamicFields.diamond_weight) : null,
             gold_karat: dynamicFields.goldKarat,
+            cut_grade: dynamicFields.cut_grade,
           }));
           break;
         case 'Special pieces':
@@ -301,7 +307,7 @@ export default function useProductForm() {
       if (specsError) throw specsError;
       // Success - reset form
       resetForm();
-      alert('Product added successfully!');
+      router.replace('/');
     } catch (error) {
       alert('An error occurred while creating the product');
     } finally {
