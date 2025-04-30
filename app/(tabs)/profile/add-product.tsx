@@ -21,17 +21,16 @@ const DIAMOND_CUTS = [
 ] as const;
 
 const CLARITY_GRADES = [
-  'FL (Flawless)',
-  'IF (Internally Flawless)',
-  'VVS1 (Very Very Slightly Included 1)',
-  'VVS2 (Very Very Slightly Included 2)',
-  'VS1 (Very Slightly Included 1)',
-  'VS2 (Very Slightly Included 2)',
-  'SI1 (Slightly Included 1)',
-  'SI2 (Slightly Included 2)',
-  'I1 (Included 1)',
-  'I2 (Included 2)',
-  'I3 (Included 3)',
+  'I3',
+  'I2',
+  'I1',
+  'SI2',
+  'SI1',
+  'VS2',
+  'VS1',
+  'VVS2',
+  'VVS1',
+  'INTERNALLY'
 ] as const;
 
 const COLOR_GRADES = [
@@ -61,15 +60,13 @@ const COLOR_GRADES = [
 ] as const;
 
 const PRODUCT_TYPES = [
-  'Loose Diamond',
   'Ring',
   'Necklace',
   'Bracelet',
   'Earrings',
   'Special pieces',
   'Watches',
-  'Gems',
-  'Rough Diamonds',
+  'Gems'
 ] as const;
 
 const WEIGHT_OPTIONS = Array.from({ length: 46 }, (_, i) => (0.5 + i * 0.1).toFixed(1));
@@ -108,14 +105,6 @@ const productOptions: Record<string, string[]> = {
     "Pins",
     "Belly chains"
   ],
-  "Loose Diamond": [
-    "Certificated",
-    "None Certificated",
-    "Natural",
-    "Lab Grown",
-    "Treated"
-  ],
-  "Rough Diamonds": [],
   "Gems": [
     "Certificated",
     "None Certificated",
@@ -131,16 +120,13 @@ const productOptions: Record<string, string[]> = {
 };
 
 const baseRingFields = [
-  { label: "Diamond Size (Carat) From", type: "number", key: "diamondSizeFrom" },
-  { label: "Diamond Size (Carat) To", type: "number", key: "diamondSizeTo" },
-  { label: "Diamond Color", type: "select", key: "diamondColor", options: ["D", "E", "F", "G", "H", "I", "J", "K", "Z"] },
-  { label: "Clarity", type: "select", key: "clarity", options: ["I3", "I2", "I1", "SI2", "SI1", "VS2", "VS1", "VVS2", "VVS1", "IF", "FL"] },
-  { label: "Side Stones", type: "select", key: "sideStones", options: ["With Side Stones", "Without Side Stones"] },
-  { label: "Cut Grade", type: "select", key: "cutGrade", options: ["POOR", "FAIR", "GOOD", "VERY GOOD", "EXCELLENT"] },
-  { label: "Certification", type: "select", key: "certification", options: ["GIA", "IGI", "HRD", "EGL", "SGL", "CGL", "IGL", "AIG"] },
-  { label: "Gold Color", type: "select", key: "goldColor", options: ["WHITE", "ROSE", "YELLOW"] },
-  { label: "Material", type: "select", key: "material", options: ["GOLD", "PLATINUM", "SILVER"] },
-  { label: "Gold Karat", type: "select", key: "goldKarat", options: ["9K", "10K", "14K", "18K", "21K", "22K", "24K"] }
+  { label: "Material", type: "select", key: "material", options: ["Gold", "Platinum", "Silver"] },
+  { label: "Gold Karat", type: "select", key: "goldKarat", options: ["9K", "10K", "14K", "18K", "21K", "22K", "24K"], condition: "material == 'Gold'" },
+  { label: "Diamond Color", type: "select", key: "diamond_color", options: COLOR_GRADES },
+  { label: "Clarity", type: "select", key: "clarity", options: ["I3", "I2", "I1", "SI2", "SI1", "VS2", "VS1", "VVS2", "VVS1", "INTERNALLY"] },
+  { label: "Side Stones", type: "select", key: "side_stones", options: ["With Side Stones", "Without Side Stones"] },
+  { label: "Cut Grade", type: "select", key: "cut_grade", options: ["POOR", "FAIR", "GOOD", "VERY GOOD", "EXCELLENT"] },
+  { label: "Certification", type: "select", key: "certification", options: ["GIA", "IGI", "HRD", "EGL", "SGL", "CGL", "IGL", "AIG"] }
 ];
 
 const productFieldsMap: Record<string, any[]> = {
@@ -149,23 +135,14 @@ const productFieldsMap: Record<string, any[]> = {
   "Earrings": baseRingFields,
   "Bracelet": baseRingFields,
   "Special pieces": baseRingFields,
-  "Loose Diamond": [
-    { label: "Diamond Shape", type: "select", key: "diamondShape", options: ["Round", "Oval", "Princess", "Emerald", "Cushion", "Heart", "Marquise", "Asscher", "Pear", "Trapeze", "Baguette"] },
-    { label: "Certification", type: "select", key: "certification", options: ["GIA", "IGI", "HRD", "EGL", "SGL", "CGL", "IGL", "AIG", "None"] },
-    { label: "Origin", type: "select", key: "origin", options: ["Natural", "Lab Grown", "Treated"] },
-    { label: "Lab Grown Type", type: "select", key: "labGrownType", options: ["CVD", "HPHT"], condition: "origin == 'Lab Grown'" },
-    { label: "Treatment Type", type: "select", key: "treatmentType", options: ["Laser Drill", "Fracture Filling", "HPHT Color"], condition: "origin == 'Treated'" }
-  ],
   "Gems": [
-    { label: "Certification", type: "select", key: "certification", options: ["GIA", "IGI", "None"] },
-    { label: "Origin", type: "select", key: "origin", options: ["Natural", "Lab Grown", "Treated"] }
+    { label: "Certification", type: "select", key: "certification", options: ["GIA", "IGI", "None"] }
   ],
   "Watches": [
     { label: "Brand", type: "text", key: "brand" },
     { label: "Model", type: "text", key: "model" },
     { label: "Diameter (mm)", type: "number", key: "diameter" }
-  ],
-  "Rough Diamonds": []
+  ]
 };
 
 export default function AddProductScreen() {
@@ -177,25 +154,19 @@ export default function AddProductScreen() {
     price: '',
     description: '',
     category: '',
-    weight: '',
-    clarity: '',
-    color: '',
-    cut: '',
   });
 
   const [imageUri, setImageUri] = useState('');
   const [imageBase64, setImageBase64] = useState('');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [showCutModal, setShowCutModal] = useState(false);
-  const [showClarityModal, setShowClarityModal] = useState(false);
-  const [showColorModal, setShowColorModal] = useState(false);
-  const [showWeightModal, setShowWeightModal] = useState(false);
   const [showProductNameModal, setShowProductNameModal] = useState(false);
   const [productNameOptions, setProductNameOptions] = useState<string[]>([]);
 
   const [dynamicFields, setDynamicFields] = useState<Record<string, string>>({});
   const [dynamicErrors, setDynamicErrors] = useState<Record<string, boolean>>({});
   const [showDynamicSelect, setShowDynamicSelect] = useState<Record<string, boolean>>({});
+
+  const [hasDiamond, setHasDiamond] = useState(false);
 
   const isLooseDiamond = formData.category === 'Loose Diamond';
 
@@ -286,35 +257,32 @@ export default function AddProductScreen() {
       setLoading(true);
       setErrors({});
       const newErrors: Record<string, boolean> = {};
-      if (!formData.title && formData.category !== 'Watches') newErrors.title = true;
-      if (!formData.price) newErrors.price = true;
+      
+      // Basic validation
       if (!formData.category) newErrors.category = true;
       if (!imageUri) newErrors.image = true;
+      if (!formData.price) newErrors.price = true;
 
-      // ולידציה ל-Watches
+      // Watch-specific validation
       if (formData.category === 'Watches') {
         if (!dynamicFields.brand) newErrors.brand = true;
         if (!dynamicFields.model) newErrors.model = true;
-        if (!dynamicFields.diameter || isNaN(Number(dynamicFields.diameter))) newErrors.diameter = true;
+        const diameter = Number(dynamicFields.diameter);
+        if (!dynamicFields.diameter || isNaN(diameter) || diameter <= 0 || !(/^\d+(\.\d)?$/).test(dynamicFields.diameter)) {
+          newErrors.diameter = true;
+        }
+      } else {
+        // Non-watch validation
+        if (!formData.title) newErrors.title = true;
+        if (!dynamicFields.weight || isNaN(Number(dynamicFields.weight)) || Number(dynamicFields.weight) <= 0) {
+          newErrors.weight = true;
+        }
       }
-      // ולידציה ל-Loose Diamond (קיים)
-      if (formData.category === 'Loose Diamond') {
-        if (!dynamicFields.weight) newErrors.weight = true;
-        if (!dynamicFields.clarity) newErrors.clarity = true;
-        if (!dynamicFields.color) newErrors.color = true;
-        if (!dynamicFields.cut) newErrors.cut = true;
-      }
+
       if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors);
         setLoading(false);
         return;
-      }
-
-      // ננקה ערכי gold אם צריך
-      let fieldsToSend = { ...dynamicFields };
-      if (fieldsToSend.material?.toUpperCase?.() !== 'GOLD') {
-        delete fieldsToSend.goldColor;
-        delete fieldsToSend.goldKarat;
       }
 
       // Upload image
@@ -337,7 +305,7 @@ export default function AddProductScreen() {
       const { data: product, error: productError } = await supabase
         .from('products')
         .insert({
-          title: formData.title,
+          title: formData.category === 'Watches' ? dynamicFields.brand : formData.title,
           description: formData.description,
           price: parseFloat(formData.price),
           image_url: publicUrl,
@@ -354,7 +322,7 @@ export default function AddProductScreen() {
       let specsError = null;
 
       switch (formData.category) {
-        case 'Watch':
+        case 'Watches':
           const { error: watchError } = await supabase
             .from('watch_specs')
             .insert({
@@ -366,22 +334,27 @@ export default function AddProductScreen() {
           specsError = watchError;
           break;
 
-        case 'Loose Diamond':
-          const { error: diamondError } = await supabase
-            .from('diamond_specs')
+        case 'Ring':
+        case 'Necklace':
+        case 'Bracelet':
+        case 'Earrings':
+        case 'Special pieces':
+          const { error: jewelryError } = await supabase
+            .from('jewelry_specs')
             .insert({
               product_id: product.id,
-              shape: dynamicFields.shape,
               weight: dynamicFields.weight ? parseFloat(dynamicFields.weight) : null,
-              color: dynamicFields.color,
-              clarity: dynamicFields.clarity,
-              cut_grade: dynamicFields.cut_grade,
-              certificate: dynamicFields.certificate,
-              origin: dynamicFields.origin,
-              lab_grown_type: dynamicFields.lab_grown_type,
-              treatment_type: dynamicFields.treatment_type
+              material: dynamicFields.material,
+              gold_karat: dynamicFields.material?.toUpperCase() === 'GOLD' ? dynamicFields.goldKarat : null,
+              has_diamond: hasDiamond,
+              diamond_weight: hasDiamond && dynamicFields.diamond_weight ? parseFloat(dynamicFields.diamond_weight) : null,
+              diamond_color: hasDiamond ? dynamicFields.diamond_color : null,
+              clarity: hasDiamond ? dynamicFields.clarity : null,
+              cut_grade: hasDiamond ? dynamicFields.cut_grade : null,
+              certification: hasDiamond ? dynamicFields.certification : null,
+              side_stones: hasDiamond ? dynamicFields.side_stones === 'With Side Stones' : null
             });
-          specsError = diamondError;
+          specsError = jewelryError;
           break;
 
         case 'Gems':
@@ -389,55 +362,19 @@ export default function AddProductScreen() {
             .from('gem_specs')
             .insert({
               product_id: product.id,
-              type: dynamicFields.type,
-              origin: dynamicFields.origin,
+              weight: dynamicFields.weight ? parseFloat(dynamicFields.weight) : null,
               certification: dynamicFields.certification
             });
           specsError = gemError;
-          break;
-
-        case 'Ring':
-        case 'Necklace':
-        case 'Bracelet':
-        case 'Earrings':
-          const { error: jewelryError } = await supabase
-            .from('jewelry_specs')
-            .insert({
-              product_id: product.id,
-              diamond_size_from: dynamicFields.diamond_size_from ? parseFloat(dynamicFields.diamond_size_from) : null,
-              diamond_size_to: dynamicFields.diamond_size_to ? parseFloat(dynamicFields.diamond_size_to) : null,
-              color: dynamicFields.color,
-              clarity: dynamicFields.clarity,
-              gold_color: dynamicFields.gold_color,
-              material: dynamicFields.material,
-              gold_karat: dynamicFields.gold_karat,
-              side_stones: dynamicFields.side_stones === 'true',
-              cut_grade: dynamicFields.cut_grade,
-              certification: dynamicFields.certification
-            });
-          specsError = jewelryError;
           break;
       }
 
       if (specsError) throw specsError;
 
-      // עדכון עם שמירה ל-watch_specs אם מדובר בשעון
-      if (formData.category === 'Watches') {
-        const { error: watchSpecsError } = await supabase
-          .from('watch_specs')
-          .insert({
-            product_id: product.id,
-            brand: dynamicFields.brand,
-            model: dynamicFields.model,
-            diameter: dynamicFields.diameter ? parseFloat(dynamicFields.diameter) : null
-          });
-        if (watchSpecsError) throw watchSpecsError;
-      }
-
       router.push('/profile');
     } catch (error) {
       console.error('Error creating product:', error);
-      Alert.alert('שגיאה', 'אירעה שגיאה בעת יצירת המוצר');
+      Alert.alert('Error', 'An error occurred while creating the product');
     } finally {
       setLoading(false);
     }
@@ -522,175 +459,258 @@ export default function AddProductScreen() {
     const fields = productFieldsMap[formData.category] || [];
     const materialValue = dynamicFields['material']?.toUpperCase?.() || dynamicFields['material'];
     let renderedFields: JSX.Element[] = [];
-    fields.forEach(field => {
-      if (formData.category === 'Watches' && field.key === 'brand') return;
-      if (field.key === 'material') {
-        // הצגת שדה Material
-        renderedFields.push(
-          <View key={field.key} style={styles.inputGroup}>
-            <Text style={styles.label}>{field.label}</Text>
-            <TouchableOpacity
-              style={styles.selectButton}
-              onPress={() => setShowDynamicSelect(s => ({ ...s, [field.key]: true }))}
-            >
-              <Text style={styles.selectButtonText}>
-                {(dynamicFields as Record<string, string>)[field.key] || `בחר ${field.label}`}
-              </Text>
-              <ChevronDown size={20} color="#666" />
-            </TouchableOpacity>
-            {(dynamicErrors as Record<string, boolean>)[field.key] && <Text style={styles.errorText}>שדה חובה</Text>}
-            <SelectionModal
-              visible={!!(showDynamicSelect as Record<string, boolean>)[field.key]}
-              onClose={() => setShowDynamicSelect(s => ({ ...s, [field.key]: false }))}
-              title={field.label}
-              options={field.options}
-              onSelect={value => {
-                setDynamicFields((f: Record<string, string>) => {
-                  if (value.toUpperCase() !== 'GOLD') {
-                    const { goldColor, goldKarat, ...rest } = f;
-                    return { ...rest, [field.key]: value };
-                  }
-                  return { ...f, [field.key]: value };
-                });
-                setShowDynamicSelect(s => ({ ...s, [field.key]: false }));
-              }}
-              selected={(dynamicFields as Record<string, string>)[field.key] || ""}
-            />
-          </View>
-        );
-        // אם נבחר Gold - הצג מיד אחרי Material את Gold Color
-        if (materialValue === 'GOLD') {
-          const goldColorField = fields.find(f => f.key === 'goldColor');
-          if (goldColorField) {
-            renderedFields.push(
-              <View key={goldColorField.key} style={styles.inputGroup}>
-                <Text style={styles.label}>{goldColorField.label}</Text>
-                <TouchableOpacity
-                  style={styles.selectButton}
-                  onPress={() => setShowDynamicSelect(s => ({ ...s, [goldColorField.key]: true }))}
-                >
-                  <Text style={styles.selectButtonText}>
-                    {(dynamicFields as Record<string, string>)[goldColorField.key] || `בחר ${goldColorField.label}`}
-                  </Text>
-                  <ChevronDown size={20} color="#666" />
-                </TouchableOpacity>
-                {(dynamicErrors as Record<string, boolean>)[goldColorField.key] && <Text style={styles.errorText}>שדה חובה</Text>}
-                <SelectionModal
-                  visible={!!(showDynamicSelect as Record<string, boolean>)[goldColorField.key]}
-                  onClose={() => setShowDynamicSelect(s => ({ ...s, [goldColorField.key]: false }))}
-                  title={goldColorField.label}
-                  options={goldColorField.options}
-                  onSelect={value => {
-                    setDynamicFields((f: Record<string, string>) => ({ ...f, [goldColorField.key]: value }));
-                    setShowDynamicSelect(s => ({ ...s, [goldColorField.key]: false }));
-                  }}
-                  selected={(dynamicFields as Record<string, string>)[goldColorField.key] || ""}
-                />
-              </View>
-            );
-          }
-        }
-        // אם נבחר Gold - הצג Gold Karat אחרי Gold Color
-        if (materialValue === 'GOLD') {
-          const goldKaratField = fields.find(f => f.key === 'goldKarat');
-          if (goldKaratField) {
-            renderedFields.push(
-              <View key={goldKaratField.key} style={styles.inputGroup}>
-                <Text style={styles.label}>{goldKaratField.label}</Text>
-                <TouchableOpacity
-                  style={styles.selectButton}
-                  onPress={() => setShowDynamicSelect(s => ({ ...s, [goldKaratField.key]: true }))}
-                >
-                  <Text style={styles.selectButtonText}>
-                    {(dynamicFields as Record<string, string>)[goldKaratField.key] || `בחר ${goldKaratField.label}`}
-                  </Text>
-                  <ChevronDown size={20} color="#666" />
-                </TouchableOpacity>
-                {(dynamicErrors as Record<string, boolean>)[goldKaratField.key] && <Text style={styles.errorText}>שדה חובה</Text>}
-                <SelectionModal
-                  visible={!!(showDynamicSelect as Record<string, boolean>)[goldKaratField.key]}
-                  onClose={() => setShowDynamicSelect(s => ({ ...s, [goldKaratField.key]: false }))}
-                  title={goldKaratField.label}
-                  options={goldKaratField.options}
-                  onSelect={value => {
-                    setDynamicFields((f: Record<string, string>) => ({ ...f, [goldKaratField.key]: value }));
-                    setShowDynamicSelect(s => ({ ...s, [goldKaratField.key]: false }));
-                  }}
-                  selected={(dynamicFields as Record<string, string>)[goldKaratField.key] || ""}
-                />
-              </View>
-            );
-          }
-        }
-        return;
-      }
-      // תנאי לשדה תלוי כללי
-      if (field.condition) {
-        const [depKey, depVal] = field.condition.split(" == ");
-        if ((dynamicFields as Record<string, string>)[depKey.trim()] !== depVal.replace(/'/g, "").trim()) return;
-      }
-      // דילוג על goldColor/goldKarat כי כבר טופלו
-      if ((field.key === 'goldColor' || field.key === 'goldKarat')) return;
-      if (field.type === "select") {
-        renderedFields.push(
-          <View key={field.key} style={styles.inputGroup}>
-            <Text style={styles.label}>{field.label}</Text>
-            <TouchableOpacity
-              style={styles.selectButton}
-              onPress={() => setShowDynamicSelect(s => ({ ...s, [field.key]: true }))}
-            >
-              <Text style={styles.selectButtonText}>
-                {(dynamicFields as Record<string, string>)[field.key] || `בחר ${field.label}`}
-              </Text>
-              <ChevronDown size={20} color="#666" />
-            </TouchableOpacity>
-            {(dynamicErrors as Record<string, boolean>)[field.key] && <Text style={styles.errorText}>שדה חובה</Text>}
-            <SelectionModal
-              visible={!!(showDynamicSelect as Record<string, boolean>)[field.key]}
-              onClose={() => setShowDynamicSelect(s => ({ ...s, [field.key]: false }))}
-              title={field.label}
-              options={field.options}
-              onSelect={value => {
-                setDynamicFields((f: Record<string, string>) => ({ ...f, [field.key]: value }));
-                setShowDynamicSelect(s => ({ ...s, [field.key]: false }));
-              }}
-              selected={(dynamicFields as Record<string, string>)[field.key] || ""}
-            />
-          </View>
-        );
-        return;
-      }
-      if (field.type === "number") {
-        renderedFields.push(
-          <View key={field.key} style={styles.inputGroup}>
-            <Text style={styles.label}>{field.label}</Text>
+
+    if (formData.category === 'Watches') {
+      // Model field for watches
+      renderedFields.push(
+        <View key="model" style={styles.inputGroup}>
+          <Text style={styles.label}>Model</Text>
+          <TextInput
+            style={styles.input}
+            value={dynamicFields.model || ''}
+            onChangeText={text => setDynamicFields(f => ({ ...f, model: text }))}
+            placeholder="Enter watch model"
+          />
+          {dynamicErrors.model && <Text style={styles.errorText}>Required field</Text>}
+        </View>
+      );
+
+      // Diameter field for watches
+      renderedFields.push(
+        <View key="diameter" style={styles.inputGroup}>
+          <Text style={styles.label}>Diameter (mm)</Text>
+          <TextInput
+            style={styles.input}
+            value={dynamicFields.diameter || ''}
+            onChangeText={text => {
+              // Allow only positive numbers with up to one decimal place
+              const sanitized = text.replace(/[^0-9.]/g, '');
+              const parts = sanitized.split('.');
+              if (parts.length > 2) return; // Don't allow multiple decimal points
+              if (parts[1]?.length > 1) return; // Don't allow more than one decimal place
+              setDynamicFields(f => ({ ...f, diameter: sanitized }));
+            }}
+            keyboardType="numeric"
+            placeholder="Enter watch diameter"
+          />
+          {dynamicErrors.diameter && <Text style={styles.errorText}>Required field / Invalid number</Text>}
+        </View>
+      );
+
+      // Return early for watches - don't show other fields
+      return renderedFields;
+    }
+
+    // Weight field is shown for non-watches
+    renderedFields.push(
+      <View key="weight" style={styles.inputGroup}>
+        <Text style={styles.label}>Weight (Grams)</Text>
+        <TextInput
+          style={styles.input}
+          value={dynamicFields.weight || ''}
+          onChangeText={text => setDynamicFields(f => ({ ...f, weight: text }))}
+          keyboardType="numeric"
+          placeholder="Enter weight in grams"
+        />
+        {dynamicErrors.weight && <Text style={styles.errorText}>Required field / Invalid number</Text>}
+      </View>
+    );
+
+    // Material field for non-watches
+    const materialField = fields.find(f => f.key === 'material');
+    if (materialField) {
+      renderedFields.push(
+        <View key={materialField.key} style={styles.inputGroup}>
+          <Text style={styles.label}>{materialField.label}</Text>
+          <TouchableOpacity
+            style={styles.selectButton}
+            onPress={() => setShowDynamicSelect(s => ({ ...s, [materialField.key]: true }))}
+          >
+            <Text style={styles.selectButtonText}>
+              {dynamicFields[materialField.key] || `Select ${materialField.label}`}
+            </Text>
+            <ChevronDown size={20} color="#666" />
+          </TouchableOpacity>
+          {dynamicErrors[materialField.key] && <Text style={styles.errorText}>Required field</Text>}
+          <SelectionModal
+            visible={!!showDynamicSelect[materialField.key]}
+            onClose={() => setShowDynamicSelect(s => ({ ...s, [materialField.key]: false }))}
+            title={`Select ${materialField.label}`}
+            options={materialField.options}
+            onSelect={value => {
+              setDynamicFields(f => {
+                if (value.toUpperCase() !== 'GOLD') {
+                  const { goldKarat, ...rest } = f;
+                  return { ...rest, [materialField.key]: value };
+                }
+                return { ...f, [materialField.key]: value };
+              });
+              setShowDynamicSelect(s => ({ ...s, [materialField.key]: false }));
+            }}
+            selected={dynamicFields[materialField.key] || ""}
+          />
+        </View>
+      );
+    }
+
+    // Gold Karat only if Gold is selected
+    if (materialValue === 'GOLD') {
+      renderedFields.push(
+        <View key="goldKarat" style={styles.inputGroup}>
+          <Text style={styles.label}>Gold Karat</Text>
+          <TouchableOpacity
+            style={styles.selectButton}
+            onPress={() => setShowDynamicSelect(s => ({ ...s, goldKarat: true }))}
+          >
+            <Text style={styles.selectButtonText}>
+              {dynamicFields.goldKarat || 'Select Gold Karat'}
+            </Text>
+            <ChevronDown size={20} color="#666" />
+          </TouchableOpacity>
+          {dynamicErrors.goldKarat && <Text style={styles.errorText}>Required field</Text>}
+          <SelectionModal
+            visible={!!showDynamicSelect.goldKarat}
+            onClose={() => setShowDynamicSelect(s => ({ ...s, goldKarat: false }))}
+            title="Select Gold Karat"
+            options={["9K", "10K", "14K", "18K", "21K", "22K", "24K"]}
+            onSelect={value => setDynamicFields(f => ({ ...f, goldKarat: value }))}
+            selected={dynamicFields.goldKarat || ""}
+          />
+        </View>
+      );
+    }
+
+    // Diamond checkbox for non-watches
+    renderedFields.push(
+      <View key="hasDiamond" style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+        <TouchableOpacity
+          onPress={() => setHasDiamond(v => !v)}
+          style={{ marginRight: 8, width: 24, height: 24, borderWidth: 1, borderColor: '#666', borderRadius: 4, backgroundColor: hasDiamond ? '#6C5CE7' : '#fff', justifyContent: 'center', alignItems: 'center' }}
+        >
+          {hasDiamond && <View style={{ width: 16, height: 16, backgroundColor: '#fff', borderRadius: 2 }} />}
+        </TouchableOpacity>
+        <Text style={styles.label}>Does this product include a diamond?</Text>
+      </View>
+    );
+
+    // Diamond fields if hasDiamond is true
+    if (hasDiamond) {
+      renderedFields.push(
+        <View key="diamondFields">
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Diamond Weight (Carat)</Text>
             <TextInput
               style={styles.input}
-              value={(dynamicFields as Record<string, string>)[field.key]}
-              onChangeText={text => setDynamicFields(f => ({ ...f, [field.key]: text }))}
+              value={dynamicFields.diamond_weight || ''}
+              onChangeText={text => setDynamicFields(f => ({ ...f, diamond_weight: text }))}
               keyboardType="numeric"
+              placeholder="Enter diamond weight in carat"
             />
-            {(dynamicErrors as Record<string, boolean>)[field.key] && <Text style={styles.errorText}>שדה חובה/מספר לא תקין</Text>}
           </View>
-        );
-        return;
-      }
-      if (field.type === "text") {
-        renderedFields.push(
-          <View key={field.key} style={styles.inputGroup}>
-            <Text style={styles.label}>{field.label}</Text>
-            <TextInput
-              style={styles.input}
-              value={(dynamicFields as Record<string, string>)[field.key]}
-              onChangeText={text => setDynamicFields(f => ({ ...f, [field.key]: text }))}
-              placeholder={`Enter ${field.label}`}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Diamond Color</Text>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => setShowDynamicSelect(s => ({ ...s, diamond_color: true }))}
+            >
+              <Text style={styles.selectButtonText}>
+                {dynamicFields.diamond_color || 'Select Diamond Color'}
+              </Text>
+              <ChevronDown size={20} color="#666" />
+            </TouchableOpacity>
+            <SelectionModal
+              visible={!!showDynamicSelect.diamond_color}
+              onClose={() => setShowDynamicSelect(s => ({ ...s, diamond_color: false }))}
+              title="Select Diamond Color"
+              options={COLOR_GRADES}
+              onSelect={value => setDynamicFields(f => ({ ...f, diamond_color: value }))}
+              selected={dynamicFields.diamond_color || ""}
             />
-            {(dynamicErrors as Record<string, boolean>)[field.key] && <Text style={styles.errorText}>שדה חובה</Text>}
           </View>
-        );
-        return;
-      }
-    });
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Clarity</Text>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => setShowDynamicSelect(s => ({ ...s, clarity: true }))}
+            >
+              <Text style={styles.selectButtonText}>
+                {dynamicFields.clarity || 'Select Clarity'}
+              </Text>
+              <ChevronDown size={20} color="#666" />
+            </TouchableOpacity>
+            <SelectionModal
+              visible={!!showDynamicSelect.clarity}
+              onClose={() => setShowDynamicSelect(s => ({ ...s, clarity: false }))}
+              title="Select Clarity"
+              options={["I3", "I2", "I1", "SI2", "SI1", "VS2", "VS1", "VVS2", "VVS1", "INTERNALLY"]}
+              onSelect={value => setDynamicFields(f => ({ ...f, clarity: value }))}
+              selected={dynamicFields.clarity || ""}
+            />
+          </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Cut Grade</Text>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => setShowDynamicSelect(s => ({ ...s, cut_grade: true }))}
+            >
+              <Text style={styles.selectButtonText}>
+                {dynamicFields.cut_grade || 'Select Cut Grade'}
+              </Text>
+              <ChevronDown size={20} color="#666" />
+            </TouchableOpacity>
+            <SelectionModal
+              visible={!!showDynamicSelect.cut_grade}
+              onClose={() => setShowDynamicSelect(s => ({ ...s, cut_grade: false }))}
+              title="Select Cut Grade"
+              options={["POOR", "FAIR", "GOOD", "VERY GOOD", "EXCELLENT"]}
+              onSelect={value => setDynamicFields(f => ({ ...f, cut_grade: value }))}
+              selected={dynamicFields.cut_grade || ""}
+            />
+          </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Certification</Text>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => setShowDynamicSelect(s => ({ ...s, certification: true }))}
+            >
+              <Text style={styles.selectButtonText}>
+                {dynamicFields.certification || 'Select Certification'}
+              </Text>
+              <ChevronDown size={20} color="#666" />
+            </TouchableOpacity>
+            <SelectionModal
+              visible={!!showDynamicSelect.certification}
+              onClose={() => setShowDynamicSelect(s => ({ ...s, certification: false }))}
+              title="Select Certification"
+              options={["GIA", "IGI", "HRD", "EGL", "SGL", "CGL", "IGL", "AIG"]}
+              onSelect={value => setDynamicFields(f => ({ ...f, certification: value }))}
+              selected={dynamicFields.certification || ""}
+            />
+          </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Side Stones</Text>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => setShowDynamicSelect(s => ({ ...s, side_stones: true }))}
+            >
+              <Text style={styles.selectButtonText}>
+                {dynamicFields.side_stones || 'Select Side Stones'}
+              </Text>
+              <ChevronDown size={20} color="#666" />
+            </TouchableOpacity>
+            <SelectionModal
+              visible={!!showDynamicSelect.side_stones}
+              onClose={() => setShowDynamicSelect(s => ({ ...s, side_stones: false }))}
+              title="Select Side Stones"
+              options={["With Side Stones", "Without Side Stones"]}
+              onSelect={value => setDynamicFields(f => ({ ...f, side_stones: value }))}
+              selected={dynamicFields.side_stones || ""}
+            />
+          </View>
+        </View>
+      );
+    }
+
     return renderedFields;
   };
 
@@ -734,34 +754,48 @@ export default function AddProductScreen() {
             </Text>
             <ChevronDown size={20} color="#666" />
           </TouchableOpacity>
+          {errors.category && <Text style={styles.errorText}>Required field</Text>}
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>
-            {formData.category === 'Watches' ? 'Brand' : 'Product Name'}
-          </Text>
-          {productNameOptions.length > 0 ? (
+        {formData.category === 'Watches' ? (
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Brand</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setShowProductNameModal(true)}
             >
               <Text style={styles.selectButtonText}>
-                {formData.category === 'Watches'
-                  ? (dynamicFields.brand || 'Select brand')
-                  : (formData.title || 'Select product name')}
+                {dynamicFields.brand || 'Select brand'}
               </Text>
               <ChevronDown size={20} color="#666" />
             </TouchableOpacity>
-          ) : (
-            <TextInput
-              style={styles.input}
-              value={formData.title}
-              onChangeText={(text) => setFormData({ ...formData, title: text })}
-              placeholder={isLooseDiamond ? "Example: 1 Carat Round Diamond" : "Example: Solitaire Diamond Ring"}
-              textAlign="left"
-            />
-          )}
-        </View>
+            {errors.brand && <Text style={styles.errorText}>Required field</Text>}
+          </View>
+        ) : (
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Product Name</Text>
+            {productNameOptions.length > 0 ? (
+              <TouchableOpacity
+                style={styles.selectButton}
+                onPress={() => setShowProductNameModal(true)}
+              >
+                <Text style={styles.selectButtonText}>
+                  {formData.title || 'Select product name'}
+                </Text>
+                <ChevronDown size={20} color="#666" />
+              </TouchableOpacity>
+            ) : (
+              <TextInput
+                style={styles.input}
+                value={formData.title}
+                onChangeText={(text) => setFormData({ ...formData, title: text })}
+                placeholder="Enter product name"
+                textAlign="left"
+              />
+            )}
+            {errors.title && <Text style={styles.errorText}>Required field</Text>}
+          </View>
+        )}
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Price</Text>
@@ -770,7 +804,6 @@ export default function AddProductScreen() {
               style={[styles.input, { flex: 1, marginRight: 8 }]}
               value={formData.price}
               onChangeText={text => {
-                // Allow only positive numbers
                 const sanitized = text.replace(/[^0-9.]/g, '');
                 setFormData({ ...formData, price: sanitized });
               }}
@@ -788,7 +821,7 @@ export default function AddProductScreen() {
             style={[styles.input, styles.textArea]}
             value={formData.description}
             onChangeText={(text) => setFormData({ ...formData, description: text })}
-            placeholder={isLooseDiamond ? "Describe the diamond..." : "Describe the product..."}
+            placeholder="Describe the product..."
             multiline
             numberOfLines={4}
             textAlign="left"
@@ -810,43 +843,6 @@ export default function AddProductScreen() {
           </Text>
         </TouchableOpacity>
       </View>
-
-      <SelectionModal
-        visible={showWeightModal}
-        onClose={() => setShowWeightModal(false)}
-        title="Select Weight"
-        options={WEIGHT_OPTIONS}
-        onSelect={(value) => setFormData({ ...formData, weight: value })}
-        selected={formData.weight}
-        isWeight={true}
-      />
-
-      <SelectionModal
-        visible={showCutModal}
-        onClose={() => setShowCutModal(false)}
-        title="Select Cut Type"
-        options={DIAMOND_CUTS}
-        onSelect={(value) => setFormData({ ...formData, cut: value })}
-        selected={formData.cut}
-      />
-
-      <SelectionModal
-        visible={showClarityModal}
-        onClose={() => setShowClarityModal(false)}
-        title="Select Clarity Grade"
-        options={CLARITY_GRADES}
-        onSelect={(value) => setFormData({ ...formData, clarity: value })}
-        selected={formData.clarity}
-      />
-
-      <SelectionModal
-        visible={showColorModal}
-        onClose={() => setShowColorModal(false)}
-        title="Select Color Grade"
-        options={COLOR_GRADES}
-        onSelect={(value) => setFormData({ ...formData, color: value })}
-        selected={formData.color}
-      />
 
       <SelectionModal
         visible={showCategoryModal}
