@@ -64,7 +64,6 @@ type RingSpecs = {
   cut_grade: string | null;
   certification: string | null;
 };
-
 type NecklaceSpecs = {
   product_id: string;
   subcategory: string;
@@ -139,7 +138,7 @@ type Product = {
   title: string;
   description: string;
   price: number;
-  image_url: string;
+  image_url?: string;
   user_id: string;
   category: string;
   status: string;
@@ -148,6 +147,9 @@ type Product = {
     full_name: string;
     avatar_url: string;
   };
+  product_images?: {
+    image_url: string;
+  }[];
   ring_specs?: RingSpecs;
   necklace_specs?: NecklaceSpecs;
   earring_specs?: EarringSpecs;
@@ -287,7 +289,6 @@ export default function HomeScreen() {
   const [activeFilters, setActiveFilters] = useState<FilterParams | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [user, setUser] = useState<any>(null);
-  
   const [productForm, setProductForm] = useState<ProductFormState>({
     title: '',
     description: '',
@@ -315,27 +316,41 @@ export default function HomeScreen() {
 
   const fetchProducts = async () => {
     try {
-      const { data, error } = await supabase
+      console.log('Fetching products...');
+      const { data: products, error } = await supabase
         .from('products')
         .select(`
           *,
+          product_images (
+            id,
+            image_url,
+            order
+          ),
+          profiles (
+            full_name,
+            avatar_url
+          ),
           ring_specs (*),
           necklace_specs (*),
           earring_specs (*),
           bracelet_specs (*),
           special_piece_specs (*),
-          profiles (
-            full_name,
-            avatar_url
-          )
+          watch_specs (*),
+          diamond_specs (*),
+          gem_specs (*)
         `)
         .eq('status', 'available')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
+
+      console.log('Products fetched:', products?.length);
+      console.log('First product images:', products?.[0]?.product_images);
 
       // Group products by category
-      const grouped = (data || []).reduce<ProductsByCategory>((acc, product) => {
+      const grouped = (products || []).reduce<ProductsByCategory>((acc, product) => {
         if (!acc[product.category]) {
           acc[product.category] = [];
         }
@@ -349,6 +364,8 @@ export default function HomeScreen() {
       console.error('Error fetching products:', error);
       Alert.alert('שגיאה', 'אירעה שגיאה בטעינת המוצרים');
       setLoading(false);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -618,227 +635,50 @@ export default function HomeScreen() {
   };
 
   const renderProducts = () => {
-    if (loading) {
-      return (
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading...</Text>
-          </View>
-      );
-    }
-
     const filteredProducts = getFilteredProducts();
 
-    // If no filter is selected, show all products in a single list by date
-    const allProducts = Object.values(filteredProducts).flat();
-    if (!selectedCategory && !selectedDiamondSize && !selectedDiamondColor && !selectedDiamondClarity) {
-      if (allProducts.length === 0) {
-        return (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No products found</Text>
-          </View>
-        );
-      }
-      // Sort by created_at descending
-      const sortedProducts = allProducts.sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-      return (
-        <View style={styles.itemsGrid}>
-          {sortedProducts.map((product) => (
-                  <TouchableOpacity
-              key={product.id}
-              style={styles.gridItem}
-              onPress={() => router.push({
-                pathname: "/products/[id]",
-                params: { id: product.id }
-              })}
-                  >
-              <View style={styles.userInfoContainer}>
-                <Image 
-                  source={{ 
-                    uri: product.profiles.avatar_url 
-                      ? product.profiles.avatar_url + `?t=${new Date().getTime()}`
-                      : 'https://www.gravatar.com/avatar/default?d=mp' 
-                  }} 
-                  style={styles.userAvatarSmall} 
-                />
-                <Text style={styles.userNameSmall} numberOfLines={1}>
-                  {product.profiles.full_name}
-                    </Text>
-                <Text style={styles.gridItemTime}>
-                  {formatTimeAgo(product.created_at)}
-                </Text>
-              </View>
-              <Image
-                source={{ uri: product.image_url }}
-                style={styles.gridItemImage}
-              />
-              <Text style={styles.gridItemTitle} numberOfLines={2}>
-                {product.title}
-                    </Text>
-              <View style={styles.productDetailsRow}>
-                {product.category === 'Ring' && product.ring_specs && (
-                  <>
-                    {product.ring_specs.diamond_size_from && (
-                  <Text style={styles.gridItemWeight}>
-                        {product.ring_specs.diamond_size_from} ct
-                      </Text>
-                    )}
-                    <Text style={styles.gridItemSpecs}>
-                      {product.ring_specs.material} {product.ring_specs.gold_karat}
-                    </Text>
-                  </>
-                )}
-                {product.category === 'Necklace' && product.necklace_specs && (
-                  <>
-                    <Text style={styles.gridItemSpecs}>
-                      {product.necklace_specs.material} {product.necklace_specs.gold_karat}
-                    </Text>
-                    <Text style={styles.gridItemLength}>
-                      {product.necklace_specs.length}
-                    </Text>
-                  </>
-                )}
-                {product.category === 'Earrings' && product.earring_specs && (
-                  <>
-                    <Text style={styles.gridItemSpecs}>
-                      {product.earring_specs.material} {product.earring_specs.gold_karat}
-                    </Text>
-                    {product.earring_specs.color && (
-                      <Text style={styles.gridItemColor}>
-                        {product.earring_specs.color}
-                      </Text>
-                    )}
-                  </>
-                )}
-                {product.category === 'Bracelet' && product.bracelet_specs && (
-                  <>
-                    <Text style={styles.gridItemSpecs}>
-                      {product.bracelet_specs.material} {product.bracelet_specs.gold_karat}
-                    </Text>
-                    <Text style={styles.gridItemLength}>
-                      {product.bracelet_specs.length}
-                    </Text>
-                  </>
-                )}
-                {product.category === 'Special Pieces' && product.special_piece_specs && (
-                  <Text style={styles.gridItemSpecs}>
-                    {product.special_piece_specs.material} {product.special_piece_specs.gold_karat}
-                  </Text>
-                )}
-                <Text style={styles.gridItemPrice}>
-                  ${product.price.toLocaleString()}
-                </Text>
-              </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-      );
-    }
+    return (
+      <View style={styles.productsGrid}>
+        {Object.values(filteredProducts).flat().map((product: Product) => {
+          // Get the first image from product_images, fallback to legacy image_url, or use placeholder
+          const imageUrl = product.product_images?.[0]?.image_url || 
+                          product.image_url || 
+                          'https://via.placeholder.com/150';
 
-    // Otherwise, show grouped by category as before
-    if (Object.keys(filteredProducts).length === 0) {
-      return (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No products match your filters</Text>
-          </View>
-      );
-    }
-    return Object.entries(filteredProducts).map(([category, products]) => (
-      <View key={category} style={styles.categorySection}>
-        <Text style={styles.categoryTitle}>{category}</Text>
-        <View style={styles.itemsGrid}>
-          {products.map((product) => (
-    <TouchableOpacity 
+          return (
+            <TouchableOpacity
               key={product.id}
-              style={styles.gridItem}
-              onPress={() => router.push({
-                pathname: "/products/[id]",
-                params: { id: product.id }
-              })}
+              style={styles.productItem}
+              onPress={() => router.push(`/products/${product.id}`)}
             >
-              <View style={styles.userInfoContainer}>
-            <Image 
-              source={{ 
-                    uri: product.profiles.avatar_url 
-                      ? product.profiles.avatar_url + `?t=${new Date().getTime()}`
-                      : 'https://www.gravatar.com/avatar/default?d=mp' 
-              }} 
-                  style={styles.userAvatarSmall} 
-            />
-                <Text style={styles.userNameSmall} numberOfLines={1}>
-                  {product.profiles.full_name}
+              <Image
+                source={{ uri: imageUrl }}
+                style={styles.productImage}
+                resizeMode="cover"
+              />
+              <View style={styles.productInfo}>
+                <Text style={styles.productTitle} numberOfLines={2}>
+                  {product.title}
                 </Text>
-                <Text style={styles.gridItemTime}>
+                <Text style={styles.productPrice}>₪{product.price.toLocaleString()}</Text>
+                <View style={styles.sellerInfo}>
+                  <Image 
+                    source={{ 
+                      uri: product.profiles?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' 
+                    }} 
+                    style={styles.avatar} 
+                  />
+                  <Text style={styles.sellerName}>{product.profiles?.full_name}</Text>
+                </View>
+                <Text style={styles.timeAgo}>
                   {formatTimeAgo(product.created_at)}
                 </Text>
-        </View>
-              <Image
-                source={{ uri: product.image_url }}
-                style={styles.gridItemImage}
-              />
-              <Text style={styles.gridItemTitle} numberOfLines={2}>
-                {product.title}
-              </Text>
-              <View style={styles.productDetailsRow}>
-                {product.category === 'Ring' && product.ring_specs && (
-                  <>
-                    {product.ring_specs.diamond_size_from && (
-                  <Text style={styles.gridItemWeight}>
-                        {product.ring_specs.diamond_size_from} ct
-                      </Text>
-                    )}
-                    <Text style={styles.gridItemSpecs}>
-                      {product.ring_specs.material} {product.ring_specs.gold_karat}
-                    </Text>
-                  </>
-                )}
-                {product.category === 'Necklace' && product.necklace_specs && (
-                  <>
-                    <Text style={styles.gridItemSpecs}>
-                      {product.necklace_specs.material} {product.necklace_specs.gold_karat}
-                    </Text>
-                    <Text style={styles.gridItemLength}>
-                      {product.necklace_specs.length}
-                    </Text>
-                  </>
-                )}
-                {product.category === 'Earrings' && product.earring_specs && (
-                  <>
-                    <Text style={styles.gridItemSpecs}>
-                      {product.earring_specs.material} {product.earring_specs.gold_karat}
-                    </Text>
-                    {product.earring_specs.color && (
-                      <Text style={styles.gridItemColor}>
-                        {product.earring_specs.color}
-                      </Text>
-                    )}
-                  </>
-                )}
-                {product.category === 'Bracelet' && product.bracelet_specs && (
-                  <>
-                    <Text style={styles.gridItemSpecs}>
-                      {product.bracelet_specs.material} {product.bracelet_specs.gold_karat}
-                    </Text>
-                    <Text style={styles.gridItemLength}>
-                      {product.bracelet_specs.length}
-                    </Text>
-                  </>
-                )}
-                {product.category === 'Special Pieces' && product.special_piece_specs && (
-                  <Text style={styles.gridItemSpecs}>
-                    {product.special_piece_specs.material} {product.special_piece_specs.gold_karat}
-                  </Text>
-                )}
-                <Text style={styles.gridItemPrice}>
-                  ${product.price.toLocaleString()}
-                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
       </View>
-    </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-    ));
+    );
   };
 
   const handleRequestPress = (requestId: string) => {
@@ -1410,23 +1250,18 @@ const styles = StyleSheet.create({
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
-    backgroundColor: '#1a1a1a',
-    padding: 8,
-    borderRadius: 8,
+    marginTop: 8,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-    backgroundColor: '#2a2a2a',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 6,
   },
-  userName: {
-    fontSize: 14,
-    fontFamily: 'Heebo-Medium',
-    color: '#fff',
-    marginBottom: 2,
+  sellerName: {
+    fontSize: 12,
+    color: '#ccc',
+    fontFamily: 'Heebo-Regular',
   },
   timeAgo: {
     fontSize: 12,
@@ -1623,5 +1458,48 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Heebo-Medium',
     textAlign: 'center',
+  },
+  productsGrid: {
+    padding: 16,
+  },
+  productItem: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 16,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    overflow: 'hidden',
+  },
+  productImage: {
+    width: '100%',
+    height: 180,
+    resizeMode: 'cover',
+  },
+  productInfo: {
+    padding: 8,
+    backgroundColor: '#1a1a1a',
+  },
+  productTitle: {
+    fontSize: 15,
+    fontFamily: 'Heebo-Medium',
+    color: '#fff',
+    marginBottom: 6,
+    lineHeight: 20,
+  },
+  productPrice: {
+    fontSize: 16,
+    fontFamily: 'Heebo-Bold',
+    color: '#6C5CE7',
+  },
+  sellerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
   },
 });
