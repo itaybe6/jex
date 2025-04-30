@@ -142,7 +142,11 @@ export default function useProductForm() {
     }
     setErrors(newErrors);
     setDynamicErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    if (Object.keys(newErrors).length > 0) {
+      console.log('Validation failed:', newErrors, {formData, dynamicFields, hasDiamond});
+      return false;
+    }
+    return true;
   };
 
   // Submit
@@ -163,68 +167,135 @@ export default function useProductForm() {
       const { data: { publicUrl } } = supabase.storage
         .from('product-images')
         .getPublicUrl(imagePath);
-      // Create product
-      const productTitle = formData.category === 'Watches' ? dynamicFields.brand : formData.title;
+      // Create product (always first)
+      const productType = formData.category;
+      const productTitle = productType === 'Watches' ? dynamicFields.brand : formData.title;
+      const productInsertObj = {
+        title: productTitle,
+        description: formData.description,
+        price: parseFloat(formData.price),
+        category: productType,
+        image_url: publicUrl,
+        user_id: user?.id
+      };
+      console.log('PRODUCT INSERT:', productInsertObj);
       const { data: product, error: productError } = await supabase
         .from('products')
-        .insert({
-          title: productTitle,
-          description: formData.description,
-          price: parseFloat(formData.price),
-          image_url: publicUrl,
-          user_id: user?.id,
-          category: formData.category,
-          status: 'available'
-        })
+        .insert(productInsertObj)
         .select()
         .single();
-      if (productError) throw productError;
+      if (productError || !product) throw productError || new Error('Product insert failed');
       // Insert category-specific specs
       let specsError = null;
-      switch (formData.category) {
-        case 'Watches':
-          const { error: watchError } = await supabase
-            .from('watch_specs')
-            .insert({
-              product_id: product.id,
-              brand: dynamicFields.brand,
-              model: dynamicFields.model,
-              diameter: dynamicFields.diameter ? parseFloat(dynamicFields.diameter) : null
-            });
-          specsError = watchError;
-          break;
+      switch (productType) {
         case 'Ring':
-        case 'Necklace':
+          ({ error: specsError } = await supabase.from('ring_specs').insert({
+            product_id: product.id,
+            subcategory: formData.title,
+            color: dynamicFields.color,
+            clarity: dynamicFields.clarity,
+            gold_color: dynamicFields.goldColor,
+            material: dynamicFields.material,
+            side_stones: dynamicFields.side_stones === 'With Side Stones',
+            cut_grade: dynamicFields.cut_grade,
+            certification: dynamicFields.certification,
+            weight: dynamicFields.weight ? parseFloat(dynamicFields.weight) : null,
+            has_diamond: hasDiamond,
+            diamond_weight: dynamicFields.diamond_weight ? parseFloat(dynamicFields.diamond_weight) : null,
+            gold_karat: dynamicFields.goldKarat,
+          }));
+          break;
         case 'Bracelet':
+          ({ error: specsError } = await supabase.from('bracelet_specs').insert({
+            product_id: product.id,
+            subcategory: formData.title,
+            material: dynamicFields.material,
+            gold_color: dynamicFields.goldColor,
+            length: dynamicFields.length ? parseFloat(dynamicFields.length) : null,
+            clarity: dynamicFields.clarity,
+            color: dynamicFields.color,
+            weight: dynamicFields.weight ? parseFloat(dynamicFields.weight) : null,
+            has_diamond: hasDiamond,
+            diamond_weight: dynamicFields.diamond_weight ? parseFloat(dynamicFields.diamond_weight) : null,
+            gold_karat: dynamicFields.goldKarat,
+          }));
+          break;
+        case 'Necklace':
+          ({ error: specsError } = await supabase.from('necklace_specs').insert({
+            product_id: product.id,
+            subcategory: formData.title,
+            material: dynamicFields.material,
+            gold_color: dynamicFields.goldColor,
+            length: dynamicFields.length ? parseFloat(dynamicFields.length) : null,
+            weight: dynamicFields.weight ? parseFloat(dynamicFields.weight) : null,
+            has_diamond: hasDiamond,
+            diamond_weight: dynamicFields.diamond_weight ? parseFloat(dynamicFields.diamond_weight) : null,
+            gold_karat: dynamicFields.goldKarat,
+            color: dynamicFields.diamond_color,
+            clarity: dynamicFields.clarity,
+            cut_grade: dynamicFields.cut_grade,
+            certification: dynamicFields.certification
+          }));
+          break;
         case 'Earrings':
+          ({ error: specsError } = await supabase.from('earring_specs').insert({
+            product_id: product.id,
+            subcategory: formData.title,
+            material: dynamicFields.material,
+            gold_color: dynamicFields.goldColor,
+            clarity: dynamicFields.clarity,
+            color: dynamicFields.color,
+            certification: dynamicFields.certification,
+            weight: dynamicFields.weight ? parseFloat(dynamicFields.weight) : null,
+            has_diamond: hasDiamond,
+            diamond_weight: dynamicFields.diamond_weight ? parseFloat(dynamicFields.diamond_weight) : null,
+            gold_karat: dynamicFields.goldKarat,
+          }));
+          break;
         case 'Special pieces':
-          const { error: jewelryError } = await supabase
-            .from('jewelry_specs')
-            .insert({
-              product_id: product.id,
-              weight: dynamicFields.weight ? parseFloat(dynamicFields.weight) : null,
-              material: dynamicFields.material,
-              gold_karat: dynamicFields.material === 'Gold' ? dynamicFields.goldKarat : null,
-              gold_color: dynamicFields.material === 'Gold' ? dynamicFields.goldColor : null,
-              has_diamond: hasDiamond,
-              diamond_weight: hasDiamond && dynamicFields.diamond_weight ? parseFloat(dynamicFields.diamond_weight) : null,
-              diamond_color: hasDiamond ? dynamicFields.diamond_color : null,
-              clarity: hasDiamond ? dynamicFields.clarity : null,
-              cut_grade: hasDiamond ? dynamicFields.cut_grade : null,
-              certification: hasDiamond ? dynamicFields.certification : null,
-              side_stones: hasDiamond ? dynamicFields.side_stones === 'With Side Stones' : null
-            });
-          specsError = jewelryError;
+          ({ error: specsError } = await supabase.from('special_piece_specs').insert({
+            product_id: product.id,
+            subcategory: formData.title,
+            material: dynamicFields.material,
+            gold_color: dynamicFields.goldColor,
+            description: formData.description,
+            weight: dynamicFields.weight ? parseFloat(dynamicFields.weight) : null,
+            has_diamond: hasDiamond,
+            diamond_weight: dynamicFields.diamond_weight ? parseFloat(dynamicFields.diamond_weight) : null,
+            gold_karat: dynamicFields.goldKarat,
+          }));
+          break;
+        case 'Watches':
+        case 'Watch':
+          ({ error: specsError } = await supabase.from('watch_specs').insert({
+            product_id: product.id,
+            brand: dynamicFields.brand,
+            model: dynamicFields.model,
+            diameter: dynamicFields.diameter ? parseFloat(dynamicFields.diameter) : null,
+          }));
           break;
         case 'Gems':
-          const { error: gemError } = await supabase
-            .from('gem_specs')
-            .insert({
-              product_id: product.id,
-              weight: dynamicFields.weight ? parseFloat(dynamicFields.weight) : null,
-              certification: dynamicFields.certification
-            });
-          specsError = gemError;
+          ({ error: specsError } = await supabase.from('gem_specs').insert({
+            product_id: product.id,
+            type: dynamicFields.type,
+            origin: dynamicFields.origin,
+            certification: dynamicFields.certification,
+          }));
+          break;
+        case 'Diamonds':
+        case 'Diamond':
+          ({ error: specsError } = await supabase.from('diamond_specs').insert({
+            product_id: product.id,
+            shape: dynamicFields.shape,
+            weight: dynamicFields.weight ? parseFloat(dynamicFields.weight) : null,
+            color: dynamicFields.color,
+            clarity: dynamicFields.clarity,
+            cut_grade: dynamicFields.cut_grade,
+            certificate: dynamicFields.certificate,
+            origin: dynamicFields.origin,
+            lab_grown_type: dynamicFields.lab_grown_type,
+            treatment_type: dynamicFields.treatment_type,
+          }));
           break;
       }
       if (specsError) throw specsError;
