@@ -33,6 +33,10 @@ export default function CategoryProductsScreen() {
       .from('products')
       .select(`
         *,
+        product_images (
+          id,
+          image_url
+        ),
         profiles!products_user_id_fkey (
           id,
           full_name,
@@ -72,23 +76,27 @@ export default function CategoryProductsScreen() {
     }
   };
 
-  const renderItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.85}
-      onPress={() => router.push({
-        pathname: '/profile/product/' + item.id,
-        params: { userId }
-      })}
-    >
-      <Image source={{ uri: item.image_url || 'https://via.placeholder.com/60' }} style={styles.productImage} />
-      <View style={{ flex: 1, marginLeft: 14, justifyContent: 'center' }}>
-        <Text style={styles.productTitle} numberOfLines={1}>{item.title}</Text>
-        <Text style={styles.price}>${item.price}</Text>
-        <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString()}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const renderItem = ({ item }: { item: any }) => {
+    const imageUrl = item.product_images?.[0]?.image_url || 'https://via.placeholder.com/60';
+    
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.85}
+        onPress={() => router.push({
+          pathname: '/profile/product/' + item.id,
+          params: { userId }
+        })}
+      >
+        <Image source={{ uri: imageUrl }} style={styles.productImage} />
+        <View style={{ flex: 1, marginLeft: 14, justifyContent: 'center' }}>
+          <Text style={styles.productTitle} numberOfLines={1}>{item.title}</Text>
+          <Text style={styles.price}>${item.price}</Text>
+          <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString()}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>

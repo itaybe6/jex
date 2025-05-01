@@ -40,8 +40,11 @@ type Product = {
   id: string;
   title: string;
   price: number;
-  image_url: string;
   category: string;
+  product_images?: {
+    id: string;
+    image_url: string;
+  }[];
 };
 
 type ProductsByCategory = {
@@ -126,7 +129,13 @@ export default function ProfileScreen() {
 
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select(`
+          *,
+          product_images (
+            id,
+            image_url
+          )
+        `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -275,23 +284,27 @@ export default function ProfileScreen() {
     });
   };
 
-  const renderProductItem = (product: Product) => (
-    <TouchableOpacity 
-      key={product.id}
-      style={styles.gridItem}
-      onPress={() => handleProductPress(product.id)}
-    >
-      <Image 
-        source={{ uri: product.image_url }} 
-        style={styles.gridImage}
-        resizeMode="cover"
-      />
-      <View style={styles.gridItemOverlay}>
-        <Text style={styles.gridItemTitle} numberOfLines={1}>{product.title}</Text>
-        <Text style={styles.gridItemPrice}>${product.price.toLocaleString()}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const renderProductItem = (product: Product) => {
+    const imageUrl = product.product_images?.[0]?.image_url || 'https://via.placeholder.com/150';
+    
+    return (
+      <TouchableOpacity 
+        key={product.id}
+        style={styles.gridItem}
+        onPress={() => handleProductPress(product.id)}
+      >
+        <Image 
+          source={{ uri: imageUrl }} 
+          style={styles.gridImage}
+          resizeMode="cover"
+        />
+        <View style={styles.gridItemOverlay}>
+          <Text style={styles.gridItemTitle} numberOfLines={1}>{product.title}</Text>
+          <Text style={styles.gridItemPrice}>${product.price.toLocaleString()}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderCategorySection = (category: string, products: Product[]) => {
     const showAll = showAllCategories[category] || false;
@@ -309,8 +322,8 @@ export default function ProfileScreen() {
           id: '',
           title: '',
           price: 0,
-          image_url: '',
           category: '',
+          product_images: []
         });
       }
     }
@@ -336,17 +349,16 @@ export default function ProfileScreen() {
             </View>
           ))}
         </View>
-        {products.length > 3 && !showAll && user && (
-          <TouchableOpacity
-            onPress={() => router.push({
-              pathname: '/(tabs)/profile/category-products',
-              params: { category, userId: user.id }
-            })}
-            style={styles.showMoreButton}
-          >
-            <Text style={styles.showMoreText}>Show More</Text>
-          </TouchableOpacity>
-        )}
+        
+        <TouchableOpacity
+          onPress={() => router.push({
+            pathname: '/(tabs)/profile/category-products',
+            params: { category, userId: user.id }
+          })}
+          style={styles.showMoreButton}
+        >
+          <Text style={styles.showMoreText}>Show More</Text>
+        </TouchableOpacity>
       </View>
     );
   };
@@ -512,17 +524,21 @@ export default function ProfileScreen() {
                     <Text style={styles.categoryCount}>{products.length} {products.length === 1 ? 'item' : 'items'}</Text>
                   </View>
                   <View style={styles.productsRow}>
-                    {products.map(product => (
-                      <TouchableOpacity
-                        key={product.id}
-                        style={styles.productCard}
-                        onPress={() => handleProductPress(product.id)}
-                      >
-                        <Image source={{ uri: product.image_url }} style={styles.productImage} resizeMode="cover" />
-                        <Text style={styles.productTitle} numberOfLines={2}>{product.title}</Text>
-                        <Text style={styles.productPrice}>${product.price.toLocaleString()}</Text>
-                      </TouchableOpacity>
-                    ))}
+                    {products.map(product => {
+                      const imageUrl = product.product_images?.[0]?.image_url || 'https://via.placeholder.com/150';
+                      
+                      return (
+                        <TouchableOpacity
+                          key={product.id}
+                          style={styles.productCard}
+                          onPress={() => handleProductPress(product.id)}
+                        >
+                          <Image source={{ uri: imageUrl }} style={styles.productImage} resizeMode="cover" />
+                          <Text style={styles.productTitle} numberOfLines={2}>{product.title}</Text>
+                          <Text style={styles.productPrice}>${product.price.toLocaleString()}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
                 </View>
               ))}

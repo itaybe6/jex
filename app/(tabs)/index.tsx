@@ -321,23 +321,21 @@ export default function HomeScreen() {
         .from('products')
         .select(`
           *,
-          product_images (
-            id,
-            image_url,
-            order
-          ),
-          profiles (
+          profiles!products_user_id_fkey (
             full_name,
             avatar_url
           ),
-          ring_specs (*),
-          necklace_specs (*),
-          earring_specs (*),
-          bracelet_specs (*),
-          special_piece_specs (*),
-          watch_specs (*),
-          diamond_specs (*),
-          gem_specs (*)
+          product_images (
+            image_url
+          ),
+          ring_specs!ring_specs_product_id_fkey (*),
+          necklace_specs!necklace_specs_product_id_fkey (*),
+          earring_specs!earring_specs_product_id_fkey (*),
+          bracelet_specs!bracelet_specs_product_id_fkey (*),
+          special_piece_specs!special_piece_specs_product_id_fkey (*),
+          watch_specs!watch_specs_product_id_fkey (*),
+          diamond_specs!diamond_specs_product_id_fkey (*),
+          gem_specs!gem_specs_product_id_fkey (*)
         `)
         .eq('status', 'available')
         .order('created_at', { ascending: false });
@@ -1501,5 +1499,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,
+  },
+  userName: {
+    fontSize: 14,
+    fontFamily: 'Heebo-Medium',
+    color: '#fff',
   },
 });
