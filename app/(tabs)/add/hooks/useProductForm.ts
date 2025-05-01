@@ -214,43 +214,58 @@ export default function useProductForm() {
         user_id: user?.id
       };
 
+      console.log('--- יצירת מוצר חדש ---');
+      console.log('productInsertObj:', productInsertObj);
       const { data: product, error: productError } = await supabase
         .from('products')
         .insert(productInsertObj)
         .select()
         .single();
+      console.log('product:', product);
+      console.log('productError:', productError);
 
       if (productError || !product) throw productError || new Error('Product insert failed');
 
       // Prepare specs data
-      let specsData: any = {
-        product_id: product.id,
-        material: dynamicFields.material,
-        weight: dynamicFields.weight,
-      };
-
-      if (dynamicFields.material === 'Gold') {
-        specsData.gold_karat = dynamicFields.goldKarat;
-        specsData.gold_color = dynamicFields.goldColor;
-      }
-
-      if (hasDiamond) {
-        specsData.diamond_details = {
-          weight: dynamicFields.diamond_weight,
-          color: dynamicFields.diamond_color,
-          clarity: dynamicFields.clarity,
-          cut_grade: dynamicFields.cut_grade,
-          certification: dynamicFields.certification
+      let specsData: any;
+      if (productType === 'Gems') {
+        specsData = {
+          product_id: product.id,
+          type: dynamicFields.type,
+          origin: dynamicFields.origin,
+          certification: dynamicFields.certification || null,
         };
-      }
-
-      if (hasSideStones) {
-        specsData.side_stones_details = {
-          weight: dynamicFields.side_stones_weight,
-          color: dynamicFields.side_stones_color,
-          clarity: dynamicFields.side_stones_clarity
+      } else {
+        specsData = {
+          product_id: product.id,
+          material: dynamicFields.material,
+          weight: dynamicFields.weight,
         };
+
+        if (dynamicFields.material === 'Gold') {
+          specsData.gold_karat = dynamicFields.goldKarat;
+          specsData.gold_color = dynamicFields.goldColor;
+        }
+
+        if (hasDiamond) {
+          specsData.diamond_details = {
+            weight: dynamicFields.diamond_weight,
+            color: dynamicFields.diamond_color,
+            clarity: dynamicFields.clarity,
+            cut_grade: dynamicFields.cut_grade,
+            certification: dynamicFields.certification
+          };
+        }
+
+        if (hasSideStones) {
+          specsData.side_stones_details = {
+            weight: dynamicFields.side_stones_weight,
+            color: dynamicFields.side_stones_color,
+            clarity: dynamicFields.side_stones_clarity
+          };
+        }
       }
+      console.log('specsData:', specsData);
 
       // Insert specs based on product type
       let specsTable = productType.toLowerCase();
@@ -259,14 +274,24 @@ export default function useProductForm() {
         specsTable = 'special_piece';
       } else if (specsTable === 'earrings') {
         specsTable = 'earring';
+      } else if (specsTable === 'gems') {
+        specsTable = 'gem';
       }
       specsTable += '_specs';
+      console.log('specsTable:', specsTable);
+
+      // Add debug logs
+      console.log('Sending request to:', specsTable);
+      console.log('With data:', specsData);
 
       const { error: specsError } = await supabase
         .from(specsTable)
         .insert(specsData);
-
-      if (specsError) throw specsError;
+      
+      if (specsError) {
+        console.error('Error inserting specs:', specsError);
+        throw specsError;
+      }
 
       // Upload all images and create product_images records
       for (const image of images) {
@@ -302,6 +327,7 @@ export default function useProductForm() {
       resetForm();
       router.replace('/');
     } catch (error) {
+      console.error('שגיאה ביצירת מוצר:', error);
       alert('An error occurred while creating the product');
     } finally {
       setLoading(false);

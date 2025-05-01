@@ -1,7 +1,7 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Alert, Modal, SafeAreaView } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Package, Search, Filter, X } from 'lucide-react-native';
 import { Link } from 'expo-router';
@@ -258,6 +258,14 @@ export default function HomeScreen() {
     fetchRequests();
     fetchTopSellers();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchProducts();
+      fetchRequests();
+      fetchTopSellers();
+    }, [])
+  );
 
   const fetchProducts = async () => {
     try {
@@ -605,39 +613,6 @@ export default function HomeScreen() {
     );
   };
 
-  const renderTopSellers = () => (
-    <View style={styles.topSellersSection}>
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.topSellersList}
-      >
-        {topSellers.map((seller) => (
-            <TouchableOpacity 
-            key={seller.id}
-            style={styles.topSellerItem}
-            onPress={() => router.push(`/user/${seller.id}`)}
-          >
-            <View style={styles.topSellerImageContainer}>
-              <Image
-                source={{ 
-                  uri: seller.avatar_url || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'
-                }}
-                style={styles.topSellerImage}
-              />
-              <View style={styles.trustBadge}>
-                <Text style={styles.trustCount}>{seller.trust_count}</Text>
-              </View>
-            </View>
-            <Text style={styles.topSellerName} numberOfLines={1}>
-              {seller.full_name}
-            </Text>
-            </TouchableOpacity>
-        ))}
-      </ScrollView>
-          </View>
-  );
-
   const validateForm = () => {
     const errors: { [key: string]: string } = {};
     const rules = validationRulesByCategory[productForm.category];
@@ -795,11 +770,10 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <StatusBar style="light" />
       <SafeAreaView style={styles.safeArea}>
-        {renderTopSellers()}
         <View style={styles.header}>
           <View style={styles.headerButtons}>
             <View style={styles.tabButtons}>
-            <TouchableOpacity 
+              <TouchableOpacity 
                 style={[styles.tabButton, !showRequests && styles.tabButtonActive]}
                 onPress={() => setShowRequests(false)}
               >
@@ -808,17 +782,17 @@ export default function HomeScreen() {
               <TouchableOpacity
                 style={[styles.tabButton, showRequests && styles.tabButtonActive]}
                 onPress={() => setShowRequests(true)}
-            >
+              >
                 <Text style={[styles.tabButtonText, showRequests && styles.tabButtonTextActive]}>Requests</Text>
-            </TouchableOpacity>
-          </View>
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity
               style={styles.filterButton}
               onPress={() => setShowFilterModal(true)}
             >
               <Filter size={24} color="#fff" />
             </TouchableOpacity>
-      </View>
+          </View>
         </View>
       </SafeAreaView>
       <ScrollView

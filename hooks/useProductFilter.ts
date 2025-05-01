@@ -10,7 +10,6 @@ export const useProductFilter = () => {
     return products.filter(product => {
       // Category filter
       if (filters.category && product.category !== filters.category) {
-        console.log('FILTER FAIL', { reason: 'category', productCategory: product.category, filterCategory: filters.category });
         return false;
       }
 
@@ -20,7 +19,6 @@ export const useProductFilter = () => {
         if (filters.filters.brand && filters.filters.brand.length > 0) {
           const productBrand = (product.watch_specs?.brand || '').toString();
           if (!filters.filters.brand.includes(productBrand)) {
-            console.log('FILTER FAIL', { reason: 'brand', productBrand, filterBrands: filters.filters.brand });
             return false;
           }
         }
@@ -28,7 +26,6 @@ export const useProductFilter = () => {
         if (filters.filters.model && filters.filters.model.length > 0) {
           const productModel = (product.watch_specs?.model || '').toString();
           if (!filters.filters.model.includes(productModel)) {
-            console.log('FILTER FAIL', { reason: 'model', productModel, filterModels: filters.filters.model });
             return false;
           }
         }
@@ -39,15 +36,12 @@ export const useProductFilter = () => {
       const priceTo = filters.filters.price_to?.[0] || filters.filters.price?.[1];
       const price = typeof product.price === 'string' ? parseFloat(product.price) : product.price;
       if (price == null || isNaN(price)) {
-        console.log('FILTER FAIL', { reason: 'price is null/NaN', product });
         return false;
       }
       if (priceFrom && price < parseFloat(priceFrom)) {
-        console.log('FILTER FAIL', { reason: 'price < priceFrom', price, priceFrom });
         return false;
       }
       if (priceTo && price > parseFloat(priceTo)) {
-        console.log('FILTER FAIL', { reason: 'price > priceTo', price, priceTo });
         return false;
       }
 
@@ -60,7 +54,6 @@ export const useProductFilter = () => {
         if (booleanFilter === 'has_side_stones') {
           const specs = product.specs as any;
           if (!specs?.has_side_stones) {
-            console.log('FILTER FAIL', { reason: 'has_side_stones', product });
             return false;
           }
         }
@@ -90,15 +83,12 @@ export const useProductFilter = () => {
           value = specs?.[key];
         }
         if (value == null || isNaN(value)) {
-          console.log('FILTER FAIL', { reason: 'range missing value', key, product });
           return false;
         }
         if (range.min && value < range.min) {
-          console.log('FILTER FAIL', { reason: 'range min', key, value, min: range.min });
           return false;
         }
         if (range.max && value > range.max) {
-          console.log('FILTER FAIL', { reason: 'range max', key, value, max: range.max });
           return false;
         }
       }
@@ -117,11 +107,9 @@ export const useProductFilter = () => {
       for (const [key, values] of multiSelectFilters) {
         const specs = product.specs as any;
         if (!specs) {
-          console.log('FILTER FAIL', { reason: 'multi-select: no specs', key, product });
           return false;
         }
         if (!values.includes(specs[key])) {
-          console.log('FILTER FAIL', { reason: 'multi-select: value not included', key, values, actual: specs[key], product });
           return false;
         }
       }
