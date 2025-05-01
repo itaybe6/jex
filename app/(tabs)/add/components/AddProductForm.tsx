@@ -93,9 +93,21 @@ const AddProductForm = () => {
             type={dynamicFields.type || ''}
             origin={dynamicFields.origin || ''}
             certification={dynamicFields.certification || ''}
+            weight={dynamicFields.weight || ''}
+            shape={dynamicFields.shape || ''}
+            clarity={dynamicFields.clarity || ''}
+            transparency={!!dynamicFields.transparency}
+            hasCertification={!!dynamicFields.hasCertification}
+            dimensions={dynamicFields.dimensions || ''}
             onTypeChange={value => handleDynamicChange('type', value)}
             onOriginChange={value => handleDynamicChange('origin', value)}
             onCertificationChange={value => handleDynamicChange('certification', value)}
+            onWeightChange={value => handleDynamicChange('weight', value)}
+            onShapeChange={value => handleDynamicChange('shape', value)}
+            onClarityChange={value => handleDynamicChange('clarity', value)}
+            onTransparencyChange={value => handleDynamicChange('transparency', value.toString())}
+            onHasCertificationChange={value => handleDynamicChange('hasCertification', value.toString())}
+            onDimensionsChange={value => handleDynamicChange('dimensions', value)}
             errors={dynamicErrors}
           />
         ) : (
