@@ -18,6 +18,8 @@ const PRODUCT_TYPES = [
   'Ring', 'Necklace', 'Bracelet', 'Earrings', 'Special pieces', 'Watches', 'Gems'
 ];
 
+const JEWELRY_TYPES = ['Ring', 'Necklace', 'Bracelet', 'Earrings', 'Special pieces'];
+
 const productOptions: Record<string, string[]> = {
   Ring: [
     'Wedding ring', 'Hand Chain Ring - Bracelet', 'Classic ring', 'Engagement ring', 'Solitaire ring', 'All around ring', 'Band ring'
@@ -52,6 +54,7 @@ export default function useProductForm() {
   const [dynamicErrors, setDynamicErrors] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [hasDiamond, setHasDiamond] = useState(false);
+  const [hasSideStones, setHasSideStones] = useState(false);
   const [images, setImages] = useState<ImageData[]>([]);
   const [loading, setLoading] = useState(false);
   const [showBrandModal, setShowBrandModal] = useState(false);
@@ -73,6 +76,7 @@ export default function useProductForm() {
     setDynamicErrors({});
     setShowDynamicModals({});
     setHasDiamond(false);
+    setHasSideStones(false);
     setShowBrandModal(false);
     setShowModelModal(false);
   }, [formData.category]);
@@ -88,6 +92,17 @@ export default function useProductForm() {
   };
   const handleDiamondToggle = () => {
     setHasDiamond(v => !v);
+  };
+  const handleSideStonesToggle = (value: boolean) => {
+    setHasSideStones(value);
+    if (!value) {
+      // Clear side stones fields when toggled off
+      const newFields = { ...dynamicFields };
+      delete newFields.side_stones_weight;
+      delete newFields.side_stones_color;
+      delete newFields.side_stones_clarity;
+      setDynamicFields(newFields);
+    }
   };
   const handleImageChange = async () => {
     try {
@@ -169,6 +184,11 @@ export default function useProductForm() {
         if (!dynamicFields.cut_grade) newErrors.cut_grade = true;
         if (!dynamicFields.certification) newErrors.certification = true;
       }
+      if (hasSideStones) {
+        if (!dynamicFields.side_stones_weight) newErrors.side_stones_weight = true;
+        if (!dynamicFields.side_stones_color) newErrors.side_stones_color = true;
+        if (!dynamicFields.side_stones_clarity) newErrors.side_stones_clarity = true;
+      }
     }
 
     setErrors(newErrors);
@@ -201,6 +221,52 @@ export default function useProductForm() {
         .single();
 
       if (productError || !product) throw productError || new Error('Product insert failed');
+
+      // Prepare specs data
+      let specsData: any = {
+        product_id: product.id,
+        material: dynamicFields.material,
+        weight: dynamicFields.weight,
+      };
+
+      if (dynamicFields.material === 'Gold') {
+        specsData.gold_karat = dynamicFields.goldKarat;
+        specsData.gold_color = dynamicFields.goldColor;
+      }
+
+      if (hasDiamond) {
+        specsData.diamond_details = {
+          weight: dynamicFields.diamond_weight,
+          color: dynamicFields.diamond_color,
+          clarity: dynamicFields.clarity,
+          cut_grade: dynamicFields.cut_grade,
+          certification: dynamicFields.certification
+        };
+      }
+
+      if (hasSideStones) {
+        specsData.side_stones_details = {
+          weight: dynamicFields.side_stones_weight,
+          color: dynamicFields.side_stones_color,
+          clarity: dynamicFields.side_stones_clarity
+        };
+      }
+
+      // Insert specs based on product type
+      let specsTable = productType.toLowerCase();
+      // Handle special cases
+      if (specsTable === 'special pieces') {
+        specsTable = 'special_piece';
+      } else if (specsTable === 'earrings') {
+        specsTable = 'earring';
+      }
+      specsTable += '_specs';
+
+      const { error: specsError } = await supabase
+        .from(specsTable)
+        .insert(specsData);
+
+      if (specsError) throw specsError;
 
       // Upload all images and create product_images records
       for (const image of images) {
@@ -248,6 +314,7 @@ export default function useProductForm() {
     setDynamicErrors({});
     setErrors({});
     setHasDiamond(false);
+    setHasSideStones(false);
     setImages([]);
     setShowBrandModal(false);
     setShowModelModal(false);
@@ -261,14 +328,14 @@ export default function useProductForm() {
     errors,
     dynamicErrors,
     hasDiamond,
+    hasSideStones,
     loading,
     handleChange,
     handleDynamicChange,
     handleDiamondToggle,
+    handleSideStonesToggle,
     handleImageChange,
     handleSubmit,
-    images,
-    removeImage,
     productTypeOptions,
     brandOptions,
     modelOptions,
@@ -280,6 +347,8 @@ export default function useProductForm() {
     setShowCategoryModal,
     showDynamicModals,
     setShowDynamicModals,
-    resetForm
+    resetForm,
+    images,
+    removeImage
   };
 } 

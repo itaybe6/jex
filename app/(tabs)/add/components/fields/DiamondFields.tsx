@@ -14,9 +14,6 @@ const CUT_GRADES = [
 const CERTIFICATIONS = [
   'GIA','IGI','HRD','EGL','SGL','CGL','IGL','AIG'
 ];
-const SIDE_STONES = [
-  'With Side Stones','Without Side Stones'
-];
 
 interface DiamondFieldsProps {
   fields: Record<string, string>;
@@ -125,52 +122,6 @@ const DiamondFields: React.FC<DiamondFieldsProps> = ({ fields, errors, onChange,
                     }}
                   >
                     <Text style={[styles.modalOptionText, fields.clarity === option && styles.modalOptionTextSelected]}>
-                      {option}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
-      </View>
-      {/* Side Stones */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Side Stones</Text>
-        <TouchableOpacity
-          style={styles.selectButton}
-          onPress={() => toggleModal('side_stones', true)}
-        >
-          <Text style={styles.selectButtonText}>
-            {fields.side_stones || 'Select Side Stones'}
-          </Text>
-          <ChevronDown size={20} color="#666" />
-        </TouchableOpacity>
-        <Modal
-          visible={!!showModals.side_stones}
-          transparent
-          animationType="slide"
-          onRequestClose={() => toggleModal('side_stones', false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Select Side Stones</Text>
-                <TouchableOpacity onPress={() => toggleModal('side_stones', false)} style={styles.modalCloseButton}>
-                  <X size={24} color="#000" />
-                </TouchableOpacity>
-              </View>
-              <ScrollView style={styles.modalScrollView}>
-                {SIDE_STONES.map(option => (
-                  <TouchableOpacity
-                    key={option}
-                    style={[styles.modalOption, fields.side_stones === option && styles.modalOptionSelected]}
-                    onPress={() => {
-                      onChange('side_stones', option);
-                      toggleModal('side_stones', false);
-                    }}
-                  >
-                    <Text style={[styles.modalOptionText, fields.side_stones === option && styles.modalOptionTextSelected]}>
                       {option}
                     </Text>
                   </TouchableOpacity>

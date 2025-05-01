@@ -15,6 +15,7 @@ import SubmitButton from './fields/SubmitButton';
 import useProductForm from '../hooks/useProductForm';
 import { Select } from '@/components/Select';
 import ImagePreview from './ImagePreview';
+import SideStonesFields from './fields/SideStonesFields';
 
 const AddProductForm = () => {
   const {
@@ -23,10 +24,12 @@ const AddProductForm = () => {
     errors,
     dynamicErrors,
     hasDiamond,
+    hasSideStones,
     loading,
     handleChange,
     handleDynamicChange,
     handleDiamondToggle,
+    handleSideStonesToggle,
     handleImageChange,
     handleSubmit,
     productTypeOptions,
@@ -44,6 +47,8 @@ const AddProductForm = () => {
     images,
     removeImage
   } = useProductForm();
+
+  const isJewelryProduct = ['Ring', 'Necklace', 'Bracelet', 'Earrings', 'Special pieces'].includes(formData.category);
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
@@ -154,6 +159,17 @@ const AddProductForm = () => {
             />
             {hasDiamond && (
               <DiamondFields
+                fields={dynamicFields}
+                errors={dynamicErrors}
+                onChange={handleDynamicChange}
+                showModals={showDynamicModals}
+                setShowModals={setShowDynamicModals}
+              />
+            )}
+            {isJewelryProduct && (
+              <SideStonesFields
+                hasSideStones={hasSideStones}
+                onToggle={handleSideStonesToggle}
                 fields={dynamicFields}
                 errors={dynamicErrors}
                 onChange={handleDynamicChange}
