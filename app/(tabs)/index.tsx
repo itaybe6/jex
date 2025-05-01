@@ -10,6 +10,10 @@ import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
 import FilterModal from '../../components/FilterModal';
 import { StatusBar } from 'expo-status-bar';
+import { useProductFilter } from '@/hooks/useProductFilter';
+import { Product, ProductsByCategory } from '@/types/product';
+import { DiamondRequest } from '@/types/diamond';
+import { Profile } from '@/types/profile';
 
 const GRID_SPACING = 2;
 const NUM_COLUMNS = 3;
@@ -133,77 +137,6 @@ type GemSpecs = {
   certificate: string | null;
 };
 
-type Product = {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  image_url?: string;
-  user_id: string;
-  category: string;
-  status: string;
-  created_at: string;
-  profiles: {
-    full_name: string;
-    avatar_url: string;
-  };
-  product_images?: {
-    image_url: string;
-  }[];
-  ring_specs?: RingSpecs;
-  necklace_specs?: NecklaceSpecs;
-  earring_specs?: EarringSpecs;
-  bracelet_specs?: BraceletSpecs;
-  special_piece_specs?: SpecialPieceSpecs;
-  watch_specs?: WatchSpecs;
-  diamond_specs?: DiamondSpecs;
-  gem_specs?: GemSpecs;
-  details?: {
-    [key: string]: string;
-  };
-};
-
-type DiamondRequest = {
-  id: string;
-  user_id: string;
-  cut: string;
-  min_weight: number;
-  max_weight: number;
-  clarity: string;
-  color: string;
-  price: number | null;
-  status: string;
-  created_at: string;
-  expires_at: string;
-  profiles: {
-    full_name: string;
-    avatar_url: string;
-  };
-};
-
-type ProductsByCategory = {
-  [key: string]: Product[];
-};
-
-type Profile = {
-    id: string;
-    full_name: string;
-    avatar_url: string | null;
-  trust_count: number;
-};
-
-const ROUTES = {
-  REQUEST: '/(tabs)/profile/requests' as const,
-  PRODUCT: '/(tabs)/profile/products' as const,
-} as const;
-
-type FilterParams = {
-  category?: string;
-  filters: {
-    [key: string]: string[];
-  };
-};
-
 type ProductFormState = {
   title: string;
   description: string;
@@ -271,6 +204,18 @@ const validationRulesByCategory: { [key: string]: ValidationRules } = {
   },
 };
 
+const ROUTES = {
+  REQUEST: '/(tabs)/profile/requests' as const,
+  PRODUCT: '/(tabs)/profile/products' as const,
+} as const;
+
+type FilterParams = {
+  category?: string;
+  filters: {
+    [key: string]: string[];
+  };
+};
+
 export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -286,7 +231,7 @@ export default function HomeScreen() {
   const [selectedRequest, setSelectedRequest] = useState<DiamondRequest | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [topSellers, setTopSellers] = useState<Profile[]>([]);
-  const [activeFilters, setActiveFilters] = useState<FilterParams | null>(null);
+  const productFilter = useProductFilter();
   const [searchQuery, setSearchQuery] = useState('');
   const [user, setUser] = useState<any>(null);
   const [productForm, setProductForm] = useState<ProductFormState>({
@@ -429,178 +374,14 @@ export default function HomeScreen() {
     }
   };
 
+  const handleApplyFilters = (filters: FilterParams) => {
+    productFilter.applyFilters(filters);
+    setShowFilterModal(false);
+  };
+
   const getFilteredProducts = () => {
-    let filtered: Product[] = Object.values(productsByCategory).flat();
-
-    // Apply category filter
-    if (activeFilters?.category) {
-      filtered = filtered.filter(product => product.category === activeFilters.category);
-    }
-
-    // Apply price filter
-    if (activeFilters?.filters) {
-      const priceFrom = activeFilters.filters.price_from?.[0];
-      const priceTo = activeFilters.filters.price_to?.[0];
-      
-      if (priceFrom || priceTo) {
-        filtered = filtered.filter(product => {
-          const price = product.price;
-          if (priceFrom && price < parseFloat(priceFrom)) return false;
-          if (priceTo && price > parseFloat(priceTo)) return false;
-          return true;
-        });
-      }
-    }
-
-    // Apply specific filters based on category
-    if (activeFilters?.filters) {
-      filtered = filtered.filter(product => {
-        switch (product.category) {
-          case 'Ring':
-            return product.ring_specs && Object.entries(activeFilters.filters).every(([key, values]) => {
-              if (!values.length) return true;
-              if (key === 'price_from' || key === 'price_to') return true; // Skip price filters as they're handled above
-              switch (key) {
-                case 'subcategory':
-                  return product.ring_specs?.subcategory && values.includes(product.ring_specs.subcategory);
-                case 'material':
-                  return product.ring_specs?.material && values.includes(product.ring_specs.material);
-                case 'gold_color':
-                  return product.ring_specs?.gold_color && values.includes(product.ring_specs.gold_color);
-                case 'gold_karat':
-                  return product.ring_specs?.gold_karat && values.includes(product.ring_specs.gold_karat);
-                case 'diamond_size_from':
-                  return product.ring_specs?.diamond_size_from && values.some(size => 
-                    product.ring_specs!.diamond_size_from! >= parseFloat(size)
-                  );
-                case 'diamond_size_to':
-                  return product.ring_specs?.diamond_size_to && values.some(size => 
-                    product.ring_specs!.diamond_size_to! <= parseFloat(size)
-                  );
-                case 'color':
-                  return product.ring_specs?.color && values.includes(product.ring_specs.color);
-                case 'clarity':
-                  return product.ring_specs?.clarity && values.includes(product.ring_specs.clarity);
-                case 'cut_grade':
-                  return product.ring_specs?.cut_grade && values.includes(product.ring_specs.cut_grade);
-                case 'certification':
-                  return product.ring_specs?.certification && values.includes(product.ring_specs.certification);
-                default:
-                  return true;
-              }
-            });
-
-          case 'Necklace':
-            return product.necklace_specs && Object.entries(activeFilters.filters).every(([key, values]) => {
-              if (!values.length) return true;
-              switch (key) {
-                case 'subcategory':
-                  return product.necklace_specs?.subcategory && values.includes(product.necklace_specs.subcategory);
-                case 'material':
-                  return product.necklace_specs?.material && values.includes(product.necklace_specs.material);
-                case 'gold_color':
-                  return product.necklace_specs?.gold_color && values.includes(product.necklace_specs.gold_color);
-                case 'gold_karat':
-                  return product.necklace_specs?.gold_karat && values.includes(product.necklace_specs.gold_karat);
-                case 'length':
-                  return product.necklace_specs?.length && values.some(length => 
-                    product.necklace_specs!.length === length
-                  );
-                default:
-                  return true;
-              }
-            });
-
-          case 'Earrings':
-            return product.earring_specs && Object.entries(activeFilters.filters).every(([key, values]) => {
-              if (!values.length) return true;
-              switch (key) {
-                case 'subcategory':
-                  return product.earring_specs?.subcategory && values.includes(product.earring_specs.subcategory);
-                case 'material':
-                  return product.earring_specs?.material && values.includes(product.earring_specs.material);
-                case 'gold_color':
-                  return product.earring_specs?.gold_color && values.includes(product.earring_specs.gold_color);
-                case 'gold_karat':
-                  return product.earring_specs?.gold_karat && values.includes(product.earring_specs.gold_karat);
-                case 'color':
-                  return product.earring_specs?.color && values.includes(product.earring_specs.color);
-                case 'clarity':
-                  return product.earring_specs?.clarity && values.includes(product.earring_specs.clarity);
-                case 'certification':
-                  return product.earring_specs?.certification && values.includes(product.earring_specs.certification);
-                default:
-                  return true;
-              }
-            });
-
-          case 'Bracelet':
-            return product.bracelet_specs && Object.entries(activeFilters.filters).every(([key, values]) => {
-              if (!values.length) return true;
-              switch (key) {
-                case 'subcategory':
-                  return product.bracelet_specs?.subcategory && values.includes(product.bracelet_specs.subcategory);
-                case 'material':
-                  return product.bracelet_specs?.material && values.includes(product.bracelet_specs.material);
-                case 'gold_color':
-                  return product.bracelet_specs?.gold_color && values.includes(product.bracelet_specs.gold_color);
-                case 'gold_karat':
-                  return product.bracelet_specs?.gold_karat && values.includes(product.bracelet_specs.gold_karat);
-                case 'length':
-                  return product.bracelet_specs?.length && values.some(length => 
-                    product.bracelet_specs!.length === length
-                  );
-                case 'color':
-                  return product.bracelet_specs?.color && values.includes(product.bracelet_specs.color);
-                case 'clarity':
-                  return product.bracelet_specs?.clarity && values.includes(product.bracelet_specs.clarity);
-                default:
-                  return true;
-              }
-            });
-
-          case 'Special Pieces':
-            return product.special_piece_specs && Object.entries(activeFilters.filters).every(([key, values]) => {
-              if (!values.length) return true;
-              switch (key) {
-                case 'subcategory':
-                  return product.special_piece_specs?.subcategory && values.includes(product.special_piece_specs.subcategory);
-                case 'material':
-                  return product.special_piece_specs?.material && values.includes(product.special_piece_specs.material);
-                case 'gold_color':
-                  return product.special_piece_specs?.gold_color && values.includes(product.special_piece_specs.gold_color);
-                case 'gold_karat':
-                  return product.special_piece_specs?.gold_karat && values.includes(product.special_piece_specs.gold_karat);
-                default:
-                  return true;
-              }
-            });
-
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Apply search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(product =>
-        product.title.toLowerCase().includes(query) ||
-        product.description.toLowerCase().includes(query)
-      );
-    }
-
-    // Group filtered products by category
-    const filteredByCategory: ProductsByCategory = {};
-    filtered.forEach(product => {
-      if (!filteredByCategory[product.category]) {
-        filteredByCategory[product.category] = [];
-      }
-      filteredByCategory[product.category].push(product);
-    });
-
-    return filteredByCategory;
+    let products = Object.values(productsByCategory).flat();
+    return productFilter.filterProducts(products, productFilter.activeFilters);
   };
 
   const getFilteredRequests = () => {
@@ -857,10 +638,6 @@ export default function HomeScreen() {
           </View>
   );
 
-  const handleApplyFilters = (filters: FilterParams) => {
-    setActiveFilters(filters);
-  };
-
   const validateForm = () => {
     const errors: { [key: string]: string } = {};
     const rules = validationRulesByCategory[productForm.category];
@@ -1057,6 +834,8 @@ export default function HomeScreen() {
         visible={showFilterModal}
         onClose={() => setShowFilterModal(false)}
         onApplyFilters={handleApplyFilters}
+        initialCategory={productFilter.activeFilters?.category}
+        initialFilters={productFilter.activeFilters}
       />
       {renderDetailsModal()}
     </View>

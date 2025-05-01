@@ -6,9 +6,7 @@ type WatchSpecsRow = Tables['watch_specs']['Row'];
 type DiamondSpecsRow = Tables['diamond_specs']['Row'];
 type GemSpecsRow = Tables['gem_specs']['Row'];
 type JewelrySpecsRow = Tables['jewelry_specs']['Row'];
-type ProfileRow = Tables['profiles']['Row'] & {
-  phone?: string;
-};
+type ProfileRow = Tables['profiles']['Row'];
 
 type ProductImage = {
   image_url: string;
@@ -24,7 +22,13 @@ type SpecsType =
 export type Product = Omit<ProductRow, 'created_at' | 'updated_at'> & {
   created_at: string;
   updated_at?: string;
-  profiles: Pick<ProfileRow, 'id' | 'full_name' | 'avatar_url' | 'phone'>;
+  thumbnail_url?: string | null;
+  profiles: {
+    id: string;
+    full_name: string;
+    avatar_url: string | null;
+    phone: string | null;
+  };
   specs?: SpecsType | null;
   product_images?: ProductImage[];
 };
