@@ -145,6 +145,38 @@ export const WATCH_BRANDS_MODELS: Record<string, string[]> = {
   ]
 };
 
+export const GEM_TYPES = [
+  'Alexandrite',
+  'Amber',
+  'Amethyst',
+  'Ametrine',
+  'Aquamarine',
+  'Citrine',
+  'Diamond',
+  'Fancy Color Diamond',
+  'Emerald',
+  'Garnet',
+  'Iolite',
+  'Jade',
+  'Kunzite',
+  'Lapis Lazuli',
+  'Moonstone',
+  'Morganite',
+  'Opal',
+  'Pearl',
+  'Peridot',
+  'Rose Quartz',
+  'Ruby',
+  'Sapphire',
+  'Spinel',
+  'Sunstone',
+  'Tanzanite',
+  'Topaz',
+  'Tourmaline',
+  'Turquoise',
+  'Zircon',
+];
+
 export const FILTER_FIELDS_BY_CATEGORY: FilterFieldsByCategory = {
   "Ring": [
     {
@@ -274,16 +306,29 @@ export const FILTER_FIELDS_BY_CATEGORY: FilterFieldsByCategory = {
   ],
   "Gems": [
     {
-      key: "certification_status",
-      type: "multi-select",
-      label: "Certification Status",
-      options: ["Certificated", "None Certificated"]
+      key: 'price',
+      type: 'range',
+      label: 'Price ($)',
+      min: 0,
+      step: 1
     },
     {
-      key: "type",
-      type: "multi-select",
-      label: "Type",
-      options: ["Natural", "Lab Grown", "Treated"]
+      key: 'gem_type',
+      type: 'multi-select',
+      label: 'Gem Type',
+      options: GEM_TYPES
+    },
+    {
+      key: 'certification_status',
+      type: 'multi-select',
+      label: 'Certification Status',
+      options: ['Certificated', 'None Certificated']
+    },
+    {
+      key: 'type',
+      type: 'multi-select',
+      label: 'Type',
+      options: ['Natural', 'Lab Grown', 'Treated']
     }
   ],
   "Watches": [

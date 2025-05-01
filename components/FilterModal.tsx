@@ -2,7 +2,7 @@ import { View, Text, Modal, TouchableOpacity, ScrollView, StyleSheet, TextInput 
 import { X } from 'lucide-react-native';
 import { useState } from 'react';
 import { FilterField, FilterParams, FilterState } from '@/types/filter';
-import { FILTER_FIELDS_BY_CATEGORY, PRICE_FILTER_FIELDS, CATEGORY_LABELS, WATCH_BRANDS_MODELS } from '@/constants/filters';
+import { FILTER_FIELDS_BY_CATEGORY, PRICE_FILTER_FIELDS, CATEGORY_LABELS, WATCH_BRANDS_MODELS, GEM_TYPES } from '@/constants/filters';
 
 type FilterModalProps = {
   visible: boolean;
@@ -26,6 +26,11 @@ export default function FilterModal({
   // Watches-specific state for dynamic models
   const [selectedWatchBrands, setSelectedWatchBrands] = useState<string[]>([]);
   const [selectedWatchModels, setSelectedWatchModels] = useState<string[]>([]);
+
+  // Gems-specific state
+  const [selectedGemTypes, setSelectedGemTypes] = useState<string[]>([]);
+  const [gemsPriceFrom, setGemsPriceFrom] = useState('');
+  const [gemsPriceTo, setGemsPriceTo] = useState('');
 
   // Watches: get models for selected brands
   const getAvailableWatchModels = () => {
@@ -141,6 +146,31 @@ export default function FilterModal({
 
     onApplyFilters({
       category: selectedCategory,
+      filters
+    });
+    onClose();
+  };
+
+  // Gems: handle gem type select
+  const handleGemTypeSelect = (gem: string) => {
+    setSelectedGemTypes(prev =>
+      prev.includes(gem)
+        ? prev.filter(g => g !== gem)
+        : [...prev, gem]
+    );
+  };
+
+  // Gems: apply filters
+  const handleApplyGemsFilters = () => {
+    const filters: Record<string, string[]> = {};
+    if (gemsPriceFrom) filters['price_from'] = [gemsPriceFrom];
+    if (gemsPriceTo) filters['price_to'] = [gemsPriceTo];
+    if (selectedGemTypes.length) filters['gem_type'] = selectedGemTypes;
+    // Add other fields (certification_status, type) from selectedFilters
+    if (selectedFilters['certification_status']) filters['certification_status'] = selectedFilters['certification_status'];
+    if (selectedFilters['type']) filters['type'] = selectedFilters['type'];
+    onApplyFilters({
+      category: 'Gems',
       filters
     });
     onClose();
@@ -298,10 +328,110 @@ export default function FilterModal({
     </ScrollView>
   );
 
+  // Gems: render only relevant fields
+  const renderGemsFields = () => (
+    <ScrollView style={styles.filtersContainer}>
+      {/* Price Range */}
+      <View style={styles.filterSection}>
+        <Text style={styles.filterLabel}>Price ($)</Text>
+        <View style={styles.rangeInputContainer}>
+          <TextInput
+            style={styles.rangeInput}
+            placeholder="From"
+            keyboardType="numeric"
+            value={gemsPriceFrom}
+            onChangeText={setGemsPriceFrom}
+          />
+          <Text style={styles.rangeSeparator}>-</Text>
+          <TextInput
+            style={styles.rangeInput}
+            placeholder="To"
+            keyboardType="numeric"
+            value={gemsPriceTo}
+            onChangeText={setGemsPriceTo}
+          />
+        </View>
+      </View>
+      {/* Gem Type Multi-select */}
+      <View style={styles.filterSection}>
+        <Text style={styles.filterLabel}>Gem Type</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {GEM_TYPES.map(gem => (
+            <TouchableOpacity
+              key={gem}
+              style={[
+                styles.filterOption,
+                selectedGemTypes.includes(gem) && styles.filterOptionSelected
+              ]}
+              onPress={() => handleGemTypeSelect(gem)}
+            >
+              <Text style={[
+                styles.filterOptionText,
+                selectedGemTypes.includes(gem) && styles.filterOptionTextSelected
+              ]}>
+                {gem}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+      {/* Certification Status */}
+      <View style={styles.filterSection}>
+        <Text style={styles.filterLabel}>Certification Status</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {['Certificated', 'None Certificated'].map(option => (
+            <TouchableOpacity
+              key={option}
+              style={[
+                styles.filterOption,
+                (selectedFilters['certification_status'] || []).includes(option) && styles.filterOptionSelected
+              ]}
+              onPress={() => handleFilterSelect('certification_status', option)}
+            >
+              <Text style={[
+                styles.filterOptionText,
+                (selectedFilters['certification_status'] || []).includes(option) && styles.filterOptionTextSelected
+              ]}>
+                {option}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+      {/* Type */}
+      <View style={styles.filterSection}>
+        <Text style={styles.filterLabel}>Type</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {['Natural', 'Lab Grown', 'Treated'].map(option => (
+            <TouchableOpacity
+              key={option}
+              style={[
+                styles.filterOption,
+                (selectedFilters['type'] || []).includes(option) && styles.filterOptionSelected
+              ]}
+              onPress={() => handleFilterSelect('type', option)}
+            >
+              <Text style={[
+                styles.filterOptionText,
+                (selectedFilters['type'] || []).includes(option) && styles.filterOptionTextSelected
+              ]}>
+                {option}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    </ScrollView>
+  );
+
   const renderFilterFields = () => {
     // Watches: custom rendering
     if (selectedCategory === 'Watches') {
       return renderWatchesFields();
+    }
+    // Gems: custom rendering
+    if (selectedCategory === 'Gems') {
+      return renderGemsFields();
     }
     if (!selectedCategory) {
       return (
@@ -358,7 +488,7 @@ export default function FilterModal({
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.footerButton, styles.applyButton]}
-              onPress={selectedCategory === 'Watches' ? handleApplyWatchesFilters : handleApplyFilters}
+              onPress={selectedCategory === 'Watches' ? handleApplyWatchesFilters : selectedCategory === 'Gems' ? handleApplyGemsFilters : handleApplyFilters}
               disabled={!selectedCategory}
             >
               <Text style={[styles.footerButtonText, styles.applyButtonText]}>Show Results</Text>
