@@ -1,4 +1,4 @@
-import AddProductForm from '../profile/components/AddProductForm';
+import AddProductForm from './components/AddProductForm';
 import { TopHeader } from '../../../components/TopHeader';
 import { View } from 'react-native';
 export default function AddProductScreen() {
