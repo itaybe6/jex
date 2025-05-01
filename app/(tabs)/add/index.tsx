@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
 import { router } from 'expo-router';
 import { Package, Search } from 'lucide-react-native';
-import { TopHeader } from '../../components/TopHeader';
+import { TopHeader } from '../../../components/TopHeader';
 
 export default function AddScreen() {
   return (
@@ -14,7 +14,7 @@ export default function AddScreen() {
         <View style={styles.optionsContainer}>
           <TouchableOpacity 
             style={styles.option}
-            onPress={() => router.push('/(tabs)/profile/add-product')}
+            onPress={() => router.push('/(tabs)/add/product')}
           >
             <Package size={32} color="#6C5CE7" />
             <Text style={styles.optionTitle}>Add Product</Text>
@@ -23,7 +23,7 @@ export default function AddScreen() {
 
           <TouchableOpacity 
             style={styles.option}
-            onPress={() => router.push('/(tabs)/profile/add-request')}
+            onPress={() => router.push('/(tabs)/add/request')}
           >
             <Search size={32} color="#6C5CE7" />
             <Text style={styles.optionTitle}>Add Request</Text>

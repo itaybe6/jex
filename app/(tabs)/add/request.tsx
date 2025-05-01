@@ -4,7 +4,7 @@ import { ChevronDown } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-
+import { TopHeader } from '../../../components/TopHeader';
 const DIAMOND_CUTS = [
   'Round',
   'Princess',
@@ -249,6 +249,7 @@ export default function AddRequestScreen() {
 
   return (
     <View style={styles.container}>
+      <TopHeader />
       <ScrollView style={styles.form}>
         <Text style={styles.label}>Cut</Text>
         <TouchableOpacity
