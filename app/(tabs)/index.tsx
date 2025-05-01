@@ -773,7 +773,7 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.headerButtons}>
             <View style={styles.tabButtons}>
-              <TouchableOpacity 
+            <TouchableOpacity 
                 style={[styles.tabButton, !showRequests && styles.tabButtonActive]}
                 onPress={() => setShowRequests(false)}
               >
@@ -782,17 +782,17 @@ export default function HomeScreen() {
               <TouchableOpacity
                 style={[styles.tabButton, showRequests && styles.tabButtonActive]}
                 onPress={() => setShowRequests(true)}
-              >
+            >
                 <Text style={[styles.tabButtonText, showRequests && styles.tabButtonTextActive]}>Requests</Text>
-              </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
+          </View>
             <TouchableOpacity
               style={styles.filterButton}
               onPress={() => setShowFilterModal(true)}
             >
               <Filter size={24} color="#fff" />
             </TouchableOpacity>
-          </View>
+      </View>
         </View>
       </SafeAreaView>
       <ScrollView
