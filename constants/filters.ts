@@ -4,7 +4,7 @@ export const COMMON_JEWELRY_FIELDS: FilterField[] = [
   {
     key: "weight",
     type: "range",
-    label: "Weight",
+    label: "Diamond Weight",
     min: 0,
     step: 0.01
   },
@@ -331,6 +331,72 @@ export const FILTER_FIELDS_BY_CATEGORY: FilterFieldsByCategory = {
       type: "multi-select",
       label: "Model",
       options: [] // Will be set dynamically in the modal
+    }
+  ],
+  "Loose Diamond": [
+    {
+      key: "clarity",
+      label: "Clarity",
+      type: "multi-select",
+      options: ["I3","I2","I1","SI2","SI1","VS2","VS1","VVS2","VVS1","INTERNALLY"]
+    },
+    {
+      key: "color",
+      label: "Color",
+      type: "multi-select",
+      options: ["D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"]
+    },
+    {
+      key: "cut",
+      label: "Cut",
+      type: "multi-select",
+      options: ["POOR","FAIR","GOOD","VERY GOOD","EXCELLENT"]
+    },
+    {
+      key: "weight",
+      label: "Weight (Carats)",
+      type: "range",
+      min: 0,
+      step: 0.01
+    },
+    {
+      key: "shape",
+      label: "Shape",
+      type: "multi-select",
+      options: ["Round", "Princess", "Cushion", "Oval", "Emerald", "Pear", "Marquise", "Radiant", "Asscher", "Heart"]
+    }
+  ],
+  "Rough Diamond": [
+    {
+      key: "clarity",
+      label: "Clarity",
+      type: "multi-select",
+      options: ["I3","I2","I1","SI2","SI1","VS2","VS1","VVS2","VVS1","INTERNALLY"]
+    },
+    {
+      key: "color",
+      label: "Color",
+      type: "multi-select",
+      options: ["D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"]
+    },
+    {
+      key: "cut",
+      label: "Cut",
+      type: "multi-select",
+      options: ["POOR","FAIR","GOOD","VERY GOOD","EXCELLENT"]
+    },
+    {
+      key: "weight",
+      label: "Weight (Carats)",
+      type: "range",
+      min: 0,
+      step: 0.01
+    },
+    {
+      key: "shape",
+      label: "Shape",
+      type: "multi-select",
+      options: ["Round", "Princess", "Cushion", "Oval", "Emerald", "Pear", "Marquise", "Radiant", "Asscher", "Heart"]
     }
   ]
 };

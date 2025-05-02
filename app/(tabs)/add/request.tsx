@@ -70,7 +70,7 @@ export default function AddRequestScreen() {
     setWeightFrom(value);
     if (weightTo && parseFloat(weightTo) <= parseFloat(value)) {
       setWeightTo('');
-    }
+      }
   };
 
   const handleSubmit = async () => {
@@ -362,7 +362,7 @@ export default function AddRequestScreen() {
                   key={option}
                   style={[styles.filterOption, diamondColors.includes(option) && styles.filterOptionSelected]}
                   onPress={() => setDiamondColors(prev => prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option])}
-                >
+        >
                   <Text style={[styles.filterOptionText, diamondColors.includes(option) && styles.filterOptionTextSelected]}>{option}</Text>
         </TouchableOpacity>
               ))}
