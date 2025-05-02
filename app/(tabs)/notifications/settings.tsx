@@ -59,6 +59,7 @@ export default function NotificationSettingsScreen() {
     enabled_types: [],
     specific_filters: []
   });
+  const [expandedFilterId, setExpandedFilterId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -111,21 +112,19 @@ export default function NotificationSettingsScreen() {
 
   const handleRemoveFilter = async (filterId: string) => {
     try {
-      const updatedPreferences = {
-        ...preferences,
-        specific_filters: preferences.specific_filters.filter(f => f.id !== filterId)
-      };
+      const updatedFilters = preferences.specific_filters.filter(f => f.id !== filterId);
 
       const { error } = await supabase
         .from('notification_preferences')
-        .upsert({
-          user_id: user?.id,
-          ...updatedPreferences
-        });
+        .update({ specific_filters: updatedFilters })
+        .eq('user_id', user?.id);
 
       if (error) throw error;
 
-      setPreferences(updatedPreferences);
+      setPreferences(prev => ({
+        ...prev,
+        specific_filters: updatedFilters
+      }));
     } catch (error) {
       console.error('Error removing filter:', error);
     }
@@ -136,6 +135,49 @@ export default function NotificationSettingsScreen() {
       pathname: '/notifications/add-filter',
       params: { editId: filterId }
     });
+  };
+
+  // מיפוי סוג מוצר לשם תצוגה ולסדר שדות
+  const FILTER_TYPE_LABELS: Record<string, string> = {
+    'Jewelry': 'Jewelry Filter',
+    'Watches': 'Watch Filter',
+    'Gems': 'Gem Filter',
+    'Rough Diamond': 'Rough Diamond Filter',
+    'Loose Diamond': 'Loose Diamond Filter',
+  };
+
+  const FILTER_FIELDS_ORDER: Record<string, string[]> = {
+    'Jewelry': ['jewelryType', 'subcategory', 'material', 'goldColor', 'goldKarat', 'has_side_stones', 'clarity', 'color'],
+    'Watches': ['brand', 'model'],
+    'Gems': ['gem_type', 'origin', 'weight_from', 'weight_to', 'shape', 'clarity', 'color', 'cut_grade'],
+    'Rough Diamond': ['clarity', 'color', 'cut_grade', 'weight_from', 'weight_to', 'shape'],
+    'Loose Diamond': ['clarity', 'color', 'cut_grade', 'weight_from', 'weight_to', 'shape'],
+  };
+
+  // פונקציה להצגת ערך שדה
+  const renderFieldValue = (field: string, filter: any) => {
+    if (field.endsWith('_from') || field.endsWith('_to')) return null; // נטפל בטווחים בנפרד
+    if (['weight_from', 'weight_to'].includes(field)) return null;
+    if (Array.isArray(filter[field])) return filter[field].join(', ');
+    if (typeof filter[field] === 'boolean') return filter[field] ? 'Yes' : 'No';
+    return filter[field] || null;
+  };
+
+  // פונקציה להצגת טווח משקל
+  const renderWeightRange = (filter: any) => {
+    const from = filter['weight_from'];
+    const to = filter['weight_to'];
+    if (from || to) {
+      return `Weight: ${from || ''}${from && to ? ' - ' : ''}${to || ''} ct`;
+    }
+    return null;
+  };
+
+  // פונקציה להצגת כותרת לפי סוג
+  const getFilterTitle = (filter: any) => {
+    if (FILTER_TYPE_LABELS[filter.type]) return FILTER_TYPE_LABELS[filter.type];
+    if (filter.jewelryType && FILTER_TYPE_LABELS[filter.jewelryType]) return FILTER_TYPE_LABELS[filter.jewelryType];
+    return filter.type ? `${filter.type} Filter` : 'Filter';
   };
 
   return (
@@ -158,47 +200,39 @@ export default function NotificationSettingsScreen() {
 
       <ScrollView style={styles.content}>
         <Text style={styles.sectionTitle}>Active Filters</Text>
-        
         {preferences?.specific_filters.map((filter, index) => {
-          // Determine the product type and fields
-          const type = filter.type;
-          // Try to get the fields for this type/category
-          let fields = FILTER_FIELDS_BY_CATEGORY[type] || [];
-          // If it's a jewelry subcategory (Ring, Necklace, etc.), use that
-          if (!fields.length && filter.jewelryType && FILTER_FIELDS_BY_CATEGORY[filter.jewelryType]) {
-            fields = FILTER_FIELDS_BY_CATEGORY[filter.jewelryType];
-          }
-          // Always show filter_type (new_product/new_request) as a badge
-          const filterTypeLabel = filter.filter_type === 'new_product' ? 'Product' : filter.filter_type === 'new_request' ? 'Request' : filter.filter_type;
-          // Helper to render a value (array, range, etc.)
-          const renderValue = (field: any, filter: any) => {
-            if (field.type === 'range') {
-              const from = filter[`${field.key}_from`];
-              const to = filter[`${field.key}_to`];
-              if (from || to) {
-                return `${from || ''}${from && to ? ' - ' : ''}${to || ''} ${field.label.toLowerCase().includes('weight') ? 'ct' : ''}`;
-              }
-              return null;
-            }
-            if (Array.isArray(filter[field.key])) {
-              return filter[field.key].join(', ');
-            }
-            if (typeof filter[field.key] === 'boolean') {
-              return filter[field.key] ? 'Yes' : 'No';
-            }
-            return filter[field.key] || null;
-          };
-          // Only show fields with a value
-          const shownFields = fields.filter(field => renderValue(field, filter));
+          const isExpanded = expandedFilterId === filter.id;
+          const type = filter.type || filter.jewelryType || 'Other';
+          const fieldsOrder = FILTER_FIELDS_ORDER[type] || Object.keys(filter);
+          // סינון שדות ריקים
+          const shownFields = fieldsOrder.filter(field => renderFieldValue(field, filter));
+          // הוספת טווח משקל אם רלוונטי
+          const weightRange = renderWeightRange(filter);
           return (
             <View key={filter.id} style={styles.filterItem}>
-              <View style={styles.filterContent}>
-                <View style={styles.filterHeader}>
-                  <Text style={styles.filterType}>
-                    {CATEGORY_LABELS[type] || type}
-                    {filterTypeLabel ? ` • ${filterTypeLabel}` : ''}
-                  </Text>
-                  <View style={styles.filterActions}>
+              <TouchableOpacity
+                style={styles.filterCompactHeader}
+                onPress={() => setExpandedFilterId(isExpanded ? null : filter.id)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.filterType}>{getFilterTitle(filter)}</Text>
+                <Icon name={isExpanded ? 'chevron-up' : 'chevron-down'} size={18} color="#0E2657" />
+              </TouchableOpacity>
+              {isExpanded && (
+                <View style={styles.filterExpandedContent}>
+                  {weightRange && (
+                    <View style={styles.filterProperty}>
+                      <Text style={styles.propertyLabel}>Weight</Text>
+                      <Text style={styles.propertyValue}>{weightRange.replace('Weight: ', '')}</Text>
+                    </View>
+                  )}
+                  {shownFields.map(field => (
+                    <View style={styles.filterProperty} key={field}>
+                      <Text style={styles.propertyLabel}>{field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</Text>
+                      <Text style={styles.propertyValue}>{renderFieldValue(field, filter)}</Text>
+                    </View>
+                  ))}
+                  <View style={styles.filterActionsExpanded}>
                     <TouchableOpacity 
                       onPress={() => handleEditFilter(filter.id)}
                       style={styles.actionButton}
@@ -213,19 +247,26 @@ export default function NotificationSettingsScreen() {
                     </TouchableOpacity>
                   </View>
                 </View>
-                <View style={styles.filterDetails}>
-                  {shownFields.map(field => (
-                    <View style={styles.filterProperty} key={field.key}>
-                      <Text style={styles.propertyLabel}>{field.label}</Text>
-                      <Text style={styles.propertyValue}>{renderValue(field, filter)}</Text>
-                    </View>
-                  ))}
+              )}
+              {!isExpanded && (
+                <View style={styles.filterActionsCompact}>
+                  <TouchableOpacity 
+                    onPress={() => handleEditFilter(filter.id)}
+                    style={styles.actionButton}
+                  >
+                    <Icon name="edit-2" size={16} color="#0E2657" />
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    onPress={() => handleRemoveFilter(filter.id)}
+                    style={[styles.actionButton, styles.deleteButton]}
+                  >
+                    <Icon name="trash-2" size={16} color="#FF3B30" />
+                  </TouchableOpacity>
                 </View>
-              </View>
+              )}
             </View>
           );
         })}
-
         {preferences.specific_filters.length === 0 && (
           <View style={styles.noFiltersContainer}>
             <Text style={styles.noFiltersText}>No active filters</Text>
@@ -310,23 +351,45 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  filterContent: {
-    padding: 16,
-  },
-  filterHeader: {
+  filterCompactHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    padding: 16,
   },
   filterType: {
     fontSize: 14,
     fontFamily: 'Montserrat-SemiBold',
     color: '#0E2657',
   },
-  filterActions: {
+  filterExpandedContent: {
+    padding: 16,
+  },
+  filterProperty: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  propertyLabel: {
+    fontSize: 12,
+    fontFamily: 'Montserrat-Medium',
+    color: '#6B7280',
+  },
+  propertyValue: {
+    fontSize: 14,
+    fontFamily: 'Montserrat-SemiBold',
+    color: '#111827',
+  },
+  filterActionsCompact: {
     flexDirection: 'row',
     gap: 8,
+    padding: 16,
+  },
+  filterActionsExpanded: {
+    flexDirection: 'row',
+    gap: 8,
+    padding: 16,
   },
   actionButton: {
     width: 32,
@@ -338,26 +401,6 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     backgroundColor: '#FEF2F2',
-  },
-  filterDetails: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  filterProperty: {
-    flex: 1,
-    minWidth: '45%',
-  },
-  propertyLabel: {
-    fontSize: 12,
-    fontFamily: 'Montserrat-Medium',
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  propertyValue: {
-    fontSize: 14,
-    fontFamily: 'Montserrat-SemiBold',
-    color: '#111827',
   },
   noFiltersContainer: {
     margin: 20,

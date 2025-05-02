@@ -51,6 +51,19 @@ const AddProductForm = () => {
 
   const isJewelryProduct = ['Ring', 'Necklace', 'Bracelet', 'Earrings', 'Special pieces'].includes(formData.category);
 
+  const handleSubmitWithValidation = async () => {
+    try {
+      await handleSubmit();
+    } catch (error) {
+      console.error('Error submitting product:', error);
+      Alert.alert(
+        'Error',
+        'Failed to submit the product. Please check all required fields and try again.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   return (
     <ScrollView style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
       <View style={{ padding: 20 }}>
@@ -62,16 +75,25 @@ const AddProductForm = () => {
           showModal={showCategoryModal}
           setShowModal={setShowCategoryModal}
         />
+        {errors.category && (
+          <Text style={styles.errorText}>Please select a product category</Text>
+        )}
         <PriceInput
           value={formData.price}
           onChange={value => handleChange('price', value)}
           error={errors.price}
         />
+        {errors.price && (
+          <Text style={styles.errorText}>Please enter a valid price</Text>
+        )}
         <DescriptionInput
           value={formData.description}
           onChange={value => handleChange('description', value)}
           error={errors.description}
         />
+        {errors.description && (
+          <Text style={styles.errorText}>Please enter a description</Text>
+        )}
         {formData.category === 'Rough Diamond' ? (
           <RoughDiamondFields
             weight={dynamicFields.weight || ''}
@@ -199,14 +221,14 @@ const AddProductForm = () => {
 
         {images.length > 0 && (
           <ImagePreview 
-            images={images} 
-            onRemove={removeImage} 
+            images={images.map(image => ({ uri: image.uri }))}
+            onRemove={removeImage}
           />
         )}
 
         <SubmitButton
+          onPress={handleSubmitWithValidation}
           loading={loading}
-          onPress={handleSubmit}
         />
       </View>
     </ScrollView>
@@ -229,8 +251,34 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#ff4444',
     fontSize: 12,
-    marginTop: -8,
+    marginTop: 4,
     marginBottom: 8,
+  },
+  imagePreviewContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 10,
+  },
+  imagePreviewWrapper: {
+    position: 'relative',
+    marginRight: 10,
+    marginBottom: 10,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#ff4444',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removeImageText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

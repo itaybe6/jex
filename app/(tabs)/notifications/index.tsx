@@ -42,10 +42,15 @@ export default function NotificationsScreen() {
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching notifications:', error);
+        Alert.alert('Error', 'Failed to load notifications. Please try again later.');
+        return;
+      }
       setNotifications(data || []);
     } catch (error) {
       console.error('Error fetching notifications:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again later.');
     }
   };
 
@@ -62,7 +67,11 @@ export default function NotificationsScreen() {
       }
 
       if (finalStatus !== 'granted') {
-        console.log('Failed to get push token for push notification!');
+        Alert.alert(
+          'Permission Required',
+          'Push notifications are required for this app. Please enable them in your settings.',
+          [{ text: 'OK' }]
+        );
         return;
       }
 
@@ -78,10 +87,12 @@ export default function NotificationsScreen() {
 
         if (error) {
           console.error('Error saving push token:', error);
+          Alert.alert('Error', 'Failed to save push notification settings. Please try again later.');
         }
       }
     } catch (error) {
       console.error('Error registering for push notifications:', error);
+      Alert.alert('Error', 'Failed to set up push notifications. Please try again later.');
     }
   };
 
