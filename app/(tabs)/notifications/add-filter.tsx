@@ -95,7 +95,7 @@ export default function AddFilterScreen() {
   const { user } = useAuth();
   const [productType, setProductType] = useState<string>('Loose Diamond');
   const [dynamicFields, setDynamicFields] = useState<Record<string, any>>({});
-  const [notifyOn, setNotifyOn] = useState<string[]>(['new_product', 'new_request']);
+  const [notifyOn, setNotifyOn] = useState<string[]>(['new_product']);
 
   const handleDynamicChange = (key: string, value: any) => {
     setDynamicFields(prev => ({ ...prev, [key]: value }));
@@ -181,27 +181,14 @@ export default function AddFilterScreen() {
           <TouchableOpacity
             style={[
               styles.typeButton,
-              notifyOn.includes('new_product') && styles.typeButtonActive
+              styles.typeButtonActive
             ]}
-            onPress={() => setNotifyOn(prev => prev.includes('new_product') ? prev.filter(t => t !== 'new_product') : [...prev, 'new_product'])}
+            disabled={true}
           >
             <Text style={[
               styles.typeButtonText,
-              notifyOn.includes('new_product') && styles.typeButtonTextActive
+              styles.typeButtonTextActive
             ]}>Product Listed</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[
-              styles.typeButton,
-              notifyOn.includes('new_request') && styles.typeButtonActive
-            ]}
-            onPress={() => setNotifyOn(prev => prev.includes('new_request') ? prev.filter(t => t !== 'new_request') : [...prev, 'new_request'])}
-          >
-            <Text style={[
-              styles.typeButtonText,
-              notifyOn.includes('new_request') && styles.typeButtonTextActive
-            ]}>Request Posted</Text>
           </TouchableOpacity>
         </View>
 
