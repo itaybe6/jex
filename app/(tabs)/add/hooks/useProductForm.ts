@@ -15,7 +15,7 @@ interface ImageData {
 type WatchModelsType = typeof watchModels;
 
 const PRODUCT_TYPES = [
-  'Ring', 'Necklace', 'Bracelet', 'Earrings', 'Special pieces', 'Watches', 'Gems', 'Rough Diamond'
+  'Ring', 'Necklace', 'Bracelet', 'Earrings', 'Special pieces', 'Watches', 'Gems', 'Rough Diamond', 'Loose Diamond'
 ];
 
 const JEWELRY_TYPES = ['Ring', 'Necklace', 'Bracelet', 'Earrings', 'Special pieces'];
@@ -201,6 +201,15 @@ export default function useProductForm() {
       }
       if (!dynamicFields.clarity) newErrors.clarity = true;
       if (!dynamicFields.color) newErrors.color = true;
+    } else if (formData.category === 'Loose Diamond') {
+      if (!dynamicFields.weight || isNaN(Number(dynamicFields.weight)) || Number(dynamicFields.weight) <= 0) {
+        newErrors.weight = true;
+      }
+      if (!dynamicFields.clarity) newErrors.clarity = true;
+      if (!dynamicFields.color) newErrors.color = true;
+      if (!dynamicFields.shape) newErrors.shape = true;
+      if (!dynamicFields.originType) newErrors.originType = true;
+      if (dynamicFields.shape === 'Round' && !dynamicFields.cut) newErrors.cut = true;
     } else {
       if (!formData.title) newErrors.title = true;
       if (!dynamicFields.material) newErrors.material = true;
@@ -337,6 +346,32 @@ export default function useProductForm() {
           .insert(specsData);
         if (specsError && specsError.code !== '23505') {
           console.error('Error inserting rough diamond specs:', specsError);
+          throw specsError;
+        }
+      } else if (productType === 'Loose Diamond') {
+        // Insert loose diamond specs
+        const specsData: Record<string, any> = {
+          product_id: product.id,
+        };
+        if (dynamicFields.weight) specsData.weight = dynamicFields.weight;
+        if (dynamicFields.clarity) specsData.clarity = dynamicFields.clarity;
+        if (dynamicFields.color) specsData.color = dynamicFields.color;
+        if (dynamicFields.shape) specsData.shape = dynamicFields.shape;
+        if (dynamicFields.shape === 'Round' && dynamicFields.cut) specsData.cut = dynamicFields.cut;
+        if (dynamicFields.certificate) specsData.certificate = dynamicFields.certificate;
+        if (dynamicFields.fluorescence) specsData.fluorescence = dynamicFields.fluorescence;
+        if (dynamicFields.polish) specsData.polish = dynamicFields.polish;
+        if (dynamicFields.symmetry) specsData.symmetry = dynamicFields.symmetry;
+        if (dynamicFields.originType) specsData.origin_type = dynamicFields.originType;
+        // Remove undefined/empty
+        Object.keys(specsData).forEach(key => {
+          if (specsData[key] === '' || specsData[key] === undefined) delete specsData[key];
+        });
+        const { error: specsError } = await supabase
+          .from('loose_diamonds_specs')
+          .insert(specsData);
+        if (specsError && specsError.code !== '23505') {
+          console.error('Error inserting loose diamond specs:', specsError);
           throw specsError;
         }
       } else {

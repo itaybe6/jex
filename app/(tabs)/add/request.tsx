@@ -130,8 +130,10 @@ export default function AddRequestScreen() {
         category,
         details,
       });
+
       if (error) throw error;
-      Alert.alert('Success', 'Request added successfully', [{ text: 'OK', onPress: () => router.back() }]);
+      router.replace('/');
+      return;
     } catch (error: any) {
       Alert.alert('Error', error?.message || 'An error occurred while adding the request. Please try again.', [{ text: 'OK' }]);
     } finally {

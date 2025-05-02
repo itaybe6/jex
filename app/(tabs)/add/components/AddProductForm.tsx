@@ -17,6 +17,7 @@ import ImagePreview from './ImagePreview';
 import SideStonesFields from './fields/SideStonesFields';
 import GemFields from './fields/GemFields';
 import RoughDiamondFields from './fields/RoughDiamondFields';
+import LooseDiamondFields from './fields/LooseDiamondFields';
 
 const AddProductForm = () => {
   const {
@@ -94,7 +95,31 @@ const AddProductForm = () => {
         {errors.description && (
           <Text style={styles.errorText}>Please enter a description</Text>
         )}
-        {formData.category === 'Rough Diamond' ? (
+        {formData.category === 'Loose Diamond' ? (
+          <LooseDiamondFields
+            weight={dynamicFields.weight || ''}
+            clarity={dynamicFields.clarity || ''}
+            color={dynamicFields.color || ''}
+            shape={dynamicFields.shape || ''}
+            cut={dynamicFields.cut || ''}
+            certificate={dynamicFields.certificate || ''}
+            fluorescence={dynamicFields.fluorescence || ''}
+            polish={dynamicFields.polish || ''}
+            symmetry={dynamicFields.symmetry || ''}
+            originType={dynamicFields.originType || ''}
+            onWeightChange={value => handleDynamicChange('weight', value)}
+            onClarityChange={value => handleDynamicChange('clarity', value)}
+            onColorChange={value => handleDynamicChange('color', value)}
+            onShapeChange={value => handleDynamicChange('shape', value)}
+            onCutChange={value => handleDynamicChange('cut', value)}
+            onCertificateChange={value => handleDynamicChange('certificate', value)}
+            onFluorescenceChange={value => handleDynamicChange('fluorescence', value)}
+            onPolishChange={value => handleDynamicChange('polish', value)}
+            onSymmetryChange={value => handleDynamicChange('symmetry', value)}
+            onOriginTypeChange={value => handleDynamicChange('originType', value)}
+            errors={dynamicErrors}
+          />
+        ) : formData.category === 'Rough Diamond' ? (
           <RoughDiamondFields
             weight={dynamicFields.weight || ''}
             clarity={dynamicFields.clarity || ''}
