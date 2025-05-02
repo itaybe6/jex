@@ -283,7 +283,6 @@ export default function HomeScreen() {
           bracelet_specs!bracelet_specs_product_id_fkey (*),
           special_piece_specs!special_piece_specs_product_id_fkey (*),
           watch_specs!watch_specs_product_id_fkey (*),
-          diamond_specs!diamond_specs_product_id_fkey (*),
           gem_specs!gem_specs_product_id_fkey (*)
         `)
         .eq('status', 'available')
@@ -292,9 +291,6 @@ export default function HomeScreen() {
       if (error) {
         throw error;
       }
-
-      console.log('Products fetched:', products?.length);
-      console.log('First product images:', products?.[0]?.product_images);
 
       // Group products by category
       const grouped = (products || []).reduce<ProductsByCategory>((acc, product) => {
@@ -544,13 +540,6 @@ export default function HomeScreen() {
                     <Text style={styles.detailValue}>${selectedRequest.details.budget.toLocaleString()}</Text>
                   </View>
                 )}
-              </View>
-
-              <View style={styles.detailSection}>
-                <Text style={styles.detailTitle}>Status</Text>
-                <View style={[styles.statusBadge, { backgroundColor: selectedRequest.status === 'active' ? '#4CAF50' : '#666' }]}>
-                  <Text style={styles.statusText}>{selectedRequest.status}</Text>
-                </View>
               </View>
             </ScrollView>
           </View>
@@ -1158,17 +1147,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Heebo-Medium',
     color: '#fff',
-  },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 14,
-    fontFamily: 'Heebo-Medium',
   },
   topSellersSection: {
     paddingTop: 4,

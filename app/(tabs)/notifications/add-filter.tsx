@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Icon } from '../../../components/Icon';
 import { Select } from '../../../components/Select';
+import { FILTER_FIELDS_BY_CATEGORY, CATEGORY_LABELS, WATCH_BRANDS_MODELS, GEM_TYPES } from '@/constants/filters';
 
 const DIAMOND_CUTS = [
   'Round',
@@ -61,79 +62,61 @@ type FilterState = {
 
 type SelectValue = string;
 
+const PRODUCT_TYPES = [
+  'Jewelry',
+  'Watch',
+  'Gem',
+  'Loose Diamond',
+  'Rough Diamond',
+];
+
 export default function AddFilterScreen() {
   const { user } = useAuth();
-  const [filter, setFilter] = useState<FilterState>({
-    type: 'product',
-    cut: DIAMOND_CUTS[0],
-    clarity: CLARITY_GRADES[0],
-    color: COLOR_GRADES[0],
-    weight: DIAMOND_WEIGHTS[0],
-    notifyOn: ['new_product', 'new_request']
-  });
+  const [productType, setProductType] = useState<string>('Loose Diamond');
+  const [dynamicFields, setDynamicFields] = useState<Record<string, any>>({});
+  const [notifyOn, setNotifyOn] = useState<string[]>(['new_product', 'new_request']);
+
+  const handleDynamicChange = (key: string, value: any) => {
+    setDynamicFields(prev => ({ ...prev, [key]: value }));
+  };
 
   const handleSave = async () => {
     try {
       if (!user) return;
-      if (!filter.weight) {
-        alert('Please enter diamond weight');
-        return;
-      }
-
       const newFilter = {
         id: Math.random().toString(36).substr(2, 9),
-        type: 'product',
-        cut: filter.cut,
-        clarity: filter.clarity,
-        color: filter.color,
-        weight: filter.weight
+        type: productType,
+        ...dynamicFields
       };
-
-      // First try to get existing preferences
       const { data: existingData } = await supabase
         .from('notification_preferences')
         .select('*')
         .eq('user_id', user.id)
         .single();
-
       if (existingData) {
-        // Update existing preferences
         const { error } = await supabase
           .from('notification_preferences')
           .update({
             specific_filters: [...(existingData.specific_filters || []), newFilter],
-            enabled_types: filter.notifyOn
+            enabled_types: notifyOn
           })
           .eq('user_id', user.id);
-
         if (error) throw error;
       } else {
-        // Create new preferences
         const { error } = await supabase
           .from('notification_preferences')
           .insert({
             user_id: user.id,
-            enabled_types: filter.notifyOn,
+            enabled_types: notifyOn,
             specific_filters: [newFilter]
           });
-
         if (error) throw error;
       }
-
       router.back();
     } catch (error) {
       console.error('Error saving filter:', error);
       alert('Failed to save filter. Please try again.');
     }
-  };
-
-  const toggleNotificationType = (type: string) => {
-    setFilter(prev => ({
-      ...prev,
-      notifyOn: prev.notifyOn.includes(type)
-        ? prev.notifyOn.filter(t => t !== type)
-        : [...prev.notifyOn, type]
-    }));
   };
 
   const cutOptions = DIAMOND_CUTS.map(cut => ({ key: cut, value: cut }));
@@ -158,83 +141,145 @@ export default function AddFilterScreen() {
           <TouchableOpacity
             style={[
               styles.typeButton,
-              filter.notifyOn.includes('new_product') && styles.typeButtonActive
+              notifyOn.includes('new_product') && styles.typeButtonActive
             ]}
-            onPress={() => toggleNotificationType('new_product')}
+            onPress={() => setNotifyOn(prev => prev.includes('new_product') ? prev.filter(t => t !== 'new_product') : [...prev, 'new_product'])}
           >
             <Text style={[
               styles.typeButtonText,
-              filter.notifyOn.includes('new_product') && styles.typeButtonTextActive
+              notifyOn.includes('new_product') && styles.typeButtonTextActive
             ]}>Product Listed</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
             style={[
               styles.typeButton,
-              filter.notifyOn.includes('new_request') && styles.typeButtonActive
+              notifyOn.includes('new_request') && styles.typeButtonActive
             ]}
-            onPress={() => toggleNotificationType('new_request')}
+            onPress={() => setNotifyOn(prev => prev.includes('new_request') ? prev.filter(t => t !== 'new_request') : [...prev, 'new_request'])}
           >
             <Text style={[
               styles.typeButtonText,
-              filter.notifyOn.includes('new_request') && styles.typeButtonTextActive
+              notifyOn.includes('new_request') && styles.typeButtonTextActive
             ]}>Request Posted</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionTitle}>Diamond Specifications</Text>
+        <Text style={styles.sectionTitle}>Product Type</Text>
         
         <View style={styles.field}>
-          <Text style={styles.label}>Cut</Text>
-          <Select<DiamondCut>
-            data={DIAMOND_CUTS}
-            value={filter.cut}
-            onSelect={(value) => setFilter(prev => ({ ...prev, cut: value }))}
-            placeholder="Select cut"
+          <Select
+            data={PRODUCT_TYPES}
+            value={productType}
+            onSelect={setProductType}
+            placeholder="Select product type"
             style={styles.select}
           />
         </View>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Weight (carats)</Text>
-          <Select<DiamondWeight>
-            data={DIAMOND_WEIGHTS}
-            value={filter.weight}
-            onSelect={(value) => setFilter(prev => ({ ...prev, weight: value }))}
-            placeholder="Select weight"
-            style={styles.select}
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Clarity</Text>
-          <Select<ClarityGrade>
-            data={CLARITY_GRADES}
-            value={filter.clarity}
-            onSelect={(value) => setFilter(prev => ({ ...prev, clarity: value }))}
-            placeholder="Select clarity"
-            style={styles.select}
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Color</Text>
-          <Select<ColorGrade>
-            data={COLOR_GRADES}
-            value={filter.color}
-            onSelect={(value) => setFilter(prev => ({ ...prev, color: value }))}
-            placeholder="Select color"
-            style={styles.select}
-          />
-        </View>
+        {/* Render dynamic fields for the selected product type */}
+        {Array.isArray(FILTER_FIELDS_BY_CATEGORY[productType]) && FILTER_FIELDS_BY_CATEGORY[productType].map((field: any) => {
+          if (field.type === 'multi-select') {
+            const selected = dynamicFields[field.key] || [];
+            return (
+              <View style={styles.field} key={field.key}>
+                <Text style={styles.label}>{field.label}</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {field.options.map((option: string) => (
+                    <TouchableOpacity
+                      key={option}
+                      style={
+                        Array.isArray(selected) && selected.includes(option)
+                          ? [styles.typeButton, typeof styles.typeButtonActive === 'object' ? styles.typeButtonActive : {}]
+                          : [styles.typeButton]
+                      }
+                      onPress={() => {
+                        let newValue = Array.isArray(selected) ? [...selected] : [];
+                        if (newValue.includes(option)) {
+                          newValue = newValue.filter((v: string) => v !== option);
+                        } else {
+                          newValue.push(option);
+                        }
+                        handleDynamicChange(field.key, newValue);
+                      }}
+                    >
+                      <Text style={
+                        Array.isArray(selected) && selected.includes(option)
+                          ? [styles.typeButtonText, typeof styles.typeButtonTextActive === 'object' ? styles.typeButtonTextActive : {}]
+                          : [styles.typeButtonText]
+                      }>{option}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            );
+          }
+          if (field.type === 'range') {
+            return (
+              <View style={styles.field} key={field.key}>
+                <Text style={styles.label}>{field.label}</Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TextInput
+                    style={[styles.select, { flex: 1 }]}
+                    keyboardType="numeric"
+                    placeholder="From"
+                    value={dynamicFields[`${field.key}_from`] || ''}
+                    onChangeText={v => handleDynamicChange(`${field.key}_from`, v)}
+                  />
+                  <TextInput
+                    style={[styles.select, { flex: 1 }]}
+                    keyboardType="numeric"
+                    placeholder="To"
+                    value={dynamicFields[`${field.key}_to`] || ''}
+                    onChangeText={v => handleDynamicChange(`${field.key}_to`, v)}
+                  />
+                </View>
+              </View>
+            );
+          }
+          if (field.type === 'boolean') {
+            return (
+              <View style={styles.field} key={field.key}>
+                <Text style={styles.label}>{field.label}</Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity
+                    style={[styles.typeButton, dynamicFields[field.key] === true && styles.typeButtonActive]}
+                    onPress={() => handleDynamicChange(field.key, true)}
+                  >
+                    <Text style={[styles.typeButtonText, dynamicFields[field.key] === true && styles.typeButtonTextActive]}>Yes</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.typeButton, dynamicFields[field.key] === false && styles.typeButtonActive]}
+                    onPress={() => handleDynamicChange(field.key, false)}
+                  >
+                    <Text style={[styles.typeButtonText, dynamicFields[field.key] === false && styles.typeButtonTextActive]}>No</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          }
+          // Default: single select
+          return (
+            <View style={styles.field} key={field.key}>
+              <Text style={styles.label}>{field.label}</Text>
+              <Select
+                data={field.options}
+                value={dynamicFields[field.key] || ''}
+                onSelect={value => handleDynamicChange(field.key, value)}
+                placeholder={`Select ${field.label}`}
+                style={styles.select}
+              />
+            </View>
+          );
+        })}
 
         <TouchableOpacity 
           style={[
             styles.saveButton,
-            (!filter.cut || !filter.weight || !filter.color || !filter.clarity || !filter.notifyOn.length) && styles.saveButtonDisabled
+            (!productType || !notifyOn.length) ? styles.saveButtonDisabled : undefined
           ]}
           onPress={handleSave}
-          disabled={!filter.cut || !filter.weight || !filter.color || !filter.clarity || !filter.notifyOn.length}
+          disabled={!productType || !notifyOn.length}
         >
           <Text style={styles.saveButtonText}>Save Filter</Text>
         </TouchableOpacity>
