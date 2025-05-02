@@ -14,6 +14,8 @@ import { useProductFilter } from '@/hooks/useProductFilter';
 import { Product, ProductsByCategory } from '@/types/product';
 import { DiamondRequest } from '@/types/diamond';
 import { Profile } from '@/types/profile';
+import { FilterParams } from '@/types/filter';
+import { Product as ProductType } from '@/types/product';
 
 const GRID_SPACING = 2;
 const NUM_COLUMNS = 3;
@@ -209,13 +211,6 @@ const ROUTES = {
   PRODUCT: '/(tabs)/profile/products' as const,
 } as const;
 
-type FilterParams = {
-  category?: string;
-  filters: {
-    [key: string]: string[];
-  };
-};
-
 export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -244,6 +239,7 @@ export default function HomeScreen() {
   });
 
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  const [filters, setFilters] = useState<FilterParams[]>([]);
 
   useEffect(() => {
     const getUser = async () => {
@@ -382,14 +378,27 @@ export default function HomeScreen() {
     }
   };
 
-  const handleApplyFilters = (filters: FilterParams) => {
-    productFilter.applyFilters(filters);
+  const handleApplyFilters = (filtersArr: FilterParams[]) => {
+    setFilters(filtersArr);
     setShowFilterModal(false);
   };
 
   const getFilteredProducts = () => {
     let products = Object.values(productsByCategory).flat();
-    return productFilter.filterProducts(products, productFilter.activeFilters);
+    if (filters.length === 0) return products;
+    return products.filter(product =>
+      filters.some(f => {
+        if (f.category && product.category !== f.category) return false;
+        return Object.entries(f.filters).every(([key, values]) => {
+          if (!values.length) return true;
+          const productValue = (product as any)[key];
+          if (Array.isArray(productValue)) {
+            return productValue.some((v: any) => values.includes(String(v)));
+          }
+          return values.includes(String(productValue));
+        });
+      })
+    );
   };
 
   const getFilteredRequests = () => {
@@ -808,8 +817,8 @@ export default function HomeScreen() {
         visible={showFilterModal}
         onClose={() => setShowFilterModal(false)}
         onApplyFilters={handleApplyFilters}
-        initialCategory={productFilter.activeFilters?.category}
-        initialFilters={productFilter.activeFilters}
+        filters={filters}
+        onFiltersChange={setFilters}
       />
       {renderDetailsModal()}
     </View>

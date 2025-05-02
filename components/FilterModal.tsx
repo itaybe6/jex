@@ -7,7 +7,9 @@ import { FILTER_FIELDS_BY_CATEGORY, PRICE_FILTER_FIELDS, CATEGORY_LABELS, WATCH_
 type FilterModalProps = {
   visible: boolean;
   onClose: () => void;
-  onApplyFilters: (filters: FilterParams) => void;
+  onApplyFilters: (filters: FilterParams[]) => void;
+  filters: FilterParams[];
+  onFiltersChange: (filters: FilterParams[]) => void;
   initialCategory?: string;
   initialFilters?: FilterParams;
 };
@@ -16,6 +18,8 @@ export default function FilterModal({
   visible,
   onClose,
   onApplyFilters,
+  filters,
+  onFiltersChange,
   initialCategory,
   initialFilters,
 }: FilterModalProps) {
@@ -462,6 +466,38 @@ export default function FilterModal({
     );
   };
 
+  // Add Filter button handler
+  const handleAddFilter = () => {
+    const filtersObj = { ...selectedFilters };
+    Object.entries(booleanFilters).forEach(([key, value]) => {
+      if (value) {
+        filtersObj[key] = ['true'];
+      }
+    });
+    const newFilter: FilterParams = {
+      category: selectedCategory,
+      filters: filtersObj
+    };
+    onFiltersChange([...filters, newFilter]);
+    // Reset form
+    setSelectedCategory('');
+    setSelectedFilters({});
+    setBooleanFilters({});
+    setSelectedWatchBrands([]);
+    setSelectedWatchModels([]);
+    setWatchPriceFrom('');
+    setWatchPriceTo('');
+    setSelectedGemTypes([]);
+    setGemsPriceFrom('');
+    setGemsPriceTo('');
+  };
+
+  // Remove filter handler
+  const handleRemoveFilter = (idx: number) => {
+    const newFilters = filters.filter((_, i) => i !== idx);
+    onFiltersChange(newFilters);
+  };
+
   return (
     <Modal
       visible={visible}
@@ -482,18 +518,49 @@ export default function FilterModal({
 
           {renderFilterFields()}
 
+          {/* Filters List */}
+          {filters.length > 0 && (
+            <View style={{padding: 16}}>
+              <Text style={{color: '#fff', fontWeight: 'bold', marginBottom: 8}}>Filters</Text>
+              {filters.map((f, idx) => (
+                <View key={idx} style={{backgroundColor: '#222', borderRadius: 10, padding: 10, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
+                  <View>
+                    <Text style={{color: '#fff', fontWeight: 'bold'}}>{f.category}</Text>
+                    <Text style={{color: '#fff', fontSize: 12}}>
+                      {Object.entries(f.filters).map(([k, v]) => `${k}: ${v.join(', ')}`).join(' | ')}
+                    </Text>
+                  </View>
+                  <TouchableOpacity onPress={() => handleRemoveFilter(idx)} style={{marginLeft: 8, padding: 4}}>
+                    <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 16}}>×</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
           <View style={styles.modalFooter}>
             <TouchableOpacity style={styles.footerButton} onPress={resetFilters}>
               <Text style={styles.footerButtonText}>Clear</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.footerButton, styles.applyButton]}
-              onPress={selectedCategory === 'Watches' ? handleApplyWatchesFilters : selectedCategory === 'Gems' ? handleApplyGemsFilters : handleApplyFilters}
+              onPress={handleAddFilter}
               disabled={!selectedCategory}
             >
-              <Text style={[styles.footerButtonText, styles.applyButtonText]}>Show Results</Text>
+              <Text style={[styles.footerButtonText, styles.applyButtonText]}>Add Filter</Text>
             </TouchableOpacity>
           </View>
+          {/* Show Results button only if there are filters */}
+          {filters.length > 0 && (
+            <View style={{paddingHorizontal: 20, paddingBottom: 20}}>
+              <TouchableOpacity
+                style={[styles.footerButton, styles.applyButton]}
+                onPress={() => { onApplyFilters(filters); onClose(); }}
+              >
+                <Text style={[styles.footerButtonText, styles.applyButtonText]}>Show Results</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
     </Modal>
