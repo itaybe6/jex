@@ -335,7 +335,7 @@ export default function NotificationsScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Notifications</Text>
         <TouchableOpacity 
-          onPress={() => router.push('/notifications/settings')}
+          onPress={() => router.push('/(tabs)/notifications/settings')}
           style={styles.settingsButton}
           activeOpacity={0.7}
         >

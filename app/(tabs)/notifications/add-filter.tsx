@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-import { Icon } from '../../components/Icon';
-import { Select } from '../../components/Select';
+import { Icon } from '../../../components/Icon';
+import { Select } from '../../../components/Select';
 
 const DIAMOND_CUTS = [
   'Round',
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 6,
-    paddingTop: 72,
+    paddingTop: 20,
     marginBottom: 0,
     backgroundColor: '#F5F8FC',
   },

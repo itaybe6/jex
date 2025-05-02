@@ -424,7 +424,7 @@ export default function ProfileScreen() {
     setLoadingRequests(true);
     try {
       const { data, error } = await supabase
-        .from('diamond_requests')
+        .from('requests')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -562,13 +562,13 @@ export default function ProfileScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                     <ClipboardList size={22} color="#6C5CE7" style={{ marginRight: 10 }} />
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontFamily: 'Montserrat-Bold', color: '#0E2657', fontSize: 15, marginBottom: 2 }}>{req.cut} {req.min_weight}-{req.max_weight || req.min_weight}ct, {req.clarity}, Color {req.color}</Text>
-                      {req.price && (
-                        <Text style={{ fontFamily: 'Montserrat-Medium', color: '#6C5CE7', fontSize: 14, marginBottom: 2 }}>Budget: {req.price} ₪</Text>
+                      <Text style={{ fontFamily: 'Montserrat-Bold', color: '#0E2657', fontSize: 15, marginBottom: 2 }}>{req.details.weight_from}-{req.details.weight_to || req.details.weight_from}ct, {req.details.clarity}, Color {req.details.color}</Text>
+                      {req.details.price && (
+                        <Text style={{ fontFamily: 'Montserrat-Medium', color: '#6C5CE7', fontSize: 14, marginBottom: 2 }}>Budget: {req.details.price} ₪</Text>
                       )}
                     </View>
-                    <View style={{ borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4, alignSelf: 'flex-start', marginLeft: 8, minWidth: 60, alignItems: 'center', backgroundColor: req.status === 'active' ? '#4CAF50' : '#888' }}>
-                      <Text style={{ color: '#fff', fontFamily: 'Montserrat-Bold', fontSize: 13 }}>{req.status === 'active' ? 'Active' : req.status}</Text>
+                    <View style={{ borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4, alignSelf: 'flex-start', marginLeft: 8, minWidth: 60, alignItems: 'center', backgroundColor: req.details.status === 'active' ? '#4CAF50' : '#888' }}>
+                      <Text style={{ color: '#fff', fontFamily: 'Montserrat-Bold', fontSize: 13 }}>{req.details.status === 'active' ? 'Active' : req.details.status}</Text>
                     </View>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 6, width: '100%' }}>

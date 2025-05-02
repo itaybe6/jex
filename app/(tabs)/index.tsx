@@ -319,10 +319,10 @@ export default function HomeScreen() {
   const fetchRequests = async () => {
     try {
       const { data, error } = await supabase
-        .from('diamond_requests')
+        .from('requests')
         .select(`
           *,
-          profiles!diamond_requests_user_id_fkey (
+          profiles:user_id (
             id,
             full_name,
             avatar_url
@@ -407,23 +407,23 @@ export default function HomeScreen() {
     if (selectedDiamondSize) {
       filtered = filtered.filter(request => {
         if (selectedDiamondSize === '3.0+') {
-          return request.min_weight >= 3.0;
+          return request.details.weight_from >= 3.0;
         }
         const [min, max] = selectedDiamondSize.split('-').map(parseFloat);
-        return request.min_weight >= min && 
-               (request.max_weight ? request.max_weight <= max : request.min_weight <= max);
+        return request.details.weight_from >= min && 
+               (request.details.weight_to ? request.details.weight_to <= max : request.details.weight_from <= max);
       });
     }
 
     if (selectedDiamondColor) {
       filtered = filtered.filter(request => 
-        request.color === selectedDiamondColor
+        request.details.color === selectedDiamondColor
       );
     }
 
     if (selectedDiamondClarity) {
       filtered = filtered.filter(request => 
-        request.clarity === selectedDiamondClarity
+        request.details.clarity === selectedDiamondClarity
       );
     }
 
@@ -523,25 +523,25 @@ export default function HomeScreen() {
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Weight:</Text>
                   <Text style={styles.detailValue}>
-                    {selectedRequest.min_weight}{selectedRequest.max_weight ? `-${selectedRequest.max_weight}` : ''} ct
+                    {selectedRequest.details.weight_from}{selectedRequest.details.weight_to ? `-${selectedRequest.details.weight_to}` : ''} ct
                   </Text>
                         </View>
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Cut:</Text>
-                  <Text style={styles.detailValue}>{selectedRequest.cut}</Text>
+                  <Text style={styles.detailValue}>{selectedRequest.details.cut}</Text>
                         </View>
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Clarity:</Text>
-                  <Text style={styles.detailValue}>{selectedRequest.clarity}</Text>
+                  <Text style={styles.detailValue}>{selectedRequest.details.clarity}</Text>
                         </View>
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Color:</Text>
-                  <Text style={styles.detailValue}>{selectedRequest.color}</Text>
+                  <Text style={styles.detailValue}>{selectedRequest.details.color}</Text>
                         </View>
-                {selectedRequest.price && (
+                {selectedRequest.details.budget && (
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Budget:</Text>
-                    <Text style={styles.detailValue}>${selectedRequest.price.toLocaleString()}</Text>
+                    <Text style={styles.detailValue}>${selectedRequest.details.budget.toLocaleString()}</Text>
                   </View>
                 )}
               </View>
@@ -595,19 +595,19 @@ export default function HomeScreen() {
                   <Text style={styles.timeAgo}>{formatTimeAgo(request.created_at)}</Text>
         </View>
               </View>
-              {request.price && (
-                <Text style={styles.price}>${request.price.toLocaleString()}</Text>
+              {request.details.budget && (
+                <Text style={styles.price}>${request.details.budget.toLocaleString()}</Text>
               )}
             </View>
             
             <Text style={styles.requestTitle}>
-              Looking for {request.min_weight}{request.max_weight ? `-${request.max_weight}` : ''} ct Diamond
+              Looking for {request.details.weight_from}{request.details.weight_to ? `-${request.details.weight_to}` : ''} ct Diamond
             </Text>
             
             <View style={styles.specsList}>
-              <Text style={styles.specsItem}>{request.min_weight} carat</Text>
-              <Text style={styles.specsItem}>{request.clarity}</Text>
-              <Text style={styles.specsItem}>Color {request.color}</Text>
+              <Text style={styles.specsItem}>{request.details.weight_from} carat</Text>
+              <Text style={styles.specsItem}>{request.details.clarity}</Text>
+              <Text style={styles.specsItem}>Color {request.details.color}</Text>
             </View>
 
         <TouchableOpacity 

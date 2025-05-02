@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { router, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-import { Icon } from '../../components/Icon';
+import { Icon } from '../../../components/Icon';
 import React from 'react';
 
 const DIAMOND_CUTS = [
@@ -150,7 +150,7 @@ export default function NotificationSettingsScreen() {
         <Text style={styles.headerTitle}>Notification Settings</Text>
         <TouchableOpacity 
           style={styles.addButton}
-          onPress={() => router.push('/notifications/add-filter')}
+          onPress={() => router.push('/(tabs)/notifications/add-filter')}
         >
           <Icon name="plus" size={20} color="#0E2657" />
         </TouchableOpacity>
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    paddingTop: 72,
+    paddingTop: 20,
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: {

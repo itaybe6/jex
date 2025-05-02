@@ -5,108 +5,72 @@ import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { TopHeader } from '../../../components/TopHeader';
-const DIAMOND_CUTS = [
-  'Round',
-  'Princess',
-  'Oval',
-  'Marquise',
-  'Pear',
-  'Emerald',
-  'Radiant',
-  'Heart',
-  'Cushion',
-  'Asscher',
-] as string[];
+import { WATCH_BRANDS_MODELS, GEM_TYPES, FILTER_FIELDS_BY_CATEGORY } from '@/constants/filters';
 
-const CLARITY_GRADES = [
-  'FL (Flawless)',
-  'IF (Internally Flawless)',
-  'VVS1 (Very Very Slightly Included 1)',
-  'VVS2 (Very Very Slightly Included 2)',
-  'VS1 (Very Slightly Included 1)',
-  'VS2 (Very Slightly Included 2)',
-  'SI1 (Slightly Included 1)',
-  'SI2 (Slightly Included 2)',
-  'I1 (Included 1)',
-  'I2 (Included 2)',
-  'I3 (Included 3)',
-] as string[];
-
-const COLOR_GRADES = [
-  'D',
-  'E',
-  'F',
-  'G',
-  'H',
-  'I',
-  'J',
-  'K',
-  'L',
-  'M',
-  'N',
-  'O',
-  'P',
-  'Q',
-  'R',
-  'S',
-  'T',
-  'U',
-  'V',
-  'W',
-  'X',
-  'Y',
-  'Z',
-] as string[];
+const CATEGORY_OPTIONS = ['Jewelry', 'Watch', 'Gem', 'Loose Diamond', 'Rough Diamond'];
+const JEWELRY_TYPES = ['Ring', 'Necklace', 'Earrings', 'Bracelet'];
+const MATERIALS = ['GOLD', 'PLATINUM', 'SILVER'];
+const DIAMOND_SHAPES = ['Round', 'Princess', 'Oval', 'Marquise', 'Pear', 'Emerald', 'Radiant', 'Heart', 'Cushion', 'Asscher'];
+const DIAMOND_CUTS = ['POOR', 'FAIR', 'GOOD', 'VERY GOOD', 'EXCELLENT'];
+const CLARITY_GRADES = ["I3", "I2", "I1", "SI2", "SI1", "VS2", "VS1", "VVS2", "VVS1", "IF", "FL"];
+const COLOR_GRADES = ["D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
 
 const ALL_WEIGHT_OPTIONS = Array.from({ length: 46 }, (_, i) => (0.5 + i * 0.1).toFixed(1));
-
-type FormData = {
-  cut: string;
-  min_weight: string;
-  max_weight: string;
-  clarity: string;
-  color: string;
-  status?: string;
-  price?: string;
-};
 
 export default function AddRequestScreen() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<FormData>({
-    cut: '',
-    min_weight: '',
-    max_weight: '',
-    clarity: '',
-    color: '',
-    price: '',
-  });
-
-  const [showCutModal, setShowCutModal] = useState(false);
-  const [showClarityModal, setShowClarityModal] = useState(false);
-  const [showColorModal, setShowColorModal] = useState(false);
-  const [showMinWeightModal, setShowMinWeightModal] = useState(false);
-  const [showMaxWeightModal, setShowMaxWeightModal] = useState(false);
+  const [category, setCategory] = useState('');
+  const [isRough, setIsRough] = useState(false);
+  const [jewelryType, setJewelryType] = useState('');
+  const [jewelrySubcategory, setJewelrySubcategory] = useState('');
+  const [material, setMaterial] = useState('');
+  const [weightFrom, setWeightFrom] = useState('');
+  const [weightTo, setWeightTo] = useState('');
+  const [diamondColors, setDiamondColors] = useState<string[]>([]);
+  const [diamondClarities, setDiamondClarities] = useState<string[]>([]);
+  const [diamondCuts, setDiamondCuts] = useState<string[]>([]);
+  const [hasSideStones, setHasSideStones] = useState(false);
+  const [watchBrand, setWatchBrand] = useState('');
+  const [watchModel, setWatchModel] = useState('');
+  const [gemType, setGemType] = useState('');
+  const [gemOrigin, setGemOrigin] = useState('');
+  const [gemWeightFrom, setGemWeightFrom] = useState('');
+  const [gemWeightTo, setGemWeightTo] = useState('');
+  const [gemShapes, setGemShapes] = useState<string[]>([]);
+  const [gemClarities, setGemClarities] = useState<string[]>([]);
+  const [diamondShape, setDiamondShape] = useState('');
+  const [diamondWeightFrom, setDiamondWeightFrom] = useState('');
+  const [diamondWeightTo, setDiamondWeightTo] = useState('');
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showJewelryTypeModal, setShowJewelryTypeModal] = useState(false);
+  const [showJewelrySubcategoryModal, setShowJewelrySubcategoryModal] = useState(false);
+  const [showMaterialModal, setShowMaterialModal] = useState(false);
+  const [showWeightModal, setShowWeightModal] = useState(false);
+  const [showWeightToModal, setShowWeightToModal] = useState(false);
+  const [showGemTypeModal, setShowGemTypeModal] = useState(false);
+  const [showGemOriginModal, setShowGemOriginModal] = useState(false);
+  const [showGemWeightModal, setShowGemWeightModal] = useState(false);
+  const [showGemShapesModal, setShowGemShapesModal] = useState(false);
+  const [showGemClaritiesModal, setShowGemClaritiesModal] = useState(false);
+  const [showDiamondShapeModal, setShowDiamondShapeModal] = useState(false);
+  const [showDiamondWeightModal, setShowDiamondWeightModal] = useState(false);
+  const [diamondShapes, setDiamondShapes] = useState<string[]>([]);
 
   const maxWeightOptions = useMemo(() => {
-    if (!formData.min_weight) return ALL_WEIGHT_OPTIONS;
+    if (!weightFrom) return ALL_WEIGHT_OPTIONS;
     
-    const minWeightIndex = ALL_WEIGHT_OPTIONS.indexOf(formData.min_weight);
-    if (minWeightIndex === -1) return ALL_WEIGHT_OPTIONS;
+    const weightIndex = ALL_WEIGHT_OPTIONS.indexOf(weightFrom);
+    if (weightIndex === -1) return ALL_WEIGHT_OPTIONS;
     
-    return ALL_WEIGHT_OPTIONS.slice(minWeightIndex + 1);
-  }, [formData.min_weight]);
+    return ALL_WEIGHT_OPTIONS.slice(weightIndex + 1);
+  }, [weightFrom]);
 
-  const handleMinWeightChange = (value: string) => {
-    setFormData(prev => {
-      const newFormData = { ...prev, min_weight: value };
-      
-      if (prev.max_weight && parseFloat(prev.max_weight) <= parseFloat(value)) {
-        newFormData.max_weight = '';
-      }
-      
-      return newFormData;
-    });
+  const handleWeightChange = (value: string) => {
+    setWeightFrom(value);
+    if (weightTo && parseFloat(weightTo) <= parseFloat(value)) {
+      setWeightTo('');
+    }
   };
 
   const handleSubmit = async () => {
@@ -115,215 +79,365 @@ export default function AddRequestScreen() {
         Alert.alert('Error', 'You must be logged in to add a request');
         return;
       }
-
-      const requiredFields = ['cut', 'min_weight', 'clarity', 'color'] as const;
-      const missingFields = [];
-
-      for (const field of requiredFields) {
-        if (!formData[field]) {
-          missingFields.push(field);
-        }
+      let details: any = {};
+      if (category === 'Jewelry') {
+        details = {
+          type: jewelryType,
+          subcategory: jewelrySubcategory,
+          material,
+          weight_from: weightFrom,
+          weight_to: weightTo,
+          color: diamondColors,
+          clarity: diamondClarities,
+          cut: diamondCuts,
+          has_side_stones: hasSideStones,
+        };
+      } else if (category === 'Watch') {
+        details = {
+          brand: watchBrand,
+          model: watchModel,
+        };
+      } else if (category === 'Gem') {
+        details = {
+          type: gemType,
+          origin: gemOrigin,
+          weight_from: gemWeightFrom,
+          weight_to: gemWeightTo,
+          shape: gemShapes,
+          clarity: gemClarities,
+        };
+      } else if (category === 'Loose Diamond') {
+        details = {
+          weight_from: diamondWeightFrom,
+          weight_to: diamondWeightTo,
+          color: diamondColors,
+          clarity: diamondClarities,
+          cut: diamondCuts,
+          shape: diamondShapes,
+        };
+      } else if (category === 'Rough Diamond') {
+        details = {
+          weight_from: diamondWeightFrom,
+          weight_to: diamondWeightTo,
+          color: diamondColors,
+          clarity: diamondClarities,
+          shape: diamondShapes,
+        };
       }
-
-      if (missingFields.length > 0) {
-        Alert.alert(
-          'Missing Fields',
-          `Please fill in the following fields: ${missingFields.join(', ')}`,
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      if (formData.min_weight && isNaN(parseFloat(formData.min_weight))) {
-        Alert.alert('Error', 'Please enter a valid minimum weight');
-        return;
-      }
-
-      if (formData.max_weight && isNaN(parseFloat(formData.max_weight))) {
-        Alert.alert('Error', 'Please enter a valid maximum weight');
-        return;
-      }
-
-      if (formData.price && isNaN(parseFloat(formData.price))) {
-        Alert.alert('Error', 'Please enter a valid price');
-        return;
-      }
-
       setLoading(true);
-
-      const requestData = {
+      const { error } = await supabase.from('requests').insert({
         user_id: user.id,
-        cut: formData.cut,
-        min_weight: formData.min_weight ? parseFloat(formData.min_weight) : null,
-        max_weight: formData.max_weight ? parseFloat(formData.max_weight) : null,
-        clarity: formData.clarity,
-        color: formData.color,
-        price: formData.price ? parseFloat(formData.price) : null,
-        status: 'active',
-        created_at: new Date().toISOString(),
-        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now
-      };
-
-      console.log('Sending request data:', requestData);
-
-      const { data, error } = await supabase
-        .from('diamond_requests')
-        .insert(requestData)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
-
-      console.log('Request added successfully:', data);
-
-      Alert.alert(
-        'Success',
-        'Request added successfully',
-        [{ text: 'OK', onPress: () => router.back() }]
-      );
+        category,
+        details,
+      });
+      if (error) throw error;
+      Alert.alert('Success', 'Request added successfully', [{ text: 'OK', onPress: () => router.back() }]);
     } catch (error: any) {
-      console.error('Error adding request:', error);
-      Alert.alert(
-        'Error',
-        error?.message || 'An error occurred while adding the request. Please try again.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Error', error?.message || 'An error occurred while adding the request. Please try again.', [{ text: 'OK' }]);
     } finally {
       setLoading(false);
     }
   };
 
-  const renderModal = (
-    visible: boolean,
-    onClose: () => void,
-    title: string,
-    options: string[],
-    onSelect: (value: string) => void,
-    selectedValue: string
-  ) => (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
+  // Find subcategory options for jewelry type
+  const jewelrySubcategoryOptions = Array.isArray(FILTER_FIELDS_BY_CATEGORY[jewelryType])
+    ? (FILTER_FIELDS_BY_CATEGORY[jewelryType].find(f => f.key === 'subcategory')?.options as string[] | undefined) || []
+    : [];
+
+  return (
+    <View style={styles.container}>
+      <TopHeader />
+      <ScrollView style={styles.form}>
+        <Text style={styles.label}>Category</Text>
+        <TouchableOpacity style={styles.selectButton} onPress={() => setShowCategoryModal(true)}>
+          <Text style={styles.selectButtonText}>{category || 'Select category'}</Text>
+          <ChevronDown size={20} color="#666" />
+        </TouchableOpacity>
+        {showCategoryModal && (
+          <Modal visible transparent animationType="slide" onRequestClose={() => setShowCategoryModal(false)}>
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{title}</Text>
-            <TouchableOpacity onPress={onClose}>
+                  <Text style={styles.modalTitle}>Select Category</Text>
+                  <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
               <ChevronDown size={24} color="#fff" />
             </TouchableOpacity>
           </View>
           <ScrollView style={styles.modalOptions}>
-            {options.map((option) => (
-              <TouchableOpacity
-                key={option}
-                style={[
-                  styles.modalOption,
-                  selectedValue === option && styles.modalOptionSelected,
-                ]}
-                onPress={() => {
-                  onSelect(option);
-                  onClose();
-                }}
-              >
-                <Text
-                  style={[
-                    styles.modalOptionText,
-                    selectedValue === option && styles.modalOptionTextSelected,
-                  ]}
-                >
-                  {option}
-                </Text>
+                  {CATEGORY_OPTIONS.map(option => (
+                    <TouchableOpacity key={option} style={styles.modalOption} onPress={() => { setCategory(option); setShowCategoryModal(false); }}>
+                      <Text style={styles.modalOptionText}>{option}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
       </View>
     </Modal>
-  );
-
-  return (
-    <View style={styles.container}>
-      <TopHeader />
-      <ScrollView style={styles.form}>
+        )}
+        {category === 'Jewelry' && (
+          <>
+            <Text style={styles.label}>Jewelry Type</Text>
+            <TouchableOpacity style={styles.selectButton} onPress={() => setShowJewelryTypeModal(true)}>
+              <Text style={styles.selectButtonText}>{jewelryType || 'Select type'}</Text>
+              <ChevronDown size={20} color="#666" />
+            </TouchableOpacity>
+            {jewelryType && (
+              <>
+                <Text style={styles.label}>Subcategory</Text>
+                <TouchableOpacity style={styles.selectButton} onPress={() => setShowJewelrySubcategoryModal(true)}>
+                  <Text style={styles.selectButtonText}>{jewelrySubcategory || 'Select subcategory'}</Text>
+                  <ChevronDown size={20} color="#666" />
+                </TouchableOpacity>
+              </>
+            )}
+            <Text style={styles.label}>Material</Text>
+            <TouchableOpacity style={styles.selectButton} onPress={() => setShowMaterialModal(true)}>
+              <Text style={styles.selectButtonText}>{material || 'Select material'}</Text>
+              <ChevronDown size={20} color="#666" />
+            </TouchableOpacity>
+            <Text style={styles.label}>Weight (From - To)</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+              <TextInput style={[styles.input, { flex: 1 }]} value={weightFrom} onChangeText={handleWeightChange} placeholder="From" keyboardType="numeric" />
+              <TextInput style={[styles.input, { flex: 1 }]} value={weightTo} onChangeText={setWeightTo} placeholder="To" keyboardType="numeric" />
+            </View>
+            <Text style={styles.label}>Diamond Color</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {COLOR_GRADES.map(option => (
+                <TouchableOpacity
+                  key={option}
+                  style={[styles.filterOption, diamondColors.includes(option) && styles.filterOptionSelected]}
+                  onPress={() => setDiamondColors(prev => prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option])}
+                >
+                  <Text style={[styles.filterOptionText, diamondColors.includes(option) && styles.filterOptionTextSelected]}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <Text style={styles.label}>Clarity</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {CLARITY_GRADES.map(option => (
+                <TouchableOpacity
+                  key={option}
+                  style={[styles.filterOption, diamondClarities.includes(option) && styles.filterOptionSelected]}
+                  onPress={() => setDiamondClarities(prev => prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option])}
+                >
+                  <Text style={[styles.filterOptionText, diamondClarities.includes(option) && styles.filterOptionTextSelected]}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
         <Text style={styles.label}>Cut</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {DIAMOND_CUTS.map(option => (
+                <TouchableOpacity
+                  key={option}
+                  style={[styles.filterOption, diamondCuts.includes(option) && styles.filterOptionSelected]}
+                  onPress={() => setDiamondCuts(prev => prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option])}
+                >
+                  <Text style={[styles.filterOptionText, diamondCuts.includes(option) && styles.filterOptionTextSelected]}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={[styles.label, { flex: 1 }]}>Side Stones?</Text>
+              <TouchableOpacity
+                style={[styles.selectButton, { flex: 1, backgroundColor: hasSideStones ? '#6C5CE7' : '#111' }]}
+                onPress={() => setHasSideStones(v => !v)}
+              >
+                <Text style={styles.selectButtonText}>{hasSideStones ? 'Yes' : 'No'}</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+        {category === 'Watch' && (
+          <>
+            <Text style={styles.label}>Brand</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {Object.keys(WATCH_BRANDS_MODELS).map(option => (
+                <TouchableOpacity
+                  key={option}
+                  style={[styles.filterOption, watchBrand === option && styles.filterOptionSelected]}
+                  onPress={() => setWatchBrand(option)}
+                >
+                  <Text style={[styles.filterOptionText, watchBrand === option && styles.filterOptionTextSelected]}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            {watchBrand && (
+              <>
+                <Text style={styles.label}>Model</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+                  {(WATCH_BRANDS_MODELS[watchBrand] || []).map(option => (
+                    <TouchableOpacity
+                      key={option}
+                      style={[styles.filterOption, watchModel === option && styles.filterOptionSelected]}
+                      onPress={() => setWatchModel(option)}
+                    >
+                      <Text style={[styles.filterOptionText, watchModel === option && styles.filterOptionTextSelected]}>{option}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </>
+            )}
+          </>
+        )}
+        {category === 'Gem' && (
+          <>
+            <Text style={styles.label}>Gem Type</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {GEM_TYPES.map(option => (
+                <TouchableOpacity
+                  key={option}
+                  style={[styles.filterOption, gemType === option && styles.filterOptionSelected]}
+                  onPress={() => setGemType(option)}
+                >
+                  <Text style={[styles.filterOptionText, gemType === option && styles.filterOptionTextSelected]}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <Text style={styles.label}>Origin</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {['Natural', 'Lab Grown'].map(option => (
+                <TouchableOpacity
+                  key={option}
+                  style={[styles.filterOption, gemOrigin === option && styles.filterOptionSelected]}
+                  onPress={() => setGemOrigin(option)}
+                >
+                  <Text style={[styles.filterOptionText, gemOrigin === option && styles.filterOptionTextSelected]}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <Text style={styles.label}>Weight (From - To)</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+              <TextInput style={[styles.input, { flex: 1 }]} value={gemWeightFrom} onChangeText={setGemWeightFrom} placeholder="From" keyboardType="numeric" />
+              <TextInput style={[styles.input, { flex: 1 }]} value={gemWeightTo} onChangeText={setGemWeightTo} placeholder="To" keyboardType="numeric" />
+            </View>
+            <Text style={styles.label}>Shape</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {DIAMOND_SHAPES.map(option => (
+                <TouchableOpacity
+                  key={option}
+                  style={[styles.filterOption, gemShapes.includes(option) && styles.filterOptionSelected]}
+                  onPress={() => setGemShapes(prev => prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option])}
+                >
+                  <Text style={[styles.filterOptionText, gemShapes.includes(option) && styles.filterOptionTextSelected]}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <Text style={styles.label}>Clarity</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {CLARITY_GRADES.map(option => (
         <TouchableOpacity
-          style={styles.selectButton}
-          onPress={() => setShowCutModal(true)}
+                  key={option}
+                  style={[styles.filterOption, gemClarities.includes(option) && styles.filterOptionSelected]}
+                  onPress={() => setGemClarities(prev => prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option])}
         >
-          <Text style={styles.selectButtonText}>
-            {formData.cut || 'Select cut'}
-          </Text>
-          <ChevronDown size={20} color="#666" />
+                  <Text style={[styles.filterOptionText, gemClarities.includes(option) && styles.filterOptionTextSelected]}>{option}</Text>
         </TouchableOpacity>
-
-        <Text style={styles.label}>Minimum Weight (Carat)</Text>
+              ))}
+            </ScrollView>
+          </>
+        )}
+        {category === 'Loose Diamond' && (
+          <>
+            <Text style={styles.label}>Shape</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {DIAMOND_SHAPES.map(option => (
         <TouchableOpacity
-          style={styles.selectButton}
-          onPress={() => setShowMinWeightModal(true)}
+                  key={option}
+                  style={[styles.filterOption, diamondShapes.includes(option) && styles.filterOptionSelected]}
+                  onPress={() => setDiamondShapes(prev => prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option])}
         >
-          <Text style={styles.selectButtonText}>
-            {formData.min_weight || 'Select minimum weight'}
-          </Text>
-          <ChevronDown size={20} color="#666" />
+                  <Text style={[styles.filterOptionText, diamondShapes.includes(option) && styles.filterOptionTextSelected]}>{option}</Text>
         </TouchableOpacity>
-
-        <Text style={styles.label}>Maximum Weight (Carat)</Text>
+              ))}
+            </ScrollView>
+            <Text style={styles.label}>Weight (From - To)</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+              <TextInput style={[styles.input, { flex: 1 }]} value={diamondWeightFrom} onChangeText={setDiamondWeightFrom} placeholder="From" keyboardType="numeric" />
+              <TextInput style={[styles.input, { flex: 1 }]} value={diamondWeightTo} onChangeText={setDiamondWeightTo} placeholder="To" keyboardType="numeric" />
+            </View>
+            <Text style={styles.label}>Color</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {COLOR_GRADES.map(option => (
         <TouchableOpacity
-          style={[
-            styles.selectButton,
-            !formData.min_weight && styles.selectButtonDisabled
-          ]}
-          onPress={() => formData.min_weight && setShowMaxWeightModal(true)}
-        >
-          <Text style={[
-            styles.selectButtonText,
-            !formData.min_weight && styles.selectButtonTextDisabled
-          ]}>
-            {!formData.min_weight 
-              ? 'Please select minimum weight first'
-              : formData.max_weight || 'Select maximum weight'}
-          </Text>
-          <ChevronDown size={20} color={formData.min_weight ? '#666' : '#444'} />
+                  key={option}
+                  style={[styles.filterOption, diamondColors.includes(option) && styles.filterOptionSelected]}
+                  onPress={() => setDiamondColors(prev => prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option])}
+                >
+                  <Text style={[styles.filterOptionText, diamondColors.includes(option) && styles.filterOptionTextSelected]}>{option}</Text>
         </TouchableOpacity>
-
+              ))}
+            </ScrollView>
         <Text style={styles.label}>Clarity</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {CLARITY_GRADES.map(option => (
+                <TouchableOpacity
+                  key={option}
+                  style={[styles.filterOption, diamondClarities.includes(option) && styles.filterOptionSelected]}
+                  onPress={() => setDiamondClarities(prev => prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option])}
+                >
+                  <Text style={[styles.filterOptionText, diamondClarities.includes(option) && styles.filterOptionTextSelected]}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <Text style={styles.label}>Cut</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {DIAMOND_CUTS.map(option => (
+                <TouchableOpacity
+                  key={option}
+                  style={[styles.filterOption, diamondCuts.includes(option) && styles.filterOptionSelected]}
+                  onPress={() => setDiamondCuts(prev => prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option])}
+                >
+                  <Text style={[styles.filterOptionText, diamondCuts.includes(option) && styles.filterOptionTextSelected]}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </>
+        )}
+        {category === 'Rough Diamond' && (
+          <>
+            <Text style={styles.label}>Shape</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {DIAMOND_SHAPES.map(option => (
         <TouchableOpacity
-          style={styles.selectButton}
-          onPress={() => setShowClarityModal(true)}
+                  key={option}
+                  style={[styles.filterOption, diamondShapes.includes(option) && styles.filterOptionSelected]}
+                  onPress={() => setDiamondShapes(prev => prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option])}
         >
-          <Text style={styles.selectButtonText}>
-            {formData.clarity || 'Select clarity'}
-          </Text>
-          <ChevronDown size={20} color="#666" />
+                  <Text style={[styles.filterOptionText, diamondShapes.includes(option) && styles.filterOptionTextSelected]}>{option}</Text>
         </TouchableOpacity>
-
+              ))}
+            </ScrollView>
+            <Text style={styles.label}>Weight (From - To)</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+              <TextInput style={[styles.input, { flex: 1 }]} value={diamondWeightFrom} onChangeText={setDiamondWeightFrom} placeholder="From" keyboardType="numeric" />
+              <TextInput style={[styles.input, { flex: 1 }]} value={diamondWeightTo} onChangeText={setDiamondWeightTo} placeholder="To" keyboardType="numeric" />
+            </View>
         <Text style={styles.label}>Color</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {COLOR_GRADES.map(option => (
+                <TouchableOpacity
+                  key={option}
+                  style={[styles.filterOption, diamondColors.includes(option) && styles.filterOptionSelected]}
+                  onPress={() => setDiamondColors(prev => prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option])}
+                >
+                  <Text style={[styles.filterOptionText, diamondColors.includes(option) && styles.filterOptionTextSelected]}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <Text style={styles.label}>Clarity</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {CLARITY_GRADES.map(option => (
         <TouchableOpacity
-          style={styles.selectButton}
-          onPress={() => setShowColorModal(true)}
+                  key={option}
+                  style={[styles.filterOption, diamondClarities.includes(option) && styles.filterOptionSelected]}
+                  onPress={() => setDiamondClarities(prev => prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option])}
         >
-          <Text style={styles.selectButtonText}>
-            {formData.color || 'Select color'}
-          </Text>
-          <ChevronDown size={20} color="#666" />
+                  <Text style={[styles.filterOptionText, diamondClarities.includes(option) && styles.filterOptionTextSelected]}>{option}</Text>
         </TouchableOpacity>
-
-        <Text style={styles.label}>Maximum Price (Optional)</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.price}
-          onChangeText={(text) => setFormData({ ...formData, price: text })}
-          placeholder="Maximum price"
-          placeholderTextColor="#666"
-          keyboardType="numeric"
-        />
-
+              ))}
+            </ScrollView>
+          </>
+        )}
         <TouchableOpacity
           style={[styles.submitButton, loading && styles.submitButtonDisabled]}
           onPress={handleSubmit}
@@ -334,50 +448,521 @@ export default function AddRequestScreen() {
           </Text>
         </TouchableOpacity>
       </ScrollView>
-
-      {renderModal(
-        showCutModal,
-        () => setShowCutModal(false),
-        'Select Cut',
-        DIAMOND_CUTS,
-        (value) => setFormData({ ...formData, cut: value }),
-        formData.cut
+      {showJewelryTypeModal && (
+        <Modal
+          visible={showJewelryTypeModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowJewelryTypeModal(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Jewelry Type</Text>
+                <TouchableOpacity onPress={() => setShowJewelryTypeModal(false)}>
+                  <ChevronDown size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalOptions}>
+                {JEWELRY_TYPES.map(option => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.modalOption,
+                      jewelryType === option && styles.modalOptionSelected,
+                    ]}
+                    onPress={() => {
+                      setJewelryType(option);
+                      setShowJewelryTypeModal(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        jewelryType === option && styles.modalOptionTextSelected,
+                      ]}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       )}
-
-      {renderModal(
-        showMinWeightModal,
-        () => setShowMinWeightModal(false),
-        'Select Minimum Weight',
-        ALL_WEIGHT_OPTIONS,
-        handleMinWeightChange,
-        formData.min_weight
+      {showJewelrySubcategoryModal && (
+        <Modal
+          visible={showJewelrySubcategoryModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowJewelrySubcategoryModal(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Jewelry Subcategory</Text>
+                <TouchableOpacity onPress={() => setShowJewelrySubcategoryModal(false)}>
+                  <ChevronDown size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalOptions}>
+                {jewelrySubcategoryOptions.map((option: string) => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.modalOption,
+                      jewelrySubcategory === option && styles.modalOptionSelected,
+                    ]}
+                    onPress={() => {
+                      setJewelrySubcategory(option);
+                      setShowJewelrySubcategoryModal(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        jewelrySubcategory === option && styles.modalOptionTextSelected,
+                      ]}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       )}
-
-      {renderModal(
-        showMaxWeightModal,
-        () => setShowMaxWeightModal(false),
-        'Select Maximum Weight',
-        maxWeightOptions,
-        (value) => setFormData({ ...formData, max_weight: value }),
-        formData.max_weight
+      {showMaterialModal && (
+        <Modal
+          visible={showMaterialModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowMaterialModal(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Material</Text>
+                <TouchableOpacity onPress={() => setShowMaterialModal(false)}>
+                  <ChevronDown size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalOptions}>
+                {MATERIALS.map(option => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.modalOption,
+                      material === option && styles.modalOptionSelected,
+                    ]}
+                    onPress={() => {
+                      setMaterial(option);
+                      setShowMaterialModal(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        material === option && styles.modalOptionTextSelected,
+                      ]}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       )}
-
-      {renderModal(
-        showClarityModal,
-        () => setShowClarityModal(false),
-        'Select Clarity',
-        CLARITY_GRADES,
-        (value) => setFormData({ ...formData, clarity: value }),
-        formData.clarity
+      {showWeightModal && (
+        <Modal
+          visible={showWeightModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowWeightModal(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Weight</Text>
+                <TouchableOpacity onPress={() => setShowWeightModal(false)}>
+                  <ChevronDown size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalOptions}>
+                {maxWeightOptions.map(option => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.modalOption,
+                      weightFrom === option && styles.modalOptionSelected,
+                    ]}
+                    onPress={() => {
+                      handleWeightChange(option);
+                      setShowWeightModal(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        weightFrom === option && styles.modalOptionTextSelected,
+                      ]}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       )}
-
-      {renderModal(
-        showColorModal,
-        () => setShowColorModal(false),
-        'Select Color',
-        COLOR_GRADES,
-        (value) => setFormData({ ...formData, color: value }),
-        formData.color
+      {showWeightToModal && (
+        <Modal
+          visible={showWeightToModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowWeightToModal(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Weight</Text>
+                <TouchableOpacity onPress={() => setShowWeightToModal(false)}>
+                  <ChevronDown size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalOptions}>
+                {maxWeightOptions.map(option => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.modalOption,
+                      weightTo === option && styles.modalOptionSelected,
+                    ]}
+                    onPress={() => {
+                      setWeightTo(option);
+                      setShowWeightToModal(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        weightTo === option && styles.modalOptionTextSelected,
+                      ]}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
+      {showGemTypeModal && (
+        <Modal
+          visible={showGemTypeModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowGemTypeModal(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Gem Type</Text>
+                <TouchableOpacity onPress={() => setShowGemTypeModal(false)}>
+                  <ChevronDown size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalOptions}>
+                {GEM_TYPES.map(option => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.modalOption,
+                      gemType === option && styles.modalOptionSelected,
+                    ]}
+                    onPress={() => {
+                      setGemType(option);
+                      setShowGemTypeModal(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        gemType === option && styles.modalOptionTextSelected,
+                      ]}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
+      {showGemOriginModal && (
+        <Modal
+          visible={showGemOriginModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowGemOriginModal(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Gem Origin</Text>
+                <TouchableOpacity onPress={() => setShowGemOriginModal(false)}>
+                  <ChevronDown size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalOptions}>
+                {['Natural', 'Lab Grown'].map(option => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.modalOption,
+                      gemOrigin === option && styles.modalOptionSelected,
+                    ]}
+                    onPress={() => {
+                      setGemOrigin(option);
+                      setShowGemOriginModal(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        gemOrigin === option && styles.modalOptionTextSelected,
+                      ]}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
+      {showGemWeightModal && (
+        <Modal
+          visible={showGemWeightModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowGemWeightModal(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Gem Weight</Text>
+                <TouchableOpacity onPress={() => setShowGemWeightModal(false)}>
+                  <ChevronDown size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalOptions}>
+                {ALL_WEIGHT_OPTIONS.map(option => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.modalOption,
+                      gemWeightFrom === option && styles.modalOptionSelected,
+                    ]}
+                    onPress={() => {
+                      setGemWeightFrom(option);
+                      setShowGemWeightModal(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        gemWeightFrom === option && styles.modalOptionTextSelected,
+                      ]}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
+      {showGemShapesModal && (
+        <Modal
+          visible={showGemShapesModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowGemShapesModal(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Gem Shape</Text>
+                <TouchableOpacity onPress={() => setShowGemShapesModal(false)}>
+                  <ChevronDown size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalOptions}>
+                {DIAMOND_SHAPES.map(option => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.modalOption,
+                      gemShapes.includes(option) && styles.modalOptionSelected,
+                    ]}
+                    onPress={() => {
+                      setGemShapes(prev => prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option]);
+                      setShowGemShapesModal(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        gemShapes.includes(option) && styles.modalOptionTextSelected,
+                      ]}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
+      {showGemClaritiesModal && (
+        <Modal
+          visible={showGemClaritiesModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowGemClaritiesModal(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Gem Clarity</Text>
+                <TouchableOpacity onPress={() => setShowGemClaritiesModal(false)}>
+                  <ChevronDown size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalOptions}>
+                {CLARITY_GRADES.map(option => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.modalOption,
+                      gemClarities.includes(option) && styles.modalOptionSelected,
+                    ]}
+                    onPress={() => {
+                      setGemClarities(prev => prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option]);
+                      setShowGemClaritiesModal(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        gemClarities.includes(option) && styles.modalOptionTextSelected,
+                      ]}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
+      {showDiamondShapeModal && (
+        <Modal
+          visible={showDiamondShapeModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowDiamondShapeModal(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Diamond Shape</Text>
+                <TouchableOpacity onPress={() => setShowDiamondShapeModal(false)}>
+                  <ChevronDown size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalOptions}>
+                {DIAMOND_SHAPES.map(option => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.modalOption,
+                      diamondShape === option && styles.modalOptionSelected,
+                    ]}
+                    onPress={() => {
+                      setDiamondShape(option);
+                      setShowDiamondShapeModal(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        diamondShape === option && styles.modalOptionTextSelected,
+                      ]}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
+      {showDiamondWeightModal && (
+        <Modal
+          visible={showDiamondWeightModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowDiamondWeightModal(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Diamond Weight</Text>
+                <TouchableOpacity onPress={() => setShowDiamondWeightModal(false)}>
+                  <ChevronDown size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalOptions}>
+                {ALL_WEIGHT_OPTIONS.map(option => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.modalOption,
+                      diamondWeightFrom === option && styles.modalOptionSelected,
+                    ]}
+                    onPress={() => {
+                      setDiamondWeightFrom(option);
+                      setShowDiamondWeightModal(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        diamondWeightFrom === option && styles.modalOptionTextSelected,
+                      ]}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       )}
     </View>
   );
@@ -478,10 +1063,20 @@ const styles = StyleSheet.create({
   modalOptionTextSelected: {
     color: '#fff',
   },
-  selectButtonDisabled: {
-    opacity: 0.5,
+  filterOption: {
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 8,
   },
-  selectButtonTextDisabled: {
-    color: '#444',
+  filterOptionSelected: {
+    backgroundColor: '#6C5CE7',
+  },
+  filterOptionText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  filterOptionTextSelected: {
+    color: '#fff',
   },
 }); 
