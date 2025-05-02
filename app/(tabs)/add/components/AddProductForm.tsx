@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { ScrollView, View, Alert, TextInput, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import ProductTypeSelect from './fields/ProductTypeSelect';
 import BrandSelect from './fields/BrandSelect';
-import ModelSelect from './fields/ModelSelect';
 import PriceInput from './fields/PriceInput';
 import DescriptionInput from './fields/DescriptionInput';
 import MaterialSection from './fields/MaterialSection';
@@ -17,6 +16,7 @@ import { Select } from '@/components/Select';
 import ImagePreview from './ImagePreview';
 import SideStonesFields from './fields/SideStonesFields';
 import GemFields from './fields/GemFields';
+import RoughDiamondFields from './fields/RoughDiamondFields';
 
 const AddProductForm = () => {
   const {
@@ -72,7 +72,17 @@ const AddProductForm = () => {
           onChange={value => handleChange('description', value)}
           error={errors.description}
         />
-        {formData.category === 'Watches' ? (
+        {formData.category === 'Rough Diamond' ? (
+          <RoughDiamondFields
+            weight={dynamicFields.weight || ''}
+            clarity={dynamicFields.clarity || ''}
+            color={dynamicFields.color || ''}
+            onWeightChange={(value: string) => handleDynamicChange('weight', value)}
+            onClarityChange={(value: string) => handleDynamicChange('clarity', value)}
+            onColorChange={(value: string) => handleDynamicChange('color', value)}
+            errors={dynamicErrors}
+          />
+        ) : formData.category === 'Watches' ? (
           <WatchFields
             brand={dynamicFields.brand}
             model={dynamicFields.model}

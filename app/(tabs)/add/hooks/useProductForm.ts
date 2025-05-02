@@ -15,7 +15,7 @@ interface ImageData {
 type WatchModelsType = typeof watchModels;
 
 const PRODUCT_TYPES = [
-  'Ring', 'Necklace', 'Bracelet', 'Earrings', 'Special pieces', 'Watches', 'Gems'
+  'Ring', 'Necklace', 'Bracelet', 'Earrings', 'Special pieces', 'Watches', 'Gems', 'Rough Diamond'
 ];
 
 const JEWELRY_TYPES = ['Ring', 'Necklace', 'Bracelet', 'Earrings', 'Special pieces'];
@@ -195,6 +195,12 @@ export default function useProductForm() {
       if (dynamicFields.hasCertification === 'true' && !dynamicFields.certification) {
         newErrors.certification = true;
       }
+    } else if (formData.category === 'Rough Diamond') {
+      if (!dynamicFields.weight || isNaN(Number(dynamicFields.weight)) || Number(dynamicFields.weight) <= 0) {
+        newErrors.weight = true;
+      }
+      if (!dynamicFields.clarity) newErrors.clarity = true;
+      if (!dynamicFields.color) newErrors.color = true;
     } else {
       if (!formData.title) newErrors.title = true;
       if (!dynamicFields.material) newErrors.material = true;
@@ -316,6 +322,21 @@ export default function useProductForm() {
         // Even if we get a duplicate key error, we can continue since the product was saved
         if (specsError && specsError.code !== '23505') {
           console.error('Error inserting gem specs:', specsError);
+          throw specsError;
+        }
+      } else if (productType === 'Rough Diamond') {
+        // Insert rough diamond specs
+        const specsData = {
+          product_id: product.id,
+          weight: dynamicFields.weight,
+          clarity: dynamicFields.clarity,
+          color: dynamicFields.color
+        };
+        const { error: specsError } = await supabase
+          .from('rough_diamond_specs')
+          .insert(specsData);
+        if (specsError && specsError.code !== '23505') {
+          console.error('Error inserting rough diamond specs:', specsError);
           throw specsError;
         }
       } else {

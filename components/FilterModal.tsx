@@ -516,27 +516,29 @@ export default function FilterModal({
             </TouchableOpacity>
           </View>
 
-          {renderFilterFields()}
-
-          {/* Filters List */}
+          {/* Filters List - always at the top */}
           {filters.length > 0 && (
-            <View style={{padding: 16}}>
-              <Text style={{color: '#fff', fontWeight: 'bold', marginBottom: 8}}>Filters</Text>
-              {filters.map((f, idx) => (
-                <View key={idx} style={{backgroundColor: '#222', borderRadius: 10, padding: 10, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
-                  <View>
-                    <Text style={{color: '#fff', fontWeight: 'bold'}}>{f.category}</Text>
-                    <Text style={{color: '#fff', fontSize: 12}}>
-                      {Object.entries(f.filters).map(([k, v]) => `${k}: ${v.join(', ')}`).join(' | ')}
-                    </Text>
+            <View style={styles.savedFiltersContainer}>
+              <Text style={styles.savedFiltersTitle}>Filters</Text>
+              <ScrollView style={styles.savedFiltersScroll} contentContainerStyle={{paddingBottom: 4}}>
+                {filters.map((f, idx) => (
+                  <View key={idx} style={styles.savedFilterCard}>
+                    <View>
+                      <Text style={styles.savedFilterCategory}>{f.category}</Text>
+                      <Text style={styles.savedFilterDetails}>
+                        {Object.entries(f.filters).map(([k, v]) => `${k}: ${v.join(', ')}`).join(' | ')}
+                      </Text>
+                    </View>
+                    <TouchableOpacity onPress={() => handleRemoveFilter(idx)} style={styles.savedFilterRemove}>
+                      <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 16}}>×</Text>
+                    </TouchableOpacity>
                   </View>
-                  <TouchableOpacity onPress={() => handleRemoveFilter(idx)} style={{marginLeft: 8, padding: 4}}>
-                    <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 16}}>×</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
+                ))}
+              </ScrollView>
             </View>
           )}
+
+          {renderFilterFields()}
 
           <View style={styles.modalFooter}>
             <TouchableOpacity style={styles.footerButton} onPress={resetFilters}>
@@ -708,5 +710,43 @@ const styles = StyleSheet.create({
   },
   applyButtonText: {
     fontWeight: 'bold',
+  },
+  savedFiltersContainer: {
+    maxHeight: 100,
+    backgroundColor: '#181818',
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  savedFiltersTitle: {
+    color: '#fff',
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  savedFiltersScroll: {
+    maxHeight: 70,
+  },
+  savedFilterCard: {
+    backgroundColor: '#222',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  savedFilterCategory: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  savedFilterDetails: {
+    color: '#fff',
+    fontSize: 12,
+  },
+  savedFilterRemove: {
+    marginLeft: 8,
+    padding: 4,
   },
 }); 
