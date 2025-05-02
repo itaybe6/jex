@@ -82,16 +82,9 @@ export const COMMON_JEWELRY_FIELDS: FilterField[] = [
 
 export const PRICE_FILTER_FIELDS: FilterField[] = [
   {
-    key: "price_from",
-    type: "number",
-    label: "Price From ($)",
-    min: 0,
-    step: 1
-  },
-  {
-    key: "price_to",
-    type: "number",
-    label: "Price To ($)",
+    key: "price",
+    type: "range",
+    label: "Price ($)",
     min: 0,
     step: 1
   }
@@ -273,35 +266,23 @@ export const FILTER_FIELDS_BY_CATEGORY: FilterFieldsByCategory = {
   ],
   "Rough Diamonds": [
     {
-      key: "shape",
-      type: "multi-select",
-      label: "Shape",
-      options: ["Octahedron", "Cube", "Dodecahedron", "Macle", "Aggregate"]
-    },
-    {
       key: "weight",
       type: "range",
-      label: "Weight",
+      label: "Weight (Carat)",
       min: 0,
       step: 0.01
-    },
-    {
-      key: "color",
-      type: "multi-select",
-      label: "Color",
-      options: ["D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N-Z"]
     },
     {
       key: "clarity",
       type: "multi-select",
       label: "Clarity",
-      options: ["FL", "IF", "VVS1", "VVS2", "VS1", "VS2", "SI1", "SI2", "I1", "I2", "I3"]
+      options: ["I3", "I2", "I1", "SI2", "SI1", "VS2", "VS1", "VVS2", "VVS1", "IF", "FL"]
     },
     {
-      key: "type",
+      key: "color",
       type: "multi-select",
-      label: "Type",
-      options: ["Natural", "Lab Grown", "Treated"]
+      label: "Color",
+      options: ["D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
     }
   ],
   "Gems": [

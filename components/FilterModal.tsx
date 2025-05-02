@@ -36,6 +36,9 @@ export default function FilterModal({
   const [gemsPriceFrom, setGemsPriceFrom] = useState('');
   const [gemsPriceTo, setGemsPriceTo] = useState('');
 
+  // Add state for expanded filter details
+  const [expandedFilterIdx, setExpandedFilterIdx] = useState<number | null>(null);
+
   // Watches: get models for selected brands
   const getAvailableWatchModels = () => {
     if (!selectedWatchBrands.length) return [];
@@ -522,19 +525,52 @@ export default function FilterModal({
               <Text style={styles.savedFiltersTitle}>Filters</Text>
               <ScrollView style={styles.savedFiltersScroll} contentContainerStyle={{paddingBottom: 4}}>
                 {filters.map((f, idx) => (
-                  <View key={idx} style={styles.savedFilterCard}>
-                    <View>
-                      <Text style={styles.savedFilterCategory}>{f.category}</Text>
-                      <Text style={styles.savedFilterDetails}>
-                        {Object.entries(f.filters).map(([k, v]) => `${k}: ${v.join(', ')}`).join(' | ')}
+                  <TouchableOpacity
+                    key={idx}
+                    style={styles.savedFilterCard}
+                    activeOpacity={0.8}
+                    onPress={() => setExpandedFilterIdx(idx)}
+                  >
+                    <View style={styles.savedFilterCardRow}>
+                      <Text
+                        style={styles.savedFilterCategory}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {f.category}
                       </Text>
+                      <TouchableOpacity onPress={() => handleRemoveFilter(idx)} style={styles.savedFilterRemove}>
+                        <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 16}}>×</Text>
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity onPress={() => handleRemoveFilter(idx)} style={styles.savedFilterRemove}>
-                      <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 16}}>×</Text>
-                    </TouchableOpacity>
-                  </View>
+                  </TouchableOpacity>
                 ))}
               </ScrollView>
+              {/* Expanded filter details modal */}
+              {expandedFilterIdx !== null && (
+                <Modal
+                  visible={expandedFilterIdx !== null}
+                  transparent
+                  animationType="fade"
+                  onRequestClose={() => setExpandedFilterIdx(null)}
+                >
+                  <View style={styles.detailsModalOverlay}>
+                    <View style={styles.detailsModalContent}>
+                      <View style={styles.detailsModalHeader}>
+                        <Text style={styles.detailsModalTitle}>{filters[expandedFilterIdx].category}</Text>
+                        <TouchableOpacity onPress={() => setExpandedFilterIdx(null)} style={styles.detailsModalClose}>
+                          <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 20}}>×</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <ScrollView style={{maxHeight: 200}}>
+                        <Text style={styles.detailsModalText}>
+                          {Object.entries(filters[expandedFilterIdx].filters).map(([k, v]) => `${k}: ${v.join(', ')}`).join(' | ')}
+                        </Text>
+                      </ScrollView>
+                    </View>
+                  </View>
+                </Modal>
+              )}
             </View>
           )}
 
@@ -729,24 +765,69 @@ const styles = StyleSheet.create({
     maxHeight: 70,
   },
   savedFilterCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     backgroundColor: '#222',
     borderRadius: 10,
-    padding: 10,
-    marginBottom: 6,
+    padding: 12,
+    marginBottom: 10,
+    overflow: 'hidden',
+  },
+  savedFilterCardRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    overflow: 'hidden',
   },
   savedFilterCategory: {
     color: '#fff',
     fontWeight: 'bold',
-  },
-  savedFilterDetails: {
-    color: '#fff',
-    fontSize: 12,
+    fontSize: 16,
+    flexShrink: 1,
+    flexGrow: 1,
+    overflow: 'hidden',
   },
   savedFilterRemove: {
-    marginLeft: 8,
+    marginLeft: 12,
     padding: 4,
+    zIndex: 2,
+  },
+  detailsModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  detailsModalContent: {
+    backgroundColor: '#222',
+    borderRadius: 16,
+    padding: 24,
+    minWidth: 260,
+    maxWidth: 340,
+    alignItems: 'flex-start',
+  },
+  detailsModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 12,
+  },
+  detailsModalTitle: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 18,
+    flex: 1,
+  },
+  detailsModalClose: {
+    marginLeft: 12,
+    padding: 4,
+  },
+  detailsModalText: {
+    color: '#fff',
+    fontSize: 15,
+    marginTop: 4,
   },
 }); 
