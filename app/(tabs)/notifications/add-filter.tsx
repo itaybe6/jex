@@ -109,11 +109,13 @@ export default function AddFilterScreen() {
         delete filterFields.gold_color;
         delete filterFields.gold_karat;
       }
-      const newFilter = {
+      // Create a filter object for each notifyOn type
+      const newFilters = notifyOn.map(type => ({
         id: Math.random().toString(36).substr(2, 9),
         type: productType,
-        ...filterFields
-      };
+        ...filterFields,
+        filter_type: type
+      }));
       const { data: existingData } = await supabase
         .from('notification_preferences')
         .select('*')
@@ -123,8 +125,7 @@ export default function AddFilterScreen() {
         const { error } = await supabase
           .from('notification_preferences')
           .update({
-            specific_filters: [...(existingData.specific_filters || []), newFilter],
-            enabled_types: notifyOn
+            specific_filters: [...(existingData.specific_filters || []), ...newFilters]
           })
           .eq('user_id', user.id);
         if (error) throw error;
@@ -133,8 +134,7 @@ export default function AddFilterScreen() {
           .from('notification_preferences')
           .insert({
             user_id: user.id,
-            enabled_types: notifyOn,
-            specific_filters: [newFilter]
+            specific_filters: newFilters
           });
         if (error) throw error;
       }

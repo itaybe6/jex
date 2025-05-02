@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Icon } from '../../../components/Icon';
 import React from 'react';
+import { FILTER_FIELDS_BY_CATEGORY, CATEGORY_LABELS } from '@/constants/filters';
 
 const DIAMOND_CUTS = [
   'Round',
@@ -41,11 +42,10 @@ const COLOR_GRADES = [
 
 type SpecificFilter = {
   id: string;
-  type: 'product' | 'request';
-  cut: string;
-  clarity: string;
-  color: string;
-  weight: string;
+  type: string;
+  filter_type?: string;
+  jewelryType?: string;
+  [key: string]: any;
 };
 
 type NotificationPreferences = {
@@ -159,47 +159,72 @@ export default function NotificationSettingsScreen() {
       <ScrollView style={styles.content}>
         <Text style={styles.sectionTitle}>Active Filters</Text>
         
-        {preferences?.specific_filters.map((filter, index) => (
-          <View key={filter.id} style={styles.filterItem}>
-            <View style={styles.filterContent}>
-              <View style={styles.filterHeader}>
-                <Text style={styles.filterType}>Diamond Filter</Text>
-                <View style={styles.filterActions}>
-                  <TouchableOpacity 
-                    onPress={() => handleEditFilter(filter.id)}
-                    style={styles.actionButton}
-                  >
-                    <Icon name="edit-2" size={16} color="#0E2657" />
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    onPress={() => handleRemoveFilter(filter.id)}
-                    style={[styles.actionButton, styles.deleteButton]}
-                  >
-                    <Icon name="trash-2" size={16} color="#FF3B30" />
-                  </TouchableOpacity>
+        {preferences?.specific_filters.map((filter, index) => {
+          // Determine the product type and fields
+          const type = filter.type;
+          // Try to get the fields for this type/category
+          let fields = FILTER_FIELDS_BY_CATEGORY[type] || [];
+          // If it's a jewelry subcategory (Ring, Necklace, etc.), use that
+          if (!fields.length && filter.jewelryType && FILTER_FIELDS_BY_CATEGORY[filter.jewelryType]) {
+            fields = FILTER_FIELDS_BY_CATEGORY[filter.jewelryType];
+          }
+          // Always show filter_type (new_product/new_request) as a badge
+          const filterTypeLabel = filter.filter_type === 'new_product' ? 'Product' : filter.filter_type === 'new_request' ? 'Request' : filter.filter_type;
+          // Helper to render a value (array, range, etc.)
+          const renderValue = (field: any, filter: any) => {
+            if (field.type === 'range') {
+              const from = filter[`${field.key}_from`];
+              const to = filter[`${field.key}_to`];
+              if (from || to) {
+                return `${from || ''}${from && to ? ' - ' : ''}${to || ''} ${field.label.toLowerCase().includes('weight') ? 'ct' : ''}`;
+              }
+              return null;
+            }
+            if (Array.isArray(filter[field.key])) {
+              return filter[field.key].join(', ');
+            }
+            if (typeof filter[field.key] === 'boolean') {
+              return filter[field.key] ? 'Yes' : 'No';
+            }
+            return filter[field.key] || null;
+          };
+          // Only show fields with a value
+          const shownFields = fields.filter(field => renderValue(field, filter));
+          return (
+            <View key={filter.id} style={styles.filterItem}>
+              <View style={styles.filterContent}>
+                <View style={styles.filterHeader}>
+                  <Text style={styles.filterType}>
+                    {CATEGORY_LABELS[type] || type}
+                    {filterTypeLabel ? ` • ${filterTypeLabel}` : ''}
+                  </Text>
+                  <View style={styles.filterActions}>
+                    <TouchableOpacity 
+                      onPress={() => handleEditFilter(filter.id)}
+                      style={styles.actionButton}
+                    >
+                      <Icon name="edit-2" size={16} color="#0E2657" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      onPress={() => handleRemoveFilter(filter.id)}
+                      style={[styles.actionButton, styles.deleteButton]}
+                    >
+                      <Icon name="trash-2" size={16} color="#FF3B30" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-              <View style={styles.filterDetails}>
-                <View style={styles.filterProperty}>
-                  <Text style={styles.propertyLabel}>Cut</Text>
-                  <Text style={styles.propertyValue}>{filter.cut}</Text>
-                </View>
-                <View style={styles.filterProperty}>
-                  <Text style={styles.propertyLabel}>Weight</Text>
-                  <Text style={styles.propertyValue}>{filter.weight}ct</Text>
-                </View>
-                <View style={styles.filterProperty}>
-                  <Text style={styles.propertyLabel}>Color</Text>
-                  <Text style={styles.propertyValue}>{filter.color}</Text>
-                </View>
-                <View style={styles.filterProperty}>
-                  <Text style={styles.propertyLabel}>Clarity</Text>
-                  <Text style={styles.propertyValue}>{filter.clarity}</Text>
+                <View style={styles.filterDetails}>
+                  {shownFields.map(field => (
+                    <View style={styles.filterProperty} key={field.key}>
+                      <Text style={styles.propertyLabel}>{field.label}</Text>
+                      <Text style={styles.propertyValue}>{renderValue(field, filter)}</Text>
+                    </View>
+                  ))}
                 </View>
               </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
 
         {preferences.specific_filters.length === 0 && (
           <View style={styles.noFiltersContainer}>
