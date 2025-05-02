@@ -346,7 +346,7 @@ export default function AddFilterScreen() {
                 );
               })}
             {/* Render gold_color and gold_karat only if material === 'GOLD' */}
-            {dynamicFields.material === 'GOLD' && (
+            {Array.isArray(dynamicFields.material) && dynamicFields.material.includes('GOLD') && (
               <>
                 {/* Gold Color */}
                 <View style={styles.field}>
