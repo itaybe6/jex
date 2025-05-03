@@ -150,7 +150,6 @@ export default function ProfileScreen() {
         return acc;
       }, {});
 
-      console.log('Loaded productsByCategory:', grouped);
       setProductsByCategory(grouped);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -351,7 +350,7 @@ export default function ProfileScreen() {
         <TouchableOpacity
           onPress={() => router.push({
             pathname: '/(tabs)/profile/category-products',
-            params: { category, userId: user.id }
+            params: { category, userId: user?.id }
           })}
           style={styles.showMoreButton}
         >
