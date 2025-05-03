@@ -364,6 +364,24 @@ export const FILTER_FIELDS_BY_CATEGORY: FilterFieldsByCategory = {
       label: "Shape",
       type: "multi-select",
       options: ["Round", "Princess", "Cushion", "Oval", "Emerald", "Pear", "Marquise", "Radiant", "Asscher", "Heart"]
+    },
+    {
+      key: "symmetry",
+      label: "Symmetry",
+      type: "multi-select",
+      options: ["Excellent", "Very Good", "Good"]
+    },
+    {
+      key: "polish",
+      label: "Polish",
+      type: "multi-select",
+      options: ["Excellent", "Very Good", "Good"]
+    },
+    {
+      key: "fluorescence",
+      label: "Fluorescence",
+      type: "multi-select",
+      options: ["None", "Faint", "Medium", "Strong"]
     }
   ],
   "Rough Diamond": [

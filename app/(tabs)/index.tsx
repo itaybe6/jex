@@ -283,7 +283,18 @@ export default function HomeScreen() {
           bracelet_specs!bracelet_specs_product_id_fkey (*),
           special_piece_specs!special_piece_specs_product_id_fkey (*),
           watch_specs!watch_specs_product_id_fkey (*),
-          gem_specs!gem_specs_product_id_fkey (*)
+          gem_specs!gem_specs_product_id_fkey (*),
+          loose_diamonds_specs!loose_diamonds_specs_product_id_fkey (
+            weight,
+            clarity,
+            color,
+            shape,
+            cut,
+            origin_type,
+            symmetry,
+            polish,
+            fluorescence
+          )
         `)
         .eq('status', 'available')
         .order('created_at', { ascending: false });

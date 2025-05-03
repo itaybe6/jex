@@ -205,7 +205,9 @@ export default function NotificationSettingsScreen() {
           const type = filter.type || filter.jewelryType || 'Other';
           const fieldsOrder = FILTER_FIELDS_ORDER[type] || Object.keys(filter);
           // סינון שדות ריקים
-          const shownFields = fieldsOrder.filter(field => renderFieldValue(field, filter));
+          const shownFields = fieldsOrder
+            .filter(field => renderFieldValue(field, filter))
+            .filter(field => field !== 'id' && field !== 'filter_type');
           // הוספת טווח משקל אם רלוונטי
           const weightRange = renderWeightRange(filter);
           return (
