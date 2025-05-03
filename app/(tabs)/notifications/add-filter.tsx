@@ -430,8 +430,8 @@ export default function AddFilterScreen() {
               <Text style={styles.label}>Gem Type</Text>
               <Select
                 data={GEM_TYPES}
-                value={dynamicFields.gem_type || ''}
-                onSelect={value => setDynamicFields(prev => ({ ...prev, gem_type: value }))}
+                value={dynamicFields.type || ''}
+                onSelect={value => setDynamicFields(prev => ({ ...prev, type: value }))}
                 placeholder="Select Gem Type"
                 style={styles.select}
               />
@@ -522,28 +522,6 @@ export default function AddFilterScreen() {
                     }}
                   >
                     <Text style={Array.isArray(dynamicFields.clarity) && dynamicFields.clarity.includes(option) ? [styles.typeButtonText, styles.typeButtonTextActive] : [styles.typeButtonText]}>{option}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            <View style={styles.field}>
-              <Text style={styles.label}>Color</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {DIAMOND_COLOR_GRADES.map(option => (
-                  <TouchableOpacity
-                    key={option}
-                    style={Array.isArray(dynamicFields.color) && dynamicFields.color.includes(option) ? [styles.typeButton, styles.typeButtonActive] : [styles.typeButton]}
-                    onPress={() => {
-                      let newValue = Array.isArray(dynamicFields.color) ? [...dynamicFields.color] : [];
-                      if (newValue.includes(option)) {
-                        newValue = newValue.filter((v: string) => v !== option);
-                      } else {
-                        newValue.push(option);
-                      }
-                      setDynamicFields(prev => ({ ...prev, color: newValue }));
-                    }}
-                  >
-                    <Text style={Array.isArray(dynamicFields.color) && dynamicFields.color.includes(option) ? [styles.typeButtonText, styles.typeButtonTextActive] : [styles.typeButtonText]}>{option}</Text>
                   </TouchableOpacity>
                 ))}
               </View>

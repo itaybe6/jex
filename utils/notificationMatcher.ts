@@ -19,6 +19,9 @@ export type Filter = {
  * בודק אם מוצר מתאים לסינון (כולל טווחים)
  */
 export function isMatch(filter: any, product: any): boolean {
+  console.log('--- isMatch called ---');
+  console.log('Filter:', JSON.stringify(filter));
+  console.log('Product:', JSON.stringify(product));
   for (const key in filter) {
     if ([
       'id',
@@ -53,7 +56,7 @@ export function isMatch(filter: any, product: any): boolean {
     const norm = (v: any) => typeof v === 'string' ? v.trim().toLowerCase() : v;
     if (Array.isArray(filterValue)) {
       const match = filterValue.map(norm).includes(norm(productValue));
-      console.log(`Comparing (array) filter[${key}]=${filterValue} to product[${key}]=${productValue} => ${match}`);
+      console.log(`Comparing (array) filter[${key}]=${JSON.stringify(filterValue)} to product[${key}]=${productValue} => ${match}`);
       if (!match) return false;
     } else if (filterValue !== undefined && filterValue !== null && filterValue !== '') {
       const match = norm(filterValue) === norm(productValue);
@@ -61,6 +64,7 @@ export function isMatch(filter: any, product: any): boolean {
       if (!match) return false;
     }
   }
+  console.log('MATCHED!');
   return true;
 }
 
@@ -68,7 +72,6 @@ export function isMatch(filter: any, product: any): boolean {
  * מאתר משתמשים עם סינון תואם למוצר חדש, ויוצר עבורם התראה בטבלת notifications
  */
 export async function notifyMatchingUsersOnNewProduct(newProduct: Product) {
-  console.log('notifyMatchingUsersOnNewProduct called with:', newProduct);
   const { data: filters, error } = await supabase
     .from('notification_preferences')
     .select('*');
@@ -82,8 +85,7 @@ export async function notifyMatchingUsersOnNewProduct(newProduct: Product) {
     return;
   }
 
-  console.log('RAW filters:', filters);
-  console.log('All notification_preferences:', filters);
+
 
   // שליפת שם ותמונת פרופיל של המוכר
   let sellerName = 'Unknown User';
@@ -113,11 +115,8 @@ export async function notifyMatchingUsersOnNewProduct(newProduct: Product) {
   if (productImages && productImages.length > 0) {
     productImage = productImages[0].image_url;
   }
-  console.log('productImage:', productImage);
 
   for (const pref of filters) {
-    console.log('User:', pref.user_id, 'Filters:', pref.specific_filters);
-    console.log('Raw specific_filters:', pref.specific_filters, 'Type:', typeof pref.specific_filters, 'JSON:', JSON.stringify(pref.specific_filters));
     for (const filter of pref.specific_filters || []) {
       if (filter.filter_type !== 'new_product') continue;
       if (!isMatch(filter, newProduct)) continue;

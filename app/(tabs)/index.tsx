@@ -265,7 +265,7 @@ export default function HomeScreen() {
 
   const fetchProducts = async () => {
     try {
-      console.log('Fetching products...');
+      
       const { data: products, error } = await supabase
         .from('products')
         .select(`
