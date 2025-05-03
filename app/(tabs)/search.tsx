@@ -4,6 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 // import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
 type Profile = {
   id: string;
   full_name: string;
@@ -36,16 +39,19 @@ export default function SearchScreen() {
   const searchProfiles = async () => {
     try {
       setLoading(true);
-      // const { data, error } = await supabase
-      //   .from('profiles')
-      //   .select('id, full_name, avatar_url, title')
-      //   .ilike('full_name', `%${debouncedQuery}%`)
-      //   .limit(20);
-
-      // if (error) throw error;
-      setProfiles([]);
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id,full_name,avatar_url,title&full_name=ilike.*${debouncedQuery}*&limit=20`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setProfiles(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error searching profiles:', error);
+      setProfiles([]);
     } finally {
       setLoading(false);
     }

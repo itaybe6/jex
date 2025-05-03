@@ -2,7 +2,6 @@ import React, { Fragment } from 'react';
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Linking, Modal, Alert } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-// import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/hooks/useAuth';
@@ -73,9 +72,12 @@ const HOLD_DURATIONS = [
   { value: 12, label: '12 Hours' },
 ];
 
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
 export default function ProductScreen() {
   const { id } = useLocalSearchParams();
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [showHoldModal, setShowHoldModal] = useState(false);
@@ -89,101 +91,74 @@ export default function ProductScreen() {
 
   const fetchProduct = async () => {
     try {
-      // First, get the product category
-      // const { data: productData, error: productError } = await supabase
-      //   .from('products')
-      //   .select('category')
-      //   .eq('id', id)
-      //   .single();
+      // שלב 1: שלוף את הקטגוריה של המוצר
+      const categoryRes = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${id}&select=category`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!categoryRes.ok) throw new Error(await categoryRes.text());
+      const categoryData = await categoryRes.json();
+      if (!categoryData || !categoryData[0]) throw new Error('Product not found');
+      const category = categoryData[0].category;
 
-      // if (productError) throw productError;
+      // שלב 2: בנה את ה-query המתאים לפי הקטגוריה
+      let specsTable = '';
+      switch (category) {
+        case 'Ring': specsTable = 'ring_specs(*)'; break;
+        case 'Bracelet': specsTable = 'bracelet_specs(*)'; break;
+        case 'Necklace': specsTable = 'necklace_specs(*)'; break;
+        case 'Earrings': specsTable = 'earring_specs(*)'; break;
+        case 'Special pieces': specsTable = 'special_piece_specs(*)'; break;
+        case 'Watches': specsTable = 'watch_specs(*)'; break;
+        case 'Gems': specsTable = 'gem_specs(*)'; break;
+        default: specsTable = ''; break;
+      }
+      let selectQuery = `*,profiles!products_user_id_fkey(id,full_name,avatar_url,phone),product_images(image_url)`;
+      if (specsTable) selectQuery += `,${specsTable}`;
 
-      // Build the query based on the category
-      // let query = `
-      //   *,
-      //   profiles!products_user_id_fkey (
-      //     id,
-      //     full_name,
-      //     avatar_url,
-      //     phone
-      //   ),
-      //   product_images (
-      //     image_url
-      //   )`;
+      // שלב 3: שלוף את כל נתוני המוצר
+      const productRes = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${id}&select=${encodeURIComponent(selectQuery)}`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!productRes.ok) throw new Error(await productRes.text());
+      const dataArr = await productRes.json();
+      if (!dataArr || !dataArr[0]) throw new Error('Product not found');
+      const data = dataArr[0];
 
-      // // Add the appropriate specs table based on category
-      // switch (productData.category) {
-      //   case 'Ring':
-      //     query += `, ring_specs(*)`;
-      //     break;
-      //   case 'Bracelet':
-      //     query += `, bracelet_specs(*)`;
-      //     break;
-      //   case 'Necklace':
-      //     query += `, necklace_specs(*)`;
-      //     break;
-      //   case 'Earrings':
-      //     query += `, earring_specs(*)`;
-      //     break;
-      //   case 'Special pieces':
-      //     query += `, special_piece_specs(*)`;
-      //     break;
-      //   case 'Watches':
-      //     query += `, watch_specs(*)`;
-      //     break;
-      //   case 'Gems':
-      //     query += `, gem_specs(*)`;
-      //     break;
-      // }
-
-      // Get the full product data with the appropriate specs
-      // const { data, error } = await supabase
-      //   .from('products')
-      //   .select(query)
-      //   .eq('id', id)
-      //   .single();
-
-      // if (error) throw error;
-
-      // Get the specs based on the category
-      // const getSpecs = (data: Product): SpecsType | undefined => {
-      //   switch (productData.category) {
-      //     case 'Ring':
-      //       return data.ring_specs?.[0];
-      //     case 'Bracelet':
-      //       return data.bracelet_specs?.[0];
-      //     case 'Necklace':
-      //       return data.necklace_specs?.[0];
-      //     case 'Earrings':
-      //       return data.earring_specs?.[0];
-      //     case 'Special pieces':
-      //       return data.special_piece_specs?.[0];
-      //     case 'Watches':
-      //       return data.watch_specs?.[0];
-      //     case 'Gems':
-      //       return data.gem_specs?.[0];
-      //     default:
-      //       return undefined;
-      //   }
-      // };
-
-      // const specs = getSpecs(data as Product);
-
-      // const productWithDetails: Product = {
-      //   ...data as Product,
-      //   details: {
-      //     weight: specs?.weight?.toString(),
-      //     clarity: specs?.clarity,
-      //     color: specs?.color || specs?.gold_color,
-      //     size: specs?.size || specs?.diameter?.toString(),
-      //   }
-      // };
-
-      // setProduct(productWithDetails);
-
-      setProduct(null);
+      // שלב 4: הפק את ה-specs המתאימים
+      const getSpecs = (data: Product): SpecsType | undefined => {
+        switch (category) {
+          case 'Ring': return data.ring_specs?.[0];
+          case 'Bracelet': return data.bracelet_specs?.[0];
+          case 'Necklace': return data.necklace_specs?.[0];
+          case 'Earrings': return data.earring_specs?.[0];
+          case 'Special pieces': return data.special_piece_specs?.[0];
+          case 'Watches': return data.watch_specs?.[0];
+          case 'Gems': return data.gem_specs?.[0];
+          default: return undefined;
+        }
+      };
+      const specs = getSpecs(data as Product);
+      const productWithDetails: Product = {
+        ...data as Product,
+        details: {
+          weight: specs?.weight?.toString(),
+          clarity: specs?.clarity,
+          color: specs?.color || specs?.gold_color,
+          size: specs?.size || specs?.diameter?.toString(),
+        }
+      };
+      setProduct(productWithDetails);
     } catch (error) {
       console.error('Error fetching product:', error);
+      setProduct(null);
     } finally {
       setLoading(false);
     }
@@ -230,27 +205,25 @@ export default function ProductScreen() {
 
   const handleDeletePress = async () => {
     if (!product || !user) return;
-
     Alert.alert(
       'Delete Product',
       'Are you sure you want to delete this product?',
       [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             try {
-              // const { error } = await supabase
-              //   .from('products')
-              //   .delete()
-              //   .eq('id', product.id)
-              //   .eq('user_id', user.id);
-
-              // if (error) throw error;
+              const res = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${product.id}&user_id=eq.${user.id}`, {
+                method: 'DELETE',
+                headers: {
+                  apikey: SUPABASE_ANON_KEY!,
+                  Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+                  'Content-Type': 'application/json',
+                },
+              });
+              if (!res.ok) throw new Error(await res.text());
               router.back();
             } catch (error) {
               console.error('Error deleting product:', error);
@@ -264,39 +237,47 @@ export default function ProductScreen() {
 
   const handleHoldRequest = async () => {
     if (!user || !product || !selectedDuration) return;
-    
     setIsSubmitting(true);
     try {
-      // Get user profile for notification
-      // const { data: userProfile, error: profileError } = await supabase
-      //   .from('profiles')
-      //   .select('full_name, avatar_url')
-      //   .eq('id', user.id)
-      //   .single();
+      // שלב 1: שלוף את פרטי המשתמש (שם ותמונה)
+      const authToken = accessToken || SUPABASE_ANON_KEY;
+      const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&select=full_name,avatar_url`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!profileRes.ok) throw new Error(await profileRes.text());
+      const profileArr = await profileRes.json();
+      const userProfile = profileArr && profileArr[0] ? profileArr[0] : { full_name: '', avatar_url: '' };
 
-      // if (profileError) throw profileError;
-
-      // Create notification for product owner
-      // const { error: notificationError } = await supabase
-      //   .from('notifications')
-      //   .insert({
-      //     user_id: product.profiles.id,
-      //     type: 'hold_request',
-      //     data: {
-      //       product_id: product.id,
-      //       product_title: product.title,
-      //       product_image_url: product.product_images[currentImageIndex].image_url,
-      //       requester_id: user.id,
-      //       requester_name: userProfile.full_name,
-      //       requester_avatar: userProfile.avatar_url,
-      //       duration_hours: selectedDuration,
-      //       message: `${userProfile.full_name} ביקש לשמור את המוצר '${product.title}' למשך ${selectedDuration} שעות.`
-      //     },
-      //     is_read: false
-      //   });
-
-      // if (notificationError) throw notificationError;
-
+      // שלב 2: צור התראה לבעל המוצר
+      const notifRes = await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify({
+          user_id: product.profiles.id,
+          type: 'hold_request',
+          data: {
+            product_id: product.id,
+            product_title: product.title,
+            product_image_url: product.product_images[currentImageIndex]?.image_url,
+            requester_id: user.id,
+            requester_name: userProfile.full_name,
+            requester_avatar: userProfile.avatar_url,
+            duration_hours: selectedDuration,
+            message: `${userProfile.full_name} ביקש לשמור את המוצר '${product.title}' למשך ${selectedDuration} שעות.`
+          },
+          read: false
+        })
+      });
+      if (!notifRes.ok) throw new Error(await notifRes.text());
       setShowHoldModal(false);
       setSelectedDuration(null);
       alert('Hold request sent successfully');
