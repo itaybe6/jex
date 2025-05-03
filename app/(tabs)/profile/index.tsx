@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Modal, Linking } from 'react-native';
-import { Settings, Plus, Link as LinkIcon, X, ChevronRight, ClipboardList, Bell } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { supabase } from '@/lib/supabase';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
 import { useAuth } from '@/hooks/useAuth';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlatList } from 'react-native';
@@ -58,7 +58,7 @@ type Category = {
 };
 
 export default function ProfileScreen() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [productsByCategory, setProductsByCategory] = useState<ProductsByCategory>({});
   const [loading, setLoading] = useState(true);
@@ -93,31 +93,31 @@ export default function ProfileScreen() {
     try {
       if (!user) return;
 
-      // First get the profile data
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+      // Get profile data
+      const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&select=*`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+        },
+      });
+      if (!profileRes.ok) throw new Error('Error fetching profile');
+      const profileArr = await profileRes.json();
+      const profileData = profileArr[0];
 
-      if (profileError) throw profileError;
+      // Get completed transactions count
+      const txRes = await fetch(`${SUPABASE_URL}/rest/v1/transactions?or=(seller_id.eq.${user.id},buyer_id.eq.${user.id})&status=eq.completed&select=id`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+        },
+      });
+      if (!txRes.ok) throw new Error('Error fetching transactions');
+      const transactionsCount = await txRes.json();
 
-      // Then get the completed transactions count where user was either buyer or seller
-      const { data: transactionsCount, error: countError } = await supabase
-        .from('transactions')
-        .select('id', { count: 'exact' })
-        .or(`seller_id.eq.${user.id},buyer_id.eq.${user.id}`)
-        .eq('status', 'completed');
-
-      if (countError) throw countError;
-
-      // Combine the data
-      const profile = {
+      setProfile({
         ...profileData,
         sold_count: transactionsCount.length
-      };
-      
-      setProfile(profile);
+      });
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
@@ -127,29 +127,24 @@ export default function ProfileScreen() {
     try {
       if (!user) return;
 
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          product_images (
-            id,
-            image_url
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
+      const query = '* , product_images(id,image_url)';
+      const url = `${SUPABASE_URL}/rest/v1/products?user_id=eq.${user.id}&select=${encodeURIComponent(query)}&order=created_at.desc`;
+      const res = await fetch(url, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+        },
+      });
+      if (!res.ok) throw new Error('Error fetching products');
+      const data = await res.json();
       // Group products by category
-      const grouped = (data || []).reduce<ProductsByCategory>((acc, product) => {
+      const grouped = (data || []).reduce((acc: ProductsByCategory, product: Product) => {
         if (!acc[product.category]) {
           acc[product.category] = [];
         }
         acc[product.category].push(product);
         return acc;
       }, {});
-
       setProductsByCategory(grouped);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -161,24 +156,17 @@ export default function ProfileScreen() {
   const fetchTrustMarks = async () => {
     try {
       if (!user) return;
-      
       setLoadingTrustMarks(true);
-      const { data, error } = await supabase
-        .from('trust_marks')
-        .select(`
-          id,
-          created_at,
-          truster:profiles!trust_marks_truster_id_fkey (
-            id,
-            full_name,
-            avatar_url,
-            title
-          )
-        `)
-        .eq('trusted_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const query = 'id,created_at,truster:profiles!trust_marks_truster_id_fkey(id,full_name,avatar_url,title)';
+      const url = `${SUPABASE_URL}/rest/v1/trust_marks?trusted_id=eq.${user.id}&select=${encodeURIComponent(query)}&order=created_at.desc`;
+      const res = await fetch(url, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+        },
+      });
+      if (!res.ok) throw new Error('Error fetching trust marks');
+      const data = await res.json();
       setTrustMarks(data.map((trustMark: any) => ({
         id: trustMark.id,
         created_at: trustMark.created_at,
@@ -205,8 +193,6 @@ export default function ProfileScreen() {
     router.push('/profile/edit');
   };
 
-
-
   const handleProductPress = (productId: string) => {
     router.push({
       pathname: "/profile/product/[id]",
@@ -232,39 +218,32 @@ export default function ProfileScreen() {
   const fetchUserProducts = async () => {
     if (!user) return;
 
-    const { data: userProducts, error } = await supabase
-      .from('products')
-      .select(`
-        id,
-        name,
-        price,
-        images,
-        category_id,
-        profiles (
-          id,
-          full_name
-        )
-      `)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching products:', error);
+    const query = 'id,name,price,images,category_id,profiles(id,full_name)';
+    const url = `${SUPABASE_URL}/rest/v1/products?user_id=eq.${user.id}&select=${encodeURIComponent(query)}&order=created_at.desc`;
+    const res = await fetch(url, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+      },
+    });
+    if (!res.ok) {
+      console.error('Error fetching products:', await res.text());
       return;
     }
-
+    const userProducts = await res.json();
     // Group products by category
-    const { data: categoriesData } = await supabase
-      .from('categories')
-      .select('*')
-      .order('name');
-
+    const catRes = await fetch(`${SUPABASE_URL}/rest/v1/categories?select=*&order=name`, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+      },
+    });
+    const categoriesData = await catRes.json();
     if (categoriesData) {
-      const groupedProducts = categoriesData.map(category => ({
+      const groupedProducts = categoriesData.map((category: any) => ({
         ...category,
-        products: userProducts?.filter(product => product.category_id === category.id) || []
+        products: userProducts?.filter((product: any) => product.category_id === category.id) || []
       }));
-
       setCategories(groupedProducts);
     }
   };
@@ -375,7 +354,7 @@ export default function ProfileScreen() {
               onPress={() => setShowTrustMarks(false)}
               style={styles.modalCloseButton}
             >
-              <X size={24} color="#fff" />
+              <Ionicons name="close" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
 
@@ -420,12 +399,15 @@ export default function ProfileScreen() {
     if (!user) return;
     setLoadingRequests(true);
     try {
-      const { data, error } = await supabase
-        .from('requests')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
+      const url = `${SUPABASE_URL}/rest/v1/requests?user_id=eq.${user.id}&select=*&order=created_at.desc`;
+      const res = await fetch(url, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+        },
+      });
+      if (!res.ok) throw new Error('Error fetching requests');
+      const data = await res.json();
       setRequests(data || []);
     } catch (err) {
       setRequests([]);
@@ -475,7 +457,7 @@ export default function ProfileScreen() {
               <Text style={styles.websiteText} numberOfLines={1}>
                 {profile.website}
               </Text>
-              <LinkIcon size={16} color="#007AFF" style={{ marginRight: 4 }} />
+              <Ionicons name="link" size={16} color="#007AFF" style={{ marginRight: 4 }} />
             </TouchableOpacity>
           ) : null}
           <View style={styles.statsRow}>
@@ -557,7 +539,7 @@ export default function ProfileScreen() {
               requests.map((req) => (
                 <View key={req.id} style={[styles.productCard, { flexDirection: 'column', alignItems: 'flex-start', marginBottom: 16, minWidth: '100%', maxWidth: '100%' }]}> 
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                    <ClipboardList size={22} color="#6C5CE7" style={{ marginRight: 10 }} />
+                    <Ionicons name="list" size={22} color="#6C5CE7" style={{ marginRight: 10 }} />
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontFamily: 'Montserrat-Bold', color: '#0E2657', fontSize: 15, marginBottom: 2 }}>{req.details.weight_from}-{req.details.weight_to || req.details.weight_from}ct, {req.details.clarity}, Color {req.details.color}</Text>
                       {req.details.price && (

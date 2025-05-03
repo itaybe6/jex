@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Platform, Modal } from 'react-native';
-import { ChevronDown } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { supabase } from '@/lib/supabase';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
 import { useAuth } from '@/hooks/useAuth';
 import { TopHeader } from '../../../components/TopHeader';
 import { WATCH_BRANDS_MODELS, GEM_TYPES, FILTER_FIELDS_BY_CATEGORY } from '@/constants/filters';
@@ -125,13 +125,24 @@ export default function AddRequestScreen() {
         };
       }
       setLoading(true);
-      const { error } = await supabase.from('requests').insert({
-        user_id: user.id,
-        category,
-        details,
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify({
+          user_id: user?.id,
+          category,
+          details,
+        })
       });
-
-      if (error) throw error;
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err);
+      }
       router.replace('/');
       return;
     } catch (error: any) {
@@ -153,7 +164,7 @@ export default function AddRequestScreen() {
         <Text style={styles.label}>Category</Text>
         <TouchableOpacity style={styles.selectButton} onPress={() => setShowCategoryModal(true)}>
           <Text style={styles.selectButtonText}>{category || 'Select category'}</Text>
-          <ChevronDown size={20} color="#666" />
+          <Ionicons name="chevron-down" size={20} color="#666" />
         </TouchableOpacity>
         {showCategoryModal && (
           <Modal visible transparent animationType="slide" onRequestClose={() => setShowCategoryModal(false)}>
@@ -162,7 +173,7 @@ export default function AddRequestScreen() {
           <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Select Category</Text>
                   <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
-              <ChevronDown size={24} color="#fff" />
+              <Ionicons name="chevron-down" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
           <ScrollView style={styles.modalOptions}>
@@ -181,21 +192,21 @@ export default function AddRequestScreen() {
             <Text style={styles.label}>Jewelry Type</Text>
             <TouchableOpacity style={styles.selectButton} onPress={() => setShowJewelryTypeModal(true)}>
               <Text style={styles.selectButtonText}>{jewelryType || 'Select type'}</Text>
-              <ChevronDown size={20} color="#666" />
+              <Ionicons name="chevron-down" size={20} color="#666" />
             </TouchableOpacity>
             {jewelryType && (
               <>
                 <Text style={styles.label}>Subcategory</Text>
                 <TouchableOpacity style={styles.selectButton} onPress={() => setShowJewelrySubcategoryModal(true)}>
                   <Text style={styles.selectButtonText}>{jewelrySubcategory || 'Select subcategory'}</Text>
-                  <ChevronDown size={20} color="#666" />
+                  <Ionicons name="chevron-down" size={20} color="#666" />
                 </TouchableOpacity>
               </>
             )}
             <Text style={styles.label}>Material</Text>
             <TouchableOpacity style={styles.selectButton} onPress={() => setShowMaterialModal(true)}>
               <Text style={styles.selectButtonText}>{material || 'Select material'}</Text>
-              <ChevronDown size={20} color="#666" />
+              <Ionicons name="chevron-down" size={20} color="#666" />
             </TouchableOpacity>
             <Text style={styles.label}>Weight (From - To)</Text>
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
@@ -462,7 +473,7 @@ export default function AddRequestScreen() {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Jewelry Type</Text>
                 <TouchableOpacity onPress={() => setShowJewelryTypeModal(false)}>
-                  <ChevronDown size={24} color="#fff" />
+                  <Ionicons name="chevron-down" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalOptions}>
@@ -505,7 +516,7 @@ export default function AddRequestScreen() {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Jewelry Subcategory</Text>
                 <TouchableOpacity onPress={() => setShowJewelrySubcategoryModal(false)}>
-                  <ChevronDown size={24} color="#fff" />
+                  <Ionicons name="chevron-down" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalOptions}>
@@ -548,7 +559,7 @@ export default function AddRequestScreen() {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Material</Text>
                 <TouchableOpacity onPress={() => setShowMaterialModal(false)}>
-                  <ChevronDown size={24} color="#fff" />
+                  <Ionicons name="chevron-down" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalOptions}>
@@ -591,7 +602,7 @@ export default function AddRequestScreen() {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Weight</Text>
                 <TouchableOpacity onPress={() => setShowWeightModal(false)}>
-                  <ChevronDown size={24} color="#fff" />
+                  <Ionicons name="chevron-down" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalOptions}>
@@ -634,7 +645,7 @@ export default function AddRequestScreen() {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Weight</Text>
                 <TouchableOpacity onPress={() => setShowWeightToModal(false)}>
-                  <ChevronDown size={24} color="#fff" />
+                  <Ionicons name="chevron-down" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalOptions}>
@@ -677,7 +688,7 @@ export default function AddRequestScreen() {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Gem Type</Text>
                 <TouchableOpacity onPress={() => setShowGemTypeModal(false)}>
-                  <ChevronDown size={24} color="#fff" />
+                  <Ionicons name="chevron-down" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalOptions}>
@@ -720,7 +731,7 @@ export default function AddRequestScreen() {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Gem Origin</Text>
                 <TouchableOpacity onPress={() => setShowGemOriginModal(false)}>
-                  <ChevronDown size={24} color="#fff" />
+                  <Ionicons name="chevron-down" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalOptions}>
@@ -763,7 +774,7 @@ export default function AddRequestScreen() {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Gem Weight</Text>
                 <TouchableOpacity onPress={() => setShowGemWeightModal(false)}>
-                  <ChevronDown size={24} color="#fff" />
+                  <Ionicons name="chevron-down" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalOptions}>
@@ -806,7 +817,7 @@ export default function AddRequestScreen() {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Gem Shape</Text>
                 <TouchableOpacity onPress={() => setShowGemShapesModal(false)}>
-                  <ChevronDown size={24} color="#fff" />
+                  <Ionicons name="chevron-down" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalOptions}>
@@ -849,7 +860,7 @@ export default function AddRequestScreen() {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Gem Clarity</Text>
                 <TouchableOpacity onPress={() => setShowGemClaritiesModal(false)}>
-                  <ChevronDown size={24} color="#fff" />
+                  <Ionicons name="chevron-down" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalOptions}>
@@ -892,7 +903,7 @@ export default function AddRequestScreen() {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Diamond Shape</Text>
                 <TouchableOpacity onPress={() => setShowDiamondShapeModal(false)}>
-                  <ChevronDown size={24} color="#fff" />
+                  <Ionicons name="chevron-down" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalOptions}>
@@ -935,7 +946,7 @@ export default function AddRequestScreen() {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Diamond Weight</Text>
                 <TouchableOpacity onPress={() => setShowDiamondWeightModal(false)}>
-                  <ChevronDown size={24} color="#fff" />
+                  <Ionicons name="chevron-down" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalOptions}>

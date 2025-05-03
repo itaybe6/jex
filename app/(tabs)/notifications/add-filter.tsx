@@ -92,10 +92,30 @@ const DIAMOND_CUT_GRADES = [
 ];
 
 export default function AddFilterScreen() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const [productType, setProductType] = useState<string>('Loose Diamond');
   const [dynamicFields, setDynamicFields] = useState<Record<string, any>>({});
   const [notifyOn, setNotifyOn] = useState<string[]>(['new_product']);
+
+  const supabaseFetch = async (endpoint: string, options: RequestInit = {}) => {
+    const baseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+    const headers: Record<string, string> = {
+      apikey: anonKey!,
+      Authorization: `Bearer ${accessToken || anonKey}`,
+      'Content-Type': 'application/json',
+    };
+    if (options.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method?.toUpperCase?.() || '')) {
+      headers['Prefer'] = 'return=representation';
+    }
+    return fetch(`${baseUrl}${endpoint}`, {
+      ...options,
+      headers: {
+        ...headers,
+        ...(options.headers || {}),
+      },
+    });
+  };
 
   const handleDynamicChange = (key: string, value: any) => {
     setDynamicFields(prev => ({ ...prev, [key]: value }));
@@ -116,27 +136,29 @@ export default function AddFilterScreen() {
         ...filterFields,
         filter_type: type
       }));
-      // const { data: existingData } = await supabase
-      //   .from('notification_preferences')
-      //   .select('*')
-      //   .eq('user_id', user.id)
-      //   .single();
-      if (/* existingData */ false) {
-        // const { error } = await supabase
-        //   .from('notification_preferences')
-        //   .update({
-        //     specific_filters: [...(existingData.specific_filters || []), ...newFilters]
-        //   })
-        //   .eq('user_id', user.id);
-        // if (error) throw error;
+      // בדוק אם קיימת רשומת notification_preferences למשתמש
+      const res = await supabaseFetch(`/rest/v1/notification_preferences?user_id=eq.${user.id}&select=*`);
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      if (data && data[0]) {
+        // עדכן את המערך הקיים
+        const updatedFilters = [...(data[0].specific_filters || []), ...newFilters];
+        const updateRes = await supabaseFetch(`/rest/v1/notification_preferences?user_id=eq.${user.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ specific_filters: updatedFilters })
+        });
+        if (!updateRes.ok) throw new Error(await updateRes.text());
       } else {
-        // const { error } = await supabase
-        //   .from('notification_preferences')
-        //   .insert({
-        //     user_id: user.id,
-        //     specific_filters: newFilters
-        //   });
-        // if (error) throw error;
+        // צור רשומה חדשה
+        const insertRes = await supabaseFetch(`/rest/v1/notification_preferences`, {
+          method: 'POST',
+          body: JSON.stringify({
+            user_id: user.id,
+            enabled_types: ['new_product', 'new_request'],
+            specific_filters: newFilters
+          })
+        });
+        if (!insertRes.ok) throw new Error(await insertRes.text());
       }
       router.back();
     } catch (error) {

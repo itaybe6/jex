@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndi
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
+import { useAuth } from '@/hooks/useAuth';
 
 const PAGE_SIZE = 20;
 
@@ -10,6 +11,7 @@ export default function CategoryProductsScreen() {
   const params = useLocalSearchParams();
   const category = typeof params.category === 'string' ? params.category : '';
   const userId = typeof params.userId === 'string' ? params.userId : '';
+  const { accessToken } = useAuth();
 
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +34,7 @@ export default function CategoryProductsScreen() {
     try {
       const headers = {
         apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
         'Content-Type': 'application/json',
       };
       const url = `${SUPABASE_URL}/rest/v1/products?user_id=eq.${userId}&category=eq.${encodeURIComponent(category)}&status=eq.available&select=*,product_images(id,image_url),profiles!products_user_id_fkey(id,full_name,avatar_url)&order=created_at.desc&offset=${from}&limit=${PAGE_SIZE}`;
@@ -55,7 +57,7 @@ export default function CategoryProductsScreen() {
       if (reset) setPage(1);
       else setPage(prev => prev + 1);
     }
-  }, [userId, category, page, loadingMore, hasMore]);
+  }, [userId, category, page, loadingMore, hasMore, accessToken]);
 
   useEffect(() => {
     fetchProducts(true);

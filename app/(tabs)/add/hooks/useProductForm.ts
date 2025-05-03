@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { createProduct, SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
 import { useAuth } from '@/hooks/useAuth';
 import { decode } from 'base64-arraybuffer';
 import watchModels from '@/lib/watch-models.json';
@@ -65,7 +65,7 @@ interface JewelrySpecsData {
 }
 
 export default function useProductForm() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
     price: '',
@@ -260,50 +260,50 @@ export default function useProductForm() {
       };
 
       console.log('--- יצירת מוצר חדש ---');
-      const { data: product, error: productError } = await supabase
-        .from('products')
-        .insert(productInsertObj)
-        .select()
-        .single();
-
-      if (productError || !product) throw productError || new Error('Product insert failed');
+      const productArr = await createProduct(productInsertObj, accessToken);
+      const product = Array.isArray(productArr) ? productArr[0] : productArr;
+      if (!product) throw new Error('Product insert failed');
 
       // Upload all images first
       const uploadedImages = [];
       for (const image of images) {
         try {
           const imagePath = `${user?.id}/${product.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
-          
-          // Upload image to storage
-          const { error: uploadError } = await supabase.storage
-            .from('product-images')
-            .upload(imagePath, decode(image.base64), {
-              contentType: 'image/jpeg',
-              upsert: false
-            });
-          
-          if (uploadError) {
-            console.error('Error uploading image:', uploadError);
+          // Upload image to storage via Supabase Storage REST API
+          const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${imagePath}`, {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/octet-stream',
+            },
+            body: decode(image.base64)
+          });
+          if (!uploadRes.ok) {
+            const err = await uploadRes.text();
+            console.error('Error uploading image:', err);
             continue;
           }
-
-          // Get public URL
-          const { data: { publicUrl } } = supabase.storage
-            .from('product-images')
-            .getPublicUrl(imagePath);
-
+          // Get public URL (Supabase public URL is predictable)
+          const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/product-images/${imagePath}`;
           uploadedImages.push(publicUrl);
-
           // Create product_images record
-          const { error: imageRecordError } = await supabase
-            .from('product_images')
-            .insert({
+          const imageRecordRes = await fetch(`${SUPABASE_URL}/rest/v1/product_images`, {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              Prefer: 'return=representation'
+            },
+            body: JSON.stringify({
               product_id: product.id,
               image_url: publicUrl
-            });
-
-          if (imageRecordError) {
-            console.error('Error creating image record:', imageRecordError);
+            })
+          });
+          if (!imageRecordRes.ok) {
+            const err = await imageRecordRes.text();
+            console.error('Error creating image record:', err);
           }
         } catch (imageError) {
           console.error('Error processing image:', imageError);
@@ -324,33 +324,44 @@ export default function useProductForm() {
           certification: dynamicFields.hasCertification === 'true' ? dynamicFields.certification : null,
           dimensions: dynamicFields.dimensions
         };
-
-        const { error: specsError } = await supabase
-          .from('gem_specs')
-          .insert(specsData);
-
-        // Even if we get a duplicate key error, we can continue since the product was saved
-        if (specsError && specsError.code !== '23505') {
-          console.error('Error inserting gem specs:', specsError);
-          throw specsError;
+        const specsRes = await fetch(`${SUPABASE_URL}/rest/v1/gem_specs`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation'
+          },
+          body: JSON.stringify(specsData)
+        });
+        if (!specsRes.ok) {
+          const err = await specsRes.text();
+          console.error('Error inserting gem specs:', err);
+          throw new Error(err);
         }
       } else if (productType === 'Rough Diamond') {
-        // Insert rough diamond specs
         const specsData = {
           product_id: product.id,
           weight: dynamicFields.weight,
           clarity: dynamicFields.clarity,
           color: dynamicFields.color
         };
-        const { error: specsError } = await supabase
-          .from('rough_diamond_specs')
-          .insert(specsData);
-        if (specsError && specsError.code !== '23505') {
-          console.error('Error inserting rough diamond specs:', specsError);
-          throw specsError;
+        const specsRes = await fetch(`${SUPABASE_URL}/rest/v1/rough_diamond_specs`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation'
+          },
+          body: JSON.stringify(specsData)
+        });
+        if (!specsRes.ok) {
+          const err = await specsRes.text();
+          console.error('Error inserting rough diamond specs:', err);
+          throw new Error(err);
         }
       } else if (productType === 'Loose Diamond') {
-        // Insert loose diamond specs
         const specsData: Record<string, any> = {
           product_id: product.id,
         };
@@ -364,16 +375,23 @@ export default function useProductForm() {
         if (dynamicFields.polish) specsData.polish = dynamicFields.polish;
         if (dynamicFields.symmetry) specsData.symmetry = dynamicFields.symmetry;
         if (dynamicFields.originType) specsData.origin_type = dynamicFields.originType;
-        // Remove undefined/empty
         Object.keys(specsData).forEach(key => {
           if (specsData[key] === '' || specsData[key] === undefined) delete specsData[key];
         });
-        const { error: specsError } = await supabase
-          .from('loose_diamonds_specs')
-          .insert(specsData);
-        if (specsError && specsError.code !== '23505') {
-          console.error('Error inserting loose diamond specs:', specsError);
-          throw specsError;
+        const specsRes = await fetch(`${SUPABASE_URL}/rest/v1/loose_diamonds_specs`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation'
+          },
+          body: JSON.stringify(specsData)
+        });
+        if (!specsRes.ok) {
+          const err = await specsRes.text();
+          console.error('Error inserting loose diamond specs:', err);
+          throw new Error(err);
         }
       } else if (productType === 'Watches') {
         const specsData = {
@@ -382,26 +400,31 @@ export default function useProductForm() {
           model: dynamicFields.model,
           diameter: dynamicFields.diameter ? Number(dynamicFields.diameter) : null
         };
-        const { error: specsError } = await supabase
-          .from('watch_specs')
-          .insert(specsData);
-        if (specsError) {
-          console.error('Error inserting watches_specs:', specsError, specsError?.message, specsError?.details);
-          throw specsError;
+        const specsRes = await fetch(`${SUPABASE_URL}/rest/v1/watch_specs`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation'
+          },
+          body: JSON.stringify(specsData)
+        });
+        if (!specsRes.ok) {
+          const err = await specsRes.text();
+          console.error('Error inserting watches_specs:', err);
+          throw new Error(err);
         }
       } else {
-        // Handle other product types...
         const specsData: JewelrySpecsData = {
           product_id: product.id,
           material: dynamicFields.material,
           weight: dynamicFields.weight,
         };
-
         if (dynamicFields.material === 'Gold') {
           specsData.gold_karat = dynamicFields.goldKarat;
           specsData.gold_color = dynamicFields.goldColor;
         }
-
         if (hasDiamond) {
           specsData.diamond_details = {
             weight: dynamicFields.diamond_weight,
@@ -411,7 +434,6 @@ export default function useProductForm() {
             certification: dynamicFields.certification
           };
         }
-
         if (hasSideStones) {
           specsData.side_stones_details = {
             weight: dynamicFields.side_stones_weight,
@@ -419,8 +441,6 @@ export default function useProductForm() {
             clarity: dynamicFields.side_stones_clarity
           };
         }
-
-        // Insert into appropriate specs table
         let specsTable = productType.toLowerCase();
         if (specsTable === 'special pieces') {
           specsTable = 'special_piece';
@@ -428,14 +448,20 @@ export default function useProductForm() {
           specsTable = 'earring';
         }
         specsTable += '_specs';
-
-        const { error: specsError } = await supabase
-          .from(specsTable)
-          .insert(specsData);
-
-        if (specsError) {
-          console.error(`Error inserting ${specsTable}:`, specsError);
-          throw specsError;
+        const specsRes = await fetch(`${SUPABASE_URL}/rest/v1/${specsTable}`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation'
+          },
+          body: JSON.stringify(specsData)
+        });
+        if (!specsRes.ok) {
+          const err = await specsRes.text();
+          console.error(`Error inserting ${specsTable}:`, err);
+          throw new Error(err);
         }
       }
 
@@ -497,4 +523,4 @@ export default function useProductForm() {
     images,
     removeImage
   };
-} 
+}

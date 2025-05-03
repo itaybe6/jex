@@ -2,12 +2,10 @@ import React from 'react';
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Alert, Modal, SafeAreaView } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { supabase } from '@/lib/supabase';
-import { Package, Search, Filter, X } from 'lucide-react-native';
-import { Link } from 'expo-router';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
+import { Ionicons } from '@expo/vector-icons';
 import { RefreshControl } from 'react-native';
-import { formatDistanceToNow } from 'date-fns';
-import { he } from 'date-fns/locale';
+
 import FilterModal from '../../components/FilterModal';
 import { StatusBar } from 'expo-status-bar';
 import { useProductFilter } from '@/hooks/useProductFilter';
@@ -16,6 +14,7 @@ import { DiamondRequest } from '@/types/diamond';
 import { Profile } from '@/types/profile';
 import { FilterParams } from '@/types/filter';
 import { Product as ProductType } from '@/types/product';
+import { useAuth } from '@/hooks/useAuth';
 
 const GRID_SPACING = 2;
 const NUM_COLUMNS = 3;
@@ -228,7 +227,7 @@ export default function HomeScreen() {
   const [topSellers, setTopSellers] = useState<Profile[]>([]);
   const productFilter = useProductFilter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [user, setUser] = useState<any>(null);
+  const { accessToken, user: authUser } = useAuth();
   const [productForm, setProductForm] = useState<ProductFormState>({
     title: '',
     description: '',
@@ -240,14 +239,6 @@ export default function HomeScreen() {
 
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [filters, setFilters] = useState<FilterParams[]>([]);
-
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    };
-    getUser();
-  }, []);
 
   useEffect(() => {
     fetchProducts();
@@ -265,44 +256,28 @@ export default function HomeScreen() {
 
   const fetchProducts = async () => {
     try {
-      
-      const { data: products, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          profiles!products_user_id_fkey (
-            full_name,
-            avatar_url
-          ),
-          product_images (
-            image_url
-          ),
-          ring_specs!ring_specs_product_id_fkey (*),
-          necklace_specs!necklace_specs_product_id_fkey (*),
-          earring_specs!earring_specs_product_id_fkey (*),
-          bracelet_specs!bracelet_specs_product_id_fkey (*),
-          special_piece_specs!special_piece_specs_product_id_fkey (*),
-          watch_specs!watch_specs_product_id_fkey (*),
-          gem_specs!gem_specs_product_id_fkey (*),
-          loose_diamonds_specs!loose_diamonds_specs_product_id_fkey (
-            weight,
-            clarity,
-            color,
-            shape,
-            cut,
-            origin_type,
-            symmetry,
-            polish,
-            fluorescence
-          )
-        `)
-        .eq('status', 'available')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        throw error;
-      }
-
+      const query = [
+        '*',
+        'profiles!products_user_id_fkey(full_name,avatar_url)',
+        'product_images(image_url)',
+        'ring_specs!ring_specs_product_id_fkey(*)',
+        'necklace_specs!necklace_specs_product_id_fkey(*)',
+        'earring_specs!earring_specs_product_id_fkey(*)',
+        'bracelet_specs!bracelet_specs_product_id_fkey(*)',
+        'special_piece_specs!special_piece_specs_product_id_fkey(*)',
+        'watch_specs!watch_specs_product_id_fkey(*)',
+        'gem_specs!gem_specs_product_id_fkey(*)',
+        'loose_diamonds_specs!loose_diamonds_specs_product_id_fkey(weight,clarity,color,shape,cut,origin_type,symmetry,polish,fluorescence)'
+      ].join(',');
+      const url = `${SUPABASE_URL}/rest/v1/products?select=${encodeURIComponent(query)}&status=eq.available&order=created_at.desc`;
+      const res = await fetch(url, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+        },
+      });
+      if (!res.ok) throw new Error('Error fetching products');
+      const products = await res.json();
       // Group products by category
       const grouped = (products || []).reduce<ProductsByCategory>((acc, product) => {
         if (!acc[product.category]) {
@@ -311,11 +286,9 @@ export default function HomeScreen() {
         acc[product.category].push(product);
         return acc;
       }, {});
-
       setProductsByCategory(grouped);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching products:', error);
       Alert.alert('שגיאה', 'אירעה שגיאה בטעינת המוצרים');
       setLoading(false);
     } finally {
@@ -325,20 +298,19 @@ export default function HomeScreen() {
 
   const fetchRequests = async () => {
     try {
-      const { data, error } = await supabase
-        .from('requests')
-        .select(`
-          *,
-          profiles:user_id (
-            id,
-            full_name,
-            avatar_url
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
+      const query = [
+        '*',
+        'profiles:user_id(id,full_name,avatar_url)'
+      ].join(',');
+      const url = `${SUPABASE_URL}/rest/v1/requests?select=${encodeURIComponent(query)}&order=created_at.desc`;
+      const res = await fetch(url, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+        },
+      });
+      if (!res.ok) throw new Error('Error fetching requests');
+      const data = await res.json();
       setDiamondRequests(data || []);
     } catch (error) {
       console.error('Error fetching requests:', error);
@@ -347,13 +319,15 @@ export default function HomeScreen() {
 
   const fetchTopSellers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, avatar_url, trust_count')
-        .order('trust_count', { ascending: false })
-        .limit(10);
-
-      if (error) throw error;
+      const url = `${SUPABASE_URL}/rest/v1/profiles?select=id,full_name,avatar_url,trust_count&order=trust_count.desc&limit=10`;
+      const res = await fetch(url, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+        },
+      });
+      if (!res.ok) throw new Error('Error fetching top sellers');
+      const data = await res.json();
       setTopSellers(data || []);
     } catch (error) {
       console.error('Error fetching top sellers:', error);
@@ -507,7 +481,7 @@ export default function HomeScreen() {
                 <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Request Details</Text>
               <TouchableOpacity onPress={() => setShowDetailsModal(false)}>
-                <X size={24} color="#fff" />
+                <Ionicons name="close" size={24} color="#fff" />
               </TouchableOpacity>
                 </View>
 
@@ -662,19 +636,23 @@ export default function HomeScreen() {
       setLoading(true);
 
       // Insert into products table
-      const { data: product, error: productError } = await supabase
-        .from('products')
-        .insert({
+      const { data: product, error: productError } = await fetch(`${SUPABASE_URL}/rest/v1/products`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
           title: productForm.title,
           description: productForm.description,
           price: parseFloat(productForm.price),
           image_url: productForm.image_url,
-          user_id: user?.id,
+          user_id: authUser?.id,
           category: productForm.category,
           status: 'available'
         })
-        .select()
-        .single();
+      })
+      .then(res => res.json());
 
       if (productError) throw productError;
 
@@ -682,82 +660,130 @@ export default function HomeScreen() {
       let specsError = null;
       switch (productForm.category) {
         case 'Ring':
-          const { error: ringError } = await supabase
-            .from('ring_specs')
-            .insert({
+          const { error: ringError } = await fetch(`${SUPABASE_URL}/rest/v1/ring_specs`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({
               product_id: product.id,
               ...productForm.specs
-            });
+            })
+          })
+          .then(res => res.json());
           specsError = ringError;
           break;
 
         case 'Necklace':
-          const { error: necklaceError } = await supabase
-            .from('necklace_specs')
-            .insert({
+          const { error: necklaceError } = await fetch(`${SUPABASE_URL}/rest/v1/necklace_specs`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({
               product_id: product.id,
               ...productForm.specs
-            });
+            })
+          })
+          .then(res => res.json());
           specsError = necklaceError;
           break;
 
         case 'Earrings':
-          const { error: earringError } = await supabase
-            .from('earring_specs')
-            .insert({
+          const { error: earringError } = await fetch(`${SUPABASE_URL}/rest/v1/earring_specs`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({
               product_id: product.id,
               ...productForm.specs
-            });
+            })
+          })
+          .then(res => res.json());
           specsError = earringError;
           break;
 
         case 'Bracelet':
-          const { error: braceletError } = await supabase
-            .from('bracelet_specs')
-            .insert({
+          const { error: braceletError } = await fetch(`${SUPABASE_URL}/rest/v1/bracelet_specs`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({
               product_id: product.id,
               ...productForm.specs
-            });
+            })
+          })
+          .then(res => res.json());
           specsError = braceletError;
           break;
 
         case 'Special Pieces':
-          const { error: specialError } = await supabase
-            .from('special_piece_specs')
-            .insert({
+          const { error: specialError } = await fetch(`${SUPABASE_URL}/rest/v1/special_piece_specs`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({
               product_id: product.id,
               ...productForm.specs
-            });
+            })
+          })
+          .then(res => res.json());
           specsError = specialError;
           break;
 
         case 'Watches':
-          const { error: watchError } = await supabase
-            .from('watch_specs')
-            .insert({
+          const { error: watchError } = await fetch(`${SUPABASE_URL}/rest/v1/watch_specs`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({
               product_id: product.id,
               ...productForm.specs
-            });
+            })
+          })
+          .then(res => res.json());
           specsError = watchError;
           break;
 
         case 'Loose Diamond':
-          const { error: diamondError } = await supabase
-            .from('diamond_specs')
-            .insert({
+          const { error: diamondError } = await fetch(`${SUPABASE_URL}/rest/v1/diamond_specs`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({
               product_id: product.id,
               ...productForm.specs
-            });
+            })
+          })
+          .then(res => res.json());
           specsError = diamondError;
           break;
 
         case 'Gems':
-          const { error: gemError } = await supabase
-            .from('gem_specs')
-            .insert({
+          const { error: gemError } = await fetch(`${SUPABASE_URL}/rest/v1/gem_specs`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({
               product_id: product.id,
               ...productForm.specs
-            });
+            })
+          })
+          .then(res => res.json());
           specsError = gemError;
           break;
       }
@@ -768,7 +794,6 @@ export default function HomeScreen() {
       setShowAddModal(false);
       fetchProducts();
     } catch (error) {
-      console.error('Error adding product:', error);
       Alert.alert('Error', 'Failed to add product');
     } finally {
       setLoading(false);
@@ -799,7 +824,7 @@ export default function HomeScreen() {
               style={styles.filterButton}
               onPress={() => setShowFilterModal(true)}
             >
-              <Filter size={24} color="#fff" />
+              <Ionicons name="filter" size={24} color="#fff" />
             </TouchableOpacity>
       </View>
         </View>

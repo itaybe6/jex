@@ -22,8 +22,32 @@ type Notification = {
   seller_name?: string;
 };
 
+// פונקציית fetch שמוסיפה את ה-access_token של המשתמש (אם קיים) ל-Authorization header
+function useSupabaseFetch(access_token?: string) {
+  return async (endpoint: string, options: RequestInit = {}) => {
+    const baseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+    const headers: Record<string, string> = {
+      apikey: anonKey!,
+      Authorization: `Bearer ${access_token || anonKey}`,
+      'Content-Type': 'application/json',
+    };
+    if (options.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method.toUpperCase())) {
+      headers['Prefer'] = 'return=representation';
+    }
+    return fetch(`${baseUrl}${endpoint}`, {
+      ...options,
+      headers: {
+        ...headers,
+        ...(options.headers || {}),
+      },
+    });
+  };
+}
+
 export default function NotificationsScreen() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
+  const supabaseFetch = useSupabaseFetch(accessToken || undefined);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -31,6 +55,7 @@ export default function NotificationsScreen() {
 
   useEffect(() => {
     if (user) {
+      console.log('user in NotificationsScreen:', user);
       fetchNotifications();
       registerForPushNotifications();
     }
@@ -38,19 +63,15 @@ export default function NotificationsScreen() {
 
   const fetchNotifications = async () => {
     try {
-      // TODO: Migrate to fetch-based API
-      // const { data, error } = await supabase
-      //   .from('notifications')
-      //   .select('*')
-      //   .eq('user_id', user?.id)
-      //   .order('created_at', { ascending: false });
-      //
-      // if (error) {
-      //   console.error('Error fetching notifications:', error);
-      //   Alert.alert('Error', 'Failed to load notifications. Please try again later.');
-      //   return;
-      // }
-      // setNotifications(data || []);
+      const res = await supabaseFetch(`/rest/v1/notifications?user_id=eq.${user?.id}&select=*&order=created_at.desc`);
+      if (!res.ok) {
+        const err = await res.text();
+        console.error('Error fetching notifications:', err);
+        Alert.alert('Error', 'Failed to load notifications. Please try again later.');
+        return;
+      }
+      const data = await res.json();
+      setNotifications(data || []);
     } catch (error) {
       console.error('Error fetching notifications:', error);
       Alert.alert('Error', 'An unexpected error occurred. Please try again later.');
@@ -83,15 +104,15 @@ export default function NotificationsScreen() {
       });
 
       if (user) {
-        // TODO: Migrate to fetch-based API
-        // const { error } = await supabase
-        //   .from('profiles')
-        //   .update({ push_token: token.data })
-        //   .eq('id', user.id);
-        // if (error) {
-        //   console.error('Error saving push token:', error);
-        //   Alert.alert('Error', 'Failed to save push notification settings. Please try again later.');
-        // }
+        const res = await supabaseFetch(`/rest/v1/profiles?id=eq.${user.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ push_token: token.data }),
+        });
+        if (!res.ok) {
+          const err = await res.text();
+          console.error('Error saving push token:', err);
+          Alert.alert('Error', 'Failed to save push notification settings. Please try again later.');
+        }
       }
     } catch (error) {
       console.error('Error registering for push notifications:', error);
@@ -101,12 +122,11 @@ export default function NotificationsScreen() {
 
   const markAsRead = async (notificationId: string) => {
     try {
-      // TODO: Migrate to fetch-based API
-      // const { error } = await supabase
-      //   .from('notifications')
-      //   .update({ read: true })
-      //   .eq('id', notificationId);
-      // if (error) throw error;
+      const res = await supabaseFetch(`/rest/v1/notifications?id=eq.${notificationId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ read: true }),
+      });
+      if (!res.ok) throw new Error(await res.text());
       setNotifications(prev => 
         prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
       );
@@ -126,38 +146,70 @@ export default function NotificationsScreen() {
     try {
       const { transaction_id, product_title, seller_id, product_id } = notification.data;
       // Fetch transaction to determine who is acting
-      // TODO: Migrate all supabase usages in this function to fetch-based API
-      // const { data: transaction, error: txFetchError } = await supabase
-      //   .from('transactions')
-      //   .select('*')
-      //   .eq('id', transaction_id)
-      //   .single();
-      // if (txFetchError) throw txFetchError;
-      // if (!transaction) throw new Error('Transaction not found');
+      const txRes = await supabaseFetch(`/rest/v1/transactions?id=eq.${transaction_id}&select=*`);
+      if (!txRes.ok) throw new Error(await txRes.text());
+      const txArr = await txRes.json();
+      const transaction = txArr[0];
+      if (!transaction) throw new Error('Transaction not found');
+
       // If user is the buyer and approves, update notification message
-      // TODO: Migrate transaction logic to fetch-based API
-      // if (approve && user?.id === buyer_id && transaction.status === 'pending') {
-      //   ...
-      // }
+      if (approve && user?.id === buyer_id && transaction.status === 'pending') {
+        // Update transaction status
+        await supabaseFetch(`/rest/v1/transactions?id=eq.${transaction_id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: 'waiting_seller_approval' }),
+        });
+        // Update notification message (optional)
+        await supabaseFetch(`/rest/v1/notifications?id=eq.${notification.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ is_action_done: true }),
+        });
+      }
       // If user is the buyer and rejects, update notification message
-      // TODO: Migrate transaction logic to fetch-based API
-      // if (!approve && user?.id === buyer_id && transaction.status === 'pending') {
-      //   ...
-      // }
+      else if (!approve && user?.id === buyer_id && transaction.status === 'pending') {
+        await supabaseFetch(`/rest/v1/transactions?id=eq.${transaction_id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: 'rejected_by_buyer' }),
+        });
+        await supabaseFetch(`/rest/v1/notifications?id=eq.${notification.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ is_action_done: true }),
+        });
+      }
       // If user is the seller and approves, move to completed and delete product
-      // TODO: Migrate transaction logic to fetch-based API
-      // if (approve && user?.id === seller_id && transaction.status === 'waiting_seller_approval') {
-      //   ...
-      // }
+      else if (approve && user?.id === seller_id && transaction.status === 'waiting_seller_approval') {
+        await supabaseFetch(`/rest/v1/transactions?id=eq.${transaction_id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: 'completed' }),
+        });
+        if (product_id) {
+          await supabaseFetch(`/rest/v1/products?id=eq.${product_id}`, {
+            method: 'DELETE',
+          });
+        }
+        await supabaseFetch(`/rest/v1/notifications?id=eq.${notification.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ is_action_done: true }),
+        });
+      }
       // If seller rejects at waiting_seller_approval
-      // TODO: Migrate transaction logic to fetch-based API
-      // if (!approve && user?.id === seller_id && transaction.status === 'waiting_seller_approval') {
-      //   ...
-      // }
-      // Fallback: do nothing
-      // TODO: Migrate fallback logic to fetch-based API
-      // await supabase.from('notifications').delete().eq('id', notification.id);
-      // setNotifications(prev => prev.filter(n => n.id !== notification.id));
+      else if (!approve && user?.id === seller_id && transaction.status === 'waiting_seller_approval') {
+        await supabaseFetch(`/rest/v1/transactions?id=eq.${transaction_id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: 'rejected_by_seller' }),
+        });
+        await supabaseFetch(`/rest/v1/notifications?id=eq.${notification.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ is_action_done: true }),
+        });
+      }
+      // Fallback: do nothing, just delete notification
+      else {
+        await supabaseFetch(`/rest/v1/notifications?id=eq.${notification.id}`, {
+          method: 'DELETE',
+        });
+        setNotifications(prev => prev.filter(n => n.id !== notification.id));
+      }
     } catch (err: any) {
       setActionError(err.message || 'Failed to update deal');
     } finally {
@@ -168,12 +220,10 @@ export default function NotificationsScreen() {
   const markAllAsRead = async () => {
     try {
       if (!user) return;
-      // TODO: Migrate all supabase usages in this function to fetch-based API
-      // await supabase
-      //   .from('notifications')
-      //   .update({ read: true })
-      //   .eq('user_id', user.id)
-      //   .eq('read', false);
+      await supabaseFetch(`/rest/v1/notifications?user_id=eq.${user.id}&read=eq.false`, {
+        method: 'PATCH',
+        body: JSON.stringify({ read: true }),
+      });
       fetchNotifications();
     } catch (error) {
       console.error('Error marking all notifications as read:', error);

@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
 
 export type Product = {
   id: string;
@@ -70,48 +70,48 @@ export function isMatch(filter: any, product: any): boolean {
 
 /**
  * מאתר משתמשים עם סינון תואם למוצר חדש, ויוצר עבורם התראה בטבלת notifications
+ * @param newProduct המוצר החדש
+ * @param accessToken הטוקן של המשתמש (ל-RLS)
  */
-export async function notifyMatchingUsersOnNewProduct(newProduct: Product) {
-  const { data: filters, error } = await supabase
-    .from('notification_preferences')
-    .select('*');
-
-  if (error) {
-    console.error('Error fetching filters:', error);
-    return;
-  }
+export async function notifyMatchingUsersOnNewProduct(newProduct: Product, accessToken: string) {
+  const filtersRes = await fetch(`${SUPABASE_URL}/rest/v1/notification_preferences`, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  const filters = await filtersRes.json();
   if (!filters) {
     console.log('No filters found!');
     return;
   }
 
-
-
   // שליפת שם ותמונת פרופיל של המוכר
   let sellerName = 'Unknown User';
   let sellerAvatar = null;
   if (newProduct.user_id) {
-    const { data: sellerProfile } = await supabase
-      .from('profiles')
-      .select('full_name, avatar_url')
-      .eq('id', newProduct.user_id)
-      .single();
-    if (sellerProfile && sellerProfile.full_name) {
-      sellerName = sellerProfile.full_name;
+    const sellerProfileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=full_name,avatar_url&eq.id.eq.${newProduct.user_id}`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+    const sellerProfile = await sellerProfileRes.json();
+    if (sellerProfile && sellerProfile.length > 0 && sellerProfile[0].full_name) {
+      sellerName = sellerProfile[0].full_name;
     }
-    if (sellerProfile && sellerProfile.avatar_url) {
-      sellerAvatar = sellerProfile.avatar_url;
+    if (sellerProfile && sellerProfile.length > 0 && sellerProfile[0].avatar_url) {
+      sellerAvatar = sellerProfile[0].avatar_url;
     }
   }
 
   // שליפת כתובת התמונה הראשית של המוצר מה-DB
   let productImage = null;
-  const { data: productImages, error: imgError } = await supabase
-    .from('product_images')
-    .select('image_url')
-    .eq('product_id', newProduct.id)
-    .order('id', { ascending: true })
-    .limit(1);
+  const productImagesRes = await fetch(`${SUPABASE_URL}/rest/v1/product_images?select=image_url&eq.product_id.eq.${newProduct.id}&order.id.asc&limit.1`, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+    },
+  });
+  const productImages = await productImagesRes.json();
   if (productImages && productImages.length > 0) {
     productImage = productImages[0].image_url;
   }
@@ -122,20 +122,28 @@ export async function notifyMatchingUsersOnNewProduct(newProduct: Product) {
       if (!isMatch(filter, newProduct)) continue;
 
       console.log('Creating notification for user:', pref.user_id, 'for product:', newProduct);
-      const { error: notifError } = await supabase.from('notifications').insert({
-        user_id: pref.user_id,
-        type: 'new_product',
-        product_id: newProduct.id,
-        data: {
-          message: `New product match: ${newProduct.brand || ''} ${newProduct.model || ''} just listed!`,
-          product: newProduct,
-          seller_name: sellerName,
-          seller_avatar_url: sellerAvatar,
-          product_image_url: productImage,
+      const notifRes = await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
         },
-        read: false,
+        body: JSON.stringify({
+          user_id: pref.user_id,
+          type: 'new_product',
+          product_id: newProduct.id,
+          data: {
+            message: `New product match: ${newProduct.brand || ''} ${newProduct.model || ''} just listed!`,
+            product: newProduct,
+            seller_name: sellerName,
+            seller_avatar_url: sellerAvatar,
+            product_image_url: productImage,
+          },
+          read: false,
+        }),
       });
-      if (notifError) {
+      const notifError = await notifRes.json();
+      if (notifError?.error) {
         console.error('Error inserting notification:', notifError, notifError?.message, notifError?.details);
       }
     }

@@ -29,7 +29,7 @@ const CATEGORIES = [
 
 export default function EditProductScreen() {
   const { id } = useLocalSearchParams();
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [product, setProduct] = useState<ProductDetails | null>(null);
@@ -55,48 +55,28 @@ export default function EditProductScreen() {
         return;
       }
 
-      console.log('Attempting to fetch product with ID:', id);
-      
-      // TODO: Replace with fetch-based migration
-      // const { data, error } = await supabase
-      //   .from('products')
-      //   .select(`
-      //     id,
-      //     title,
-      //     description,
-      //     price,
-      //     user_id,
-      //     product_images (
-      //       id,
-      //       image_url
-      //     )
-      //   `)
-      //   .eq('id', id)
-      //   .single();
-
+      // קריאת fetch ל-Supabase REST API
+      const url = `${SUPABASE_URL}/rest/v1/products?id=eq.${id}&select=*,product_images(id,image_url)`;
+      const res = await fetch(url, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+        },
+      });
+      const data = await res.json();
+      const product = data[0];
       if (!product) {
         console.error('No data returned from Supabase');
         Alert.alert('Error', 'Product not found');
         return;
       }
-      
-      console.log('Successfully fetched product data:', {
-        id: product.id,
-        title: product.title,
-        hasDescription: !!product.description,
-        hasImages: Array.isArray(product.product_images) && product.product_images.length > 0
-      });
-      
       setProduct(product);
       setTitle(product.title || '');
       setDescription(product.description || '');
       setPrice(product.price ? product.price.toString() : '');
-      
       // Get image URLs from product_images
-      const imageUrls = product.product_images?.map(img => img.image_url) || [];
+      const imageUrls = product.product_images?.map((img: any) => img.image_url) || [];
       setImageUrls(imageUrls);
-      
-      console.log('Set image URLs state:', imageUrls);
     } catch (error) {
       console.error('Detailed error when fetching product:', error);
       Alert.alert(

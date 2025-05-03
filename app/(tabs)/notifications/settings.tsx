@@ -54,12 +54,32 @@ type NotificationPreferences = {
 };
 
 export default function NotificationSettingsScreen() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     enabled_types: [],
     specific_filters: []
   });
   const [expandedFilterId, setExpandedFilterId] = useState<string | null>(null);
+
+  const supabaseFetch = async (endpoint: string, options: RequestInit = {}) => {
+    const baseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+    const headers: Record<string, string> = {
+      apikey: anonKey!,
+      Authorization: `Bearer ${accessToken || anonKey}`,
+      'Content-Type': 'application/json',
+    };
+    if (options.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method.toUpperCase())) {
+      headers['Prefer'] = 'return=representation';
+    }
+    return fetch(`${baseUrl}${endpoint}`, {
+      ...options,
+      headers: {
+        ...headers,
+        ...(options.headers || {}),
+      },
+    });
+  };
 
   useEffect(() => {
     if (user) {
@@ -78,29 +98,33 @@ export default function NotificationSettingsScreen() {
   const fetchPreferences = async () => {
     try {
       if (!user) return;
-      // TODO: Migrate to fetch-based API
-      // const { data, error } = await supabase
-      //   .from('notification_preferences')
-      //   .select('*')
-      //   .eq('user_id', user.id)
-      //   .single();
-      // if (error && error.code !== 'PGRST116') throw error;
-      // if (data) {
-      //   setPreferences(data);
-      // } else {
-      //   const defaultPreferences = {
-      //     enabled_types: ['new_product', 'new_request'],
-      //     specific_filters: []
-      //   };
-      //   const { error: insertError } = await supabase
-      //     .from('notification_preferences')
-      //     .insert({
-      //       user_id: user.id,
-      //       ...defaultPreferences
-      //     });
-      //   if (insertError) throw insertError;
-      //   setPreferences(defaultPreferences);
-      // }
+      const res = await supabaseFetch(`/rest/v1/notification_preferences?user_id=eq.${user.id}&select=*`);
+      if (!res.ok) {
+        const err = await res.text();
+        // קוד שגיאה 406 = לא נמצא, ניצור ברירת מחדל
+        if (res.status === 406) {
+          const defaultPreferences = {
+            enabled_types: ['new_product', 'new_request'],
+            specific_filters: []
+          };
+          const insertRes = await supabaseFetch(`/rest/v1/notification_preferences`, {
+            method: 'POST',
+            body: JSON.stringify({
+              user_id: user.id,
+              ...defaultPreferences
+            })
+          });
+          if (!insertRes.ok) throw new Error(await insertRes.text());
+          setPreferences(defaultPreferences);
+        } else {
+          throw new Error(err);
+        }
+      } else {
+        const data = await res.json();
+        if (data && data[0]) {
+          setPreferences(data[0]);
+        }
+      }
     } catch (error) {
       console.error('Error fetching preferences:', error);
     }
@@ -109,12 +133,12 @@ export default function NotificationSettingsScreen() {
   const handleRemoveFilter = async (filterId: string) => {
     try {
       const updatedFilters = preferences.specific_filters.filter(f => f.id !== filterId);
-      // TODO: Migrate to fetch-based API
-      // const { error } = await supabase
-      //   .from('notification_preferences')
-      //   .update({ specific_filters: updatedFilters })
-      //   .eq('user_id', user?.id);
-      // if (error) throw error;
+      if (!user) return;
+      const res = await supabaseFetch(`/rest/v1/notification_preferences?user_id=eq.${user.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ specific_filters: updatedFilters })
+      });
+      if (!res.ok) throw new Error(await res.text());
       setPreferences(prev => ({
         ...prev,
         specific_filters: updatedFilters

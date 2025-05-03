@@ -15,10 +15,15 @@ export async function getProducts() {
   return res.json();
 }
 
-export async function createProduct(data) {
+export async function createProduct(data, accessToken) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/products`, {
     method: 'POST',
-    headers,
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation'
+    },
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error('Failed to create product');

@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react';
 import { getToken } from '../lib/secureStorage';
 
+type AuthUser = { id: string } & Record<string, any>;
+
 export function useAuth() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
       setLoading(true);
       try {
         const token = await getToken('access_token');
+        setAccessToken(token);
         if (!token) {
           setUser(null);
           setLoading(false);
@@ -36,5 +40,5 @@ export function useAuth() {
     fetchUser();
   }, []);
 
-  return { user, loading };
+  return { user, loading, accessToken };
 }
