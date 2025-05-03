@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Linking, Modal, Alert } from 'react-native';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
-import { supabase } from '@/lib/supabase';
-import { ArrowLeft, MessageCircle, Clock, X, Edit, Trash, CheckCircle } from 'lucide-react-native';
+// import { supabase } from '@/lib/supabase'; // Removed, migrate to fetch-based API
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/hooks/useAuth';
 import ImageViewer from 'react-native-image-zoom-viewer';
@@ -53,67 +53,52 @@ export default function ProductScreen() {
 
   const fetchProduct = async () => {
     try {
-      // First, fetch the product with basic info
-      const { data: productData, error: productError } = await supabase
-        .from('products')
-        .select(`
-          *,
-          profiles (
-            id,
-            full_name,
-            avatar_url,
-            phone
-          ),
-          product_images (
-            image_url
-          )
-        `)
-        .eq('id', id)
-        .single();
-
-      if (productError) throw productError;
-
-      if (!productData) {
-        showAlert('שגיאה', 'המוצר לא נמצא');
-        return;
-      }
-
+      // TODO: Migrate to fetch-based API
+      // const { data: productData, error: productError } = await supabase
+      //   .from('products')
+      //   .select(`
+      //     *,
+      //     profiles (
+      //       id,
+      //       full_name,
+      //       avatar_url,
+      //       phone
+      //     ),
+      //     product_images (
+      //       image_url
+      //     )
+      //   `)
+      //   .eq('id', id)
+      //   .single();
+      // if (productError) throw productError;
+      // if (!productData) {
+      //   showAlert('שגיאה', 'המוצר לא נמצא');
+      //   return;
+      // }
       // Extract image URLs
-      const images = productData.product_images || [];
-      const imageUrls = images.map((img: { image_url: string }) => img.image_url);
-      
-      // If no images in product_images, use the legacy image_url
-      if (imageUrls.length === 0 && productData.image_url) {
-        imageUrls.push(productData.image_url);
-      }
-      
-      setProductImages(imageUrls);
-
-      // Get the specs table name based on the product category
-      const specsTable = CATEGORY_TO_SPECS_TABLE[productData.category.toLowerCase()];
-      
-      // If we have a specs table for this category, fetch the specs
-      if (specsTable) {
-        const { data: specsData, error: specsError } = await supabase
-          .from(specsTable)
-          .select('*')
-          .eq('product_id', productData.id)
-          .single();
-
-        if (specsError && specsError.code !== 'PGRST116') {
-          // PGRST116 means no data found, which is fine
-          throw specsError;
-        }
-
-        // Combine product data with specs
-        setProduct({
-          ...productData,
-          specs: specsData || null
-        } as Product);
-      } else {
-        // If no specs table exists for this category, just use the product data
-        setProduct(productData as Product);
-      }
+      // const images = productData.product_images || [];
+      // const imageUrls = images.map((img: { image_url: string }) => img.image_url);
+      // if (imageUrls.length === 0 && productData.image_url) {
+      //   imageUrls.push(productData.image_url);
+      // }
+      // setProductImages(imageUrls);
+      // const specsTable = CATEGORY_TO_SPECS_TABLE[productData.category.toLowerCase()];
+      // if (specsTable) {
+      //   const { data: specsData, error: specsError } = await supabase
+      //     .from(specsTable)
+      //     .select('*')
+      //     .eq('product_id', productData.id)
+      //     .single();
+      //   if (specsError && specsError.code !== 'PGRST116') {
+      //     throw specsError;
+      //   }
+      //   setProduct({
+      //     ...productData,
+      //     specs: specsData || null
+      //   } as Product);
+      // } else {
+      //   setProduct(productData as Product);
+      // }
     } catch (error) {
       console.error('Error fetching product:', error);
       showAlert('שגיאה', 'אירעה שגיאה בטעינת פרטי המוצר');
@@ -142,13 +127,13 @@ export default function ProductScreen() {
   const handleMarkAsSold = async () => {
     if (!product) return;
     try {
-      const { error } = await supabase
-        .from('products')
-        .update({ status: 'sold' })
-        .eq('id', product.id);
-      
-      if (error) throw error;
-      await fetchProduct();
+      // TODO: Migrate to fetch-based API
+      // const { error } = await supabase
+      //   .from('products')
+      //   .update({ status: 'sold' })
+      //   .eq('id', product.id);
+      // if (error) throw error;
+      // await fetchProduct();
     } catch (error) {
       console.error('Error marking product as sold:', error);
       Alert.alert('שגיאה', 'אירעה שגיאה בעדכון סטטוס המוצר');
@@ -162,13 +147,13 @@ export default function ProductScreen() {
   const handleDeletePress = async () => {
     if (!product) return;
     try {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', product.id);
-      
-      if (error) throw error;
-      router.back();
+      // TODO: Migrate to fetch-based API
+      // const { error } = await supabase
+      //   .from('products')
+      //   .delete()
+      //   .eq('id', product.id);
+      // if (error) throw error;
+      // router.back();
     } catch (error) {
       console.error('Error deleting product:', error);
       Alert.alert('שגיאה', 'אירעה שגיאה במחיקת המוצר');
@@ -215,50 +200,13 @@ export default function ProductScreen() {
   };
 
   const handleHoldRequest = async () => {
-    if (!user || !product || !selectedDuration) return;
-    
-    setIsSubmitting(true);
-    try {
-      // Get user profile for notification
-      const { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('full_name, avatar_url')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError) throw profileError;
-
-      // Create notification for product owner
-      const { error: notificationError } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: product.user_id, // Send to product owner
-          type: 'hold_request',
-          data: {
-            product_id: product.id,
-            product_title: product.title,
-            product_image_url: product.image_url,
-            requester_id: user.id,
-            requester_name: userProfile.full_name,
-            requester_avatar: userProfile.avatar_url,
-            duration_hours: selectedDuration,
-            message: `${userProfile.full_name} ביקש לשמור את המוצר '${product.title}' למשך ${selectedDuration} שעות.`
-          },
-          is_read: false
-        });
-
-      if (notificationError) throw notificationError;
-
-      // Close modal and reset state
-      setShowHoldModal(false);
-      setSelectedDuration(null);
-      alert('Hold request sent successfully');
-    } catch (error) {
-      console.error('Error sending hold request:', error);
-      alert('Failed to send hold request. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    // TODO: Migrate to fetch-based API
+    // const { error } = await supabase
+    //   .from('products')
+    //   .update({ status: 'hold' })
+    //   .eq('id', product.id);
+    // if (error) throw error;
+    // await fetchProduct();
   };
 
   if (loading) {
@@ -296,19 +244,19 @@ export default function ProductScreen() {
       />
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-          <ArrowLeft size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{product.title}</Text>
         {isOwner && (
           <View style={styles.ownerActions}>
             <TouchableOpacity onPress={handleMarkAsSold} style={[styles.actionButton, styles.soldButton]}>
-              <CheckCircle size={20} color="#4CAF50" />
+              <Ionicons name="checkmark-circle-outline" size={24} color="#4CAF50" />
             </TouchableOpacity>
             <TouchableOpacity onPress={handleEditPress} style={styles.actionButton}>
-              <Edit size={20} color="#fff" />
+              <Ionicons name="create-outline" size={24} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity onPress={handleDeletePress} style={[styles.actionButton, styles.deleteButton]}>
-              <Trash size={20} color="#fff" />
+              <Ionicons name="trash-outline" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
         )}
@@ -380,7 +328,7 @@ export default function ProductScreen() {
               style={styles.holdButton} 
               onPress={() => setShowHoldModal(true)}
             >
-              <Clock size={24} color="#fff" strokeWidth={2.5} />
+              <Ionicons name="time-outline" size={24} color="#fff" strokeWidth={2.5} />
               <Text style={styles.holdButtonText}>Hold Product</Text>
             </TouchableOpacity>
             
@@ -388,7 +336,7 @@ export default function ProductScreen() {
               style={styles.contactButton}
               onPress={handleContactPress}
             >
-              <MessageCircle size={20} color="#fff" style={{ marginRight: 8 }} />
+              <Ionicons name="chatbubble-outline" size={24} color="#fff" style={{ marginRight: 8 }} />
               <Text style={styles.contactButtonText}>Contact via WhatsApp</Text>
             </TouchableOpacity>
           </View>
@@ -409,7 +357,7 @@ export default function ProductScreen() {
                 onPress={() => setShowHoldModal(false)}
                 style={styles.modalCloseButton}
               >
-                <X size={24} color="#0E2657" />
+                <Ionicons name="close" size={24} color="#0E2657" />
               </TouchableOpacity>
             </View>
 
@@ -472,7 +420,7 @@ export default function ProductScreen() {
                 style={styles.closeButton}
                 onPress={() => setShowImageViewer(false)}
               >
-                <X size={24} color="#fff" />
+                <Ionicons name="close" size={24} color="#fff" />
               </TouchableOpacity>
             )}
           />

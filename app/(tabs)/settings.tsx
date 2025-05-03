@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { JSX } from 'react';
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch } from 'react-native';
-import { LogOut, Bell, Lock, Shield, CircleHelp as HelpCircle, Info } from 'lucide-react-native';
-import { supabase } from '@/lib/supabase';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useRouter } from 'expo-router';
+// import { useAuth } from '../../context/AuthContext';
+import { getToken } from '../../lib/secureStorage';
 
 type SettingItemProps = {
   icon: JSX.Element;
@@ -18,11 +20,29 @@ export default function SettingsScreen() {
 
   const handleSignOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      const token = await getToken('access_token');
+      if (!token) {
+        Alert.alert('Error', 'No active session found');
+        return;
+      }
+
+      const response = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/auth/v1/logout`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to sign out');
+      }
+
+      await getToken('access_token');
       router.replace('/(auth)/sign-in');
     } catch (error) {
       console.error('Error signing out:', error);
+      Alert.alert('Error', 'Failed to sign out. Please try again.');
     }
   };
 
@@ -61,7 +81,7 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Notifications</Text>
         <SettingItem
-          icon={<Bell size={24} color="#888" />}
+          icon={<Ionicons name="notifications-outline" size={24} color="#888" />}
           title="Push Notifications"
           value={notificationsEnabled}
           onPress={() => setNotificationsEnabled(!notificationsEnabled)}
@@ -71,12 +91,12 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Security</Text>
         <SettingItem
-          icon={<Lock size={24} color="#888" />}
+          icon={<Ionicons name="lock-closed-outline" size={24} color="#888" />}
           title="Change Password"
           onPress={() => router.push('/settings/change-password')}
         />
         <SettingItem
-          icon={<Shield size={24} color="#888" />}
+          icon={<Ionicons name="shield-checkmark-outline" size={24} color="#888" />}
           title="Two-Factor Authentication"
           onPress={() => {}}
         />
@@ -85,19 +105,19 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Support</Text>
         <SettingItem
-          icon={<HelpCircle size={24} color="#888" />}
+          icon={<Ionicons name="help-circle-outline" size={24} color="#888" />}
           title="Help Center"
           onPress={() => {}}
         />
         <SettingItem
-          icon={<Info size={24} color="#888" />}
+          icon={<Ionicons name="information-circle-outline" size={24} color="#888" />}
           title="About"
           onPress={() => {}}
         />
       </View>
 
       <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-        <LogOut size={24} color="#ff6b6b" />
+        <Ionicons name="log-out-outline" size={24} color="#ff6b6b" />
         <Text style={styles.signOutText}>Sign Out</Text>
       </TouchableOpacity>
     </ScrollView>

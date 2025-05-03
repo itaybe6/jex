@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
 import { router } from 'expo-router';
-import { Package, Search } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { TopHeader } from '../../../components/TopHeader';
 
 export default function AddScreen() {
@@ -16,7 +16,7 @@ export default function AddScreen() {
             style={styles.option}
             onPress={() => router.push('/(tabs)/add/product')}
           >
-            <Package size={32} color="#6C5CE7" />
+            <Ionicons name="cube-outline" size={32} color="#6C5CE7" />
             <Text style={styles.optionTitle}>Add Product</Text>
             <Text style={styles.optionDescription}>Add a diamond or jewelry for sale</Text>
           </TouchableOpacity>
@@ -25,7 +25,7 @@ export default function AddScreen() {
             style={styles.option}
             onPress={() => router.push('/(tabs)/add/request')}
           >
-            <Search size={32} color="#6C5CE7" />
+            <Ionicons name="search-outline" size={32} color="#6C5CE7" />
             <Text style={styles.optionTitle}>Add Request</Text>
             <Text style={styles.optionDescription}>Post a request for a specific diamond or jewelry</Text>
           </TouchableOpacity>

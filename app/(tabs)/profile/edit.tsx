@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Image, Alert, Platform } from 'react-native';
-import { Camera, X, User, ChevronLeft, CheckCircle } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { supabase } from '@/lib/supabase';
+// import { supabase } from '@/lib/supabase'; // Removed, migrate to fetch-based API
 import { useAuth } from '@/hooks/useAuth';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
@@ -28,28 +28,26 @@ export default function EditProfileScreen() {
   const fetchProfile = async () => {
     try {
       if (!user) return;
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (error) throw error;
-      if (data) {
-        // Ensure all fields have default values even if null in database
-        setProfile({
-          full_name: data.full_name || '',
-          title: data.title || '',
-          bio: data.bio || '',
-          website: data.website || '',
-          avatar_url: data.avatar_url || '',
-          phone: data.phone || '',
-        });
-        if (data.avatar_url) {
-          setImageUri(data.avatar_url);
-        }
-      }
+      // TODO: Migrate to fetch-based API
+      // const { data, error } = await supabase
+      //   .from('profiles')
+      //   .select('*')
+      //   .eq('id', user.id)
+      //   .single();
+      // if (error) throw error;
+      // if (data) {
+      //   setProfile({
+      //     full_name: data.full_name || '',
+      //     title: data.title || '',
+      //     bio: data.bio || '',
+      //     website: data.website || '',
+      //     avatar_url: data.avatar_url || '',
+      //     phone: data.phone || '',
+      //   });
+      //   if (data.avatar_url) {
+      //     setImageUri(data.avatar_url);
+      //   }
+      // }
     } catch (error) {
       console.error('Error fetching profile:', error);
       Alert.alert('שגיאה', 'אירעה שגיאה בטעינת הפרופיל');
@@ -82,23 +80,20 @@ export default function EditProfileScreen() {
 
   const uploadImage = async () => {
     if (!imageBase64) return profile.avatar_url;
-
     try {
-      const fileName = `${user?.id}/avatar.jpg`;
-      const { data, error } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, decode(imageBase64), {
-          contentType: 'image/jpeg',
-          upsert: true,
-        });
-
-      if (error) throw error;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(fileName);
-
-      return publicUrl;
+      // TODO: Migrate to fetch-based API
+      // const fileName = `${user?.id}/avatar.jpg`;
+      // const { data, error } = await supabase.storage
+      //   .from('avatars')
+      //   .upload(fileName, decode(imageBase64), {
+      //     contentType: 'image/jpeg',
+      //     upsert: true,
+      //   });
+      // if (error) throw error;
+      // const { data: { publicUrl } } = supabase.storage
+      //   .from('avatars')
+      //   .getPublicUrl(fileName);
+      // return publicUrl;
     } catch (error) {
       console.error('Error uploading image:', error);
       throw error;
@@ -111,32 +106,27 @@ export default function EditProfileScreen() {
         Alert.alert('שגיאה', 'יש להתחבר כדי לערוך את הפרופיל');
         return;
       }
-
       if (!profile.full_name) {
         Alert.alert('שגיאה', 'נא להזין שם מלא');
         return;
       }
-
       setLoading(true);
-
       // Upload avatar if changed
-      const avatarUrl = imageBase64 ? await uploadImage() : profile.avatar_url;
-
+      // const avatarUrl = imageBase64 ? await uploadImage() : profile.avatar_url;
       // Update profile
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          full_name: profile.full_name,
-          title: profile.title,
-          bio: profile.bio,
-          website: profile.website,
-          avatar_url: avatarUrl,
-          phone: profile.phone,
-        })
-        .eq('id', user.id);
-
-      if (error) throw error;
-
+      // TODO: Migrate to fetch-based API
+      // const { error } = await supabase
+      //   .from('profiles')
+      //   .update({
+      //     full_name: profile.full_name,
+      //     title: profile.title,
+      //     bio: profile.bio,
+      //     website: profile.website,
+      //     avatar_url: avatarUrl,
+      //     phone: profile.phone,
+      //   })
+      //   .eq('id', user.id);
+      // if (error) throw error;
       Alert.alert('הצלחה', 'הפרופיל עודכן בהצלחה', [
         { text: 'אישור', onPress: () => router.back() }
       ]);
@@ -153,7 +143,7 @@ export default function EditProfileScreen() {
       {/* Top Navigation Bar */}
       <View style={styles.topNavBar}>
         <TouchableOpacity style={styles.navLeft} onPress={() => router.back()} activeOpacity={0.7}>
-          <ChevronLeft size={26} color="#0E2657" />
+          <Ionicons name="chevron-back" size={26} color="#0E2657" />
           <Text style={styles.navTitle}>Profile</Text>
         </TouchableOpacity>
       </View>
@@ -165,7 +155,7 @@ export default function EditProfileScreen() {
               <Image source={{ uri: imageUri }} style={styles.avatar} />
             ) : (
               <View style={[styles.avatar, styles.defaultAvatar]}>
-                <User size={50} color="#666" />
+                <Ionicons name="person" size={50} color="#666" />
               </View>
             )}
             <TouchableOpacity 
@@ -173,7 +163,7 @@ export default function EditProfileScreen() {
               onPress={pickImage}
               activeOpacity={0.7}
             >
-              <Camera size={20} color="#fff" />
+              <Ionicons name="camera" size={20} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
@@ -268,7 +258,7 @@ export default function EditProfileScreen() {
             activeOpacity={0.85}
           >
             <Text style={styles.submitButtonText}>{loading ? 'Saving...' : 'Save Changes'}</Text>
-            <CheckCircle size={20} color="#fff" style={{ marginLeft: 8 }} />
+            <Ionicons name="checkmark-circle" size={20} color="#fff" style={{ marginLeft: 8 }} />
           </TouchableOpacity>
         </View>
       </View>

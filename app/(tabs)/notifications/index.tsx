@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert } from 'react-native';
-import { Settings } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { supabase } from '@/lib/supabase';
+// import { supabase } from '@/lib/supabase'; // Removed, migrate to fetch-based API
 import { useAuth } from '@/hooks/useAuth';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
@@ -36,18 +36,19 @@ export default function NotificationsScreen() {
 
   const fetchNotifications = async () => {
     try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching notifications:', error);
-        Alert.alert('Error', 'Failed to load notifications. Please try again later.');
-        return;
-      }
-      setNotifications(data || []);
+      // TODO: Migrate to fetch-based API
+      // const { data, error } = await supabase
+      //   .from('notifications')
+      //   .select('*')
+      //   .eq('user_id', user?.id)
+      //   .order('created_at', { ascending: false });
+      //
+      // if (error) {
+      //   console.error('Error fetching notifications:', error);
+      //   Alert.alert('Error', 'Failed to load notifications. Please try again later.');
+      //   return;
+      // }
+      // setNotifications(data || []);
     } catch (error) {
       console.error('Error fetching notifications:', error);
       Alert.alert('Error', 'An unexpected error occurred. Please try again later.');
@@ -80,15 +81,15 @@ export default function NotificationsScreen() {
       });
 
       if (user) {
-        const { error } = await supabase
-          .from('profiles')
-          .update({ push_token: token.data })
-          .eq('id', user.id);
-
-        if (error) {
-          console.error('Error saving push token:', error);
-          Alert.alert('Error', 'Failed to save push notification settings. Please try again later.');
-        }
+        // TODO: Migrate to fetch-based API
+        // const { error } = await supabase
+        //   .from('profiles')
+        //   .update({ push_token: token.data })
+        //   .eq('id', user.id);
+        // if (error) {
+        //   console.error('Error saving push token:', error);
+        //   Alert.alert('Error', 'Failed to save push notification settings. Please try again later.');
+        // }
       }
     } catch (error) {
       console.error('Error registering for push notifications:', error);
@@ -98,13 +99,12 @@ export default function NotificationsScreen() {
 
   const markAsRead = async (notificationId: string) => {
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('id', notificationId);
-
-      if (error) throw error;
-
+      // TODO: Migrate to fetch-based API
+      // const { error } = await supabase
+      //   .from('notifications')
+      //   .update({ read: true })
+      //   .eq('id', notificationId);
+      // if (error) throw error;
       setNotifications(prev => 
         prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
       );
@@ -124,150 +124,38 @@ export default function NotificationsScreen() {
     try {
       const { transaction_id, product_title, seller_id, product_id } = notification.data;
       // Fetch transaction to determine who is acting
-      const { data: transaction, error: txFetchError } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('id', transaction_id)
-        .single();
-      if (txFetchError) throw txFetchError;
-      if (!transaction) throw new Error('Transaction not found');
+      // TODO: Migrate all supabase usages in this function to fetch-based API
+      // const { data: transaction, error: txFetchError } = await supabase
+      //   .from('transactions')
+      //   .select('*')
+      //   .eq('id', transaction_id)
+      //   .single();
+      // if (txFetchError) throw txFetchError;
+      // if (!transaction) throw new Error('Transaction not found');
       // If user is the buyer and approves, update notification message
-      if (approve && user?.id === buyer_id && transaction.status === 'pending') {
-        // Update transaction status
-        const { error: txError } = await supabase
-          .from('transactions')
-          .update({ status: 'waiting_seller_approval' })
-          .eq('id', transaction_id);
-        if (txError) throw txError;
-        // Update notification message and is_action_done (column only)
-        const newMessage = 'The deal was approved and is waiting for the seller\'s final approval.';
-        const newData = { ...notification.data, message: newMessage };
-        const { error: notifUpdateError } = await supabase
-          .from('notifications')
-          .update({ data: newData, is_action_done: true })
-          .eq('id', notification.id);
-        if (notifUpdateError) throw notifUpdateError;
-        setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, data: newData, is_action_done: true } : n));
-        // Fetch buyer profile
-        const { data: buyerProfile, error: buyerProfileError } = await supabase
-          .from('profiles')
-          .select('full_name, avatar_url')
-          .eq('id', user.id)
-          .single();
-        if (buyerProfileError) throw buyerProfileError;
-        // Insert new notification for seller
-        const { error: sellerNotifError } = await supabase
-          .from('notifications')
-          .insert({
-            user_id: seller_id,
-            type: 'waiting_seller_approval',
-            data: {
-              message: 'The buyer approved the price. Please complete the deal by clicking Complete Deal.',
-              transaction_id,
-              product_id,
-              sender_avatar_url: buyerProfile.avatar_url || null,
-              sender_full_name: buyerProfile.full_name || user.email || 'Buyer',
-            },
-            read: false,
-            is_action_done: false,
-          });
-        if (sellerNotifError) throw sellerNotifError;
-        Alert.alert('Waiting Seller Approval', newMessage);
-        return;
-      }
+      // TODO: Migrate transaction logic to fetch-based API
+      // if (approve && user?.id === buyer_id && transaction.status === 'pending') {
+      //   ...
+      // }
       // If user is the buyer and rejects, update notification message
-      if (!approve && user?.id === buyer_id && transaction.status === 'pending') {
-        // Update transaction status
-        const { error: txError } = await supabase
-          .from('transactions')
-          .update({ status: 'rejected' })
-          .eq('id', transaction_id);
-        if (txError) throw txError;
-        // Update notification message and is_action_done (column only)
-        const newMessage = 'The deal was rejected by the buyer.';
-        const newData = { ...notification.data, message: newMessage };
-        const { error: notifUpdateError } = await supabase
-          .from('notifications')
-          .update({ data: newData, is_action_done: true })
-          .eq('id', notification.id);
-        if (notifUpdateError) throw notifUpdateError;
-        setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, data: newData, is_action_done: true } : n));
-        // Fetch buyer profile
-        const { data: buyerProfile, error: buyerProfileError } = await supabase
-          .from('profiles')
-          .select('full_name, avatar_url')
-          .eq('id', user.id)
-          .single();
-        if (buyerProfileError) throw buyerProfileError;
-        // Insert new notification for seller
-        const { error: sellerNotifError } = await supabase
-          .from('notifications')
-          .insert({
-            user_id: seller_id,
-            type: 'waiting_seller_approval',
-            data: {
-              message: 'The buyer rejected the deal.',
-              transaction_id,
-              product_id,
-              sender_avatar_url: buyerProfile.avatar_url || null,
-              sender_full_name: buyerProfile.full_name || user.email || 'Buyer',
-            },
-            read: false,
-            is_action_done: false,
-          });
-        if (sellerNotifError) throw sellerNotifError;
-        Alert.alert('Deal Rejected', newMessage);
-        return;
-      }
+      // TODO: Migrate transaction logic to fetch-based API
+      // if (!approve && user?.id === buyer_id && transaction.status === 'pending') {
+      //   ...
+      // }
       // If user is the seller and approves, move to completed and delete product
-      if (approve && user?.id === seller_id && transaction.status === 'waiting_seller_approval') {
-        // Update status
-        const { error: txError } = await supabase
-          .from('transactions')
-          .update({ status: 'completed' })
-          .eq('id', transaction_id);
-        if (txError) throw txError;
-        // Delete product
-        if (product_id) {
-          const { error: deleteError } = await supabase
-            .from('products')
-            .delete()
-            .eq('id', product_id);
-          if (deleteError) throw deleteError;
-        }
-        // Delete old notification
-        const { error: delNotifError } = await supabase
-          .from('notifications')
-          .delete()
-          .eq('id', notification.id);
-        console.log('delNotifError:', delNotifError);
-        if (delNotifError) throw delNotifError;
-        setNotifications(prev => prev.filter(n => n.id !== notification.id));
-        Alert.alert('Deal Completed', 'The deal is completed and the product was removed.');
-        return;
-      }
+      // TODO: Migrate transaction logic to fetch-based API
+      // if (approve && user?.id === seller_id && transaction.status === 'waiting_seller_approval') {
+      //   ...
+      // }
       // If seller rejects at waiting_seller_approval
-      if (!approve && user?.id === seller_id && transaction.status === 'waiting_seller_approval') {
-        // Update status
-        const { error: txError } = await supabase
-          .from('transactions')
-          .update({ status: 'rejected' })
-          .eq('id', transaction_id);
-        if (txError) throw txError;
-        // Delete old notification
-        const { error: delNotifError } = await supabase
-          .from('notifications')
-          .delete()
-          .eq('id', notification.id);
-        console.log('delNotifError:', delNotifError);
-        if (delNotifError) throw delNotifError;
-        setNotifications(prev => prev.filter(n => n.id !== notification.id));
-        Alert.alert('Deal Rejected', 'You have rejected the deal.');
-        return;
-      }
+      // TODO: Migrate transaction logic to fetch-based API
+      // if (!approve && user?.id === seller_id && transaction.status === 'waiting_seller_approval') {
+      //   ...
+      // }
       // Fallback: do nothing
-      await supabase.from('notifications').delete().eq('id', notification.id);
-      setNotifications(prev => prev.filter(n => n.id !== notification.id));
+      // TODO: Migrate fallback logic to fetch-based API
+      // await supabase.from('notifications').delete().eq('id', notification.id);
+      // setNotifications(prev => prev.filter(n => n.id !== notification.id));
     } catch (err: any) {
       setActionError(err.message || 'Failed to update deal');
     } finally {
@@ -278,11 +166,12 @@ export default function NotificationsScreen() {
   const markAllAsRead = async () => {
     try {
       if (!user) return;
-      await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('user_id', user.id)
-        .eq('read', false);
+      // TODO: Migrate all supabase usages in this function to fetch-based API
+      // await supabase
+      //   .from('notifications')
+      //   .update({ read: true })
+      //   .eq('user_id', user.id)
+      //   .eq('read', false);
       fetchNotifications();
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
@@ -350,7 +239,7 @@ export default function NotificationsScreen() {
           style={styles.settingsButton}
           activeOpacity={0.7}
         >
-          <Settings size={24} color="#0E2657" />
+          <Ionicons name="settings-outline" size={24} color="#888" />
         </TouchableOpacity>
       </View>
 

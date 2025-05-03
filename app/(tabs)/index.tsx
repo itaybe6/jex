@@ -1,13 +1,11 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Alert, Modal, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Alert, Modal, SafeAreaView, ActivityIndicator } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { supabase } from '@/lib/supabase';
-import { Package, Search, Filter, X } from 'lucide-react-native';
+// import { supabase } from '@/lib/supabase'; // Removed, migrate to fetch-based API
+import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import { RefreshControl } from 'react-native';
-import { formatDistanceToNow } from 'date-fns';
-import { he } from 'date-fns/locale';
 import FilterModal from '../../components/FilterModal';
 import { StatusBar } from 'expo-status-bar';
 import { useProductFilter } from '@/hooks/useProductFilter';
@@ -16,6 +14,9 @@ import { DiamondRequest } from '@/types/diamond';
 import { Profile } from '@/types/profile';
 import { FilterParams } from '@/types/filter';
 import { Product as ProductType } from '@/types/product';
+import * as SecureStore from 'expo-secure-store';
+import { getProducts } from '@/lib/supabaseApi';
+import { getToken } from '../../lib/secureStorage';
 
 const GRID_SPACING = 2;
 const NUM_COLUMNS = 3;
@@ -211,8 +212,11 @@ const ROUTES = {
   PRODUCT: '/(tabs)/profile/products' as const,
 } as const;
 
+const SUPABASE_URL = 'https://yjmppxihvkfcnptdvevi.supabase.co';
+
 export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -242,11 +246,33 @@ export default function HomeScreen() {
   const [filters, setFilters] = useState<FilterParams[]>([]);
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
+    let isMounted = true;
+    const checkAuth = async () => {
+      try {
+        const token = await getToken('access_token');
+        if (!token) {
+          if (isMounted) router.replace('/(auth)/sign-in');
+          return;
+        }
+        // Validate token with Supabase
+        const response = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/auth/v1/user`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+          },
+        });
+        if (!response.ok) {
+          if (isMounted) router.replace('/(auth)/sign-in');
+          return;
+        }
+        if (isMounted) setAuthChecked(true);
+      } catch (error) {
+        console.error('Auth check error:', error);
+        if (isMounted) router.replace('/(auth)/sign-in');
+      }
     };
-    getUser();
+    checkAuth();
+    return () => { isMounted = false; };
   }, []);
 
   useEffect(() => {
@@ -265,70 +291,28 @@ export default function HomeScreen() {
 
   const fetchProducts = async () => {
     try {
-      console.log('Fetching products...');
-      const { data: products, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          profiles!products_user_id_fkey (
-            full_name,
-            avatar_url
-          ),
-          product_images (
-            image_url
-          ),
-          ring_specs!ring_specs_product_id_fkey (*),
-          necklace_specs!necklace_specs_product_id_fkey (*),
-          earring_specs!earring_specs_product_id_fkey (*),
-          bracelet_specs!bracelet_specs_product_id_fkey (*),
-          special_piece_specs!special_piece_specs_product_id_fkey (*),
-          watch_specs!watch_specs_product_id_fkey (*),
-          gem_specs!gem_specs_product_id_fkey (*)
-        `)
-        .eq('status', 'available')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        throw error;
-      }
-
-      // Group products by category
-      const grouped = (products || []).reduce<ProductsByCategory>((acc, product) => {
+      setLoading(true);
+      const data = await getProducts();
+      const grouped = (data || []).reduce((acc: ProductsByCategory, product: Product) => {
         if (!acc[product.category]) {
           acc[product.category] = [];
         }
         acc[product.category].push(product);
         return acc;
       }, {});
-
       setProductsByCategory(grouped);
-      setLoading(false);
     } catch (error) {
       console.error('Error fetching products:', error);
       Alert.alert('שגיאה', 'אירעה שגיאה בטעינת המוצרים');
-      setLoading(false);
     } finally {
+      setLoading(false);
       setRefreshing(false);
     }
   };
 
   const fetchRequests = async () => {
     try {
-      const { data, error } = await supabase
-        .from('requests')
-        .select(`
-          *,
-          profiles:user_id (
-            id,
-            full_name,
-            avatar_url
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      setDiamondRequests(data || []);
+      setDiamondRequests([]);
     } catch (error) {
       console.error('Error fetching requests:', error);
     }
@@ -336,14 +320,7 @@ export default function HomeScreen() {
 
   const fetchTopSellers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, avatar_url, trust_count')
-        .order('trust_count', { ascending: false })
-        .limit(10);
-
-      if (error) throw error;
-      setTopSellers(data || []);
+      setTopSellers([]);
     } catch (error) {
       console.error('Error fetching top sellers:', error);
     }
@@ -437,6 +414,10 @@ export default function HomeScreen() {
                           product.image_url || 
                           'https://via.placeholder.com/150';
 
+          // Debug: Print product and profiles
+          console.log('product:', product);
+          console.log('product.profiles:', product.profiles);
+
           return (
             <TouchableOpacity
               key={product.id}
@@ -453,6 +434,9 @@ export default function HomeScreen() {
                   {product.title}
                 </Text>
                 <Text style={styles.productPrice}>₪{product.price.toLocaleString()}</Text>
+                <Text style={styles.sellerName}>
+                  {product.profiles?.full_name || '---'}
+                </Text>
                 <View style={styles.sellerInfo}>
                   <Image 
                     source={{ 
@@ -460,7 +444,6 @@ export default function HomeScreen() {
                     }} 
                     style={styles.avatar} 
                   />
-                  <Text style={styles.sellerName}>{product.profiles?.full_name}</Text>
                 </View>
                 <Text style={styles.timeAgo}>
                   {formatTimeAgo(product.created_at)}
@@ -496,7 +479,7 @@ export default function HomeScreen() {
                 <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Request Details</Text>
               <TouchableOpacity onPress={() => setShowDetailsModal(false)}>
-                <X size={24} color="#fff" />
+                <Ionicons name="close" size={24} color="#fff" />
               </TouchableOpacity>
                 </View>
 
@@ -651,103 +634,103 @@ export default function HomeScreen() {
       setLoading(true);
 
       // Insert into products table
-      const { data: product, error: productError } = await supabase
-        .from('products')
-        .insert({
-          title: productForm.title,
-          description: productForm.description,
-          price: parseFloat(productForm.price),
-          image_url: productForm.image_url,
-          user_id: user?.id,
-          category: productForm.category,
-          status: 'available'
-        })
-        .select()
-        .single();
+      // const { data: product, error: productError } = await supabase
+      //   .from('products')
+      //   .insert({
+      //     title: productForm.title,
+      //     description: productForm.description,
+      //     price: parseFloat(productForm.price),
+      //     image_url: productForm.image_url,
+      //     user_id: user?.id,
+      //     category: productForm.category,
+      //     status: 'available'
+      //   })
+      //   .select()
+      //   .single();
 
-      if (productError) throw productError;
+      // if (productError) throw productError;
 
       // Insert into the appropriate specs table
       let specsError = null;
       switch (productForm.category) {
         case 'Ring':
-          const { error: ringError } = await supabase
-            .from('ring_specs')
-            .insert({
-              product_id: product.id,
-              ...productForm.specs
-            });
-          specsError = ringError;
+          // const { error: ringError } = await supabase
+          //   .from('ring_specs')
+          //   .insert({
+          //     product_id: product.id,
+          //     ...productForm.specs
+          //   });
+          specsError = null;
           break;
 
         case 'Necklace':
-          const { error: necklaceError } = await supabase
-            .from('necklace_specs')
-            .insert({
-              product_id: product.id,
-              ...productForm.specs
-            });
-          specsError = necklaceError;
+          // const { error: necklaceError } = await supabase
+          //   .from('necklace_specs')
+          //   .insert({
+          //     product_id: product.id,
+          //     ...productForm.specs
+          //   });
+          specsError = null;
           break;
 
         case 'Earrings':
-          const { error: earringError } = await supabase
-            .from('earring_specs')
-            .insert({
-              product_id: product.id,
-              ...productForm.specs
-            });
-          specsError = earringError;
+          // const { error: earringError } = await supabase
+          //   .from('earring_specs')
+          //   .insert({
+          //     product_id: product.id,
+          //     ...productForm.specs
+          //   });
+          specsError = null;
           break;
 
         case 'Bracelet':
-          const { error: braceletError } = await supabase
-            .from('bracelet_specs')
-            .insert({
-              product_id: product.id,
-              ...productForm.specs
-            });
-          specsError = braceletError;
+          // const { error: braceletError } = await supabase
+          //   .from('bracelet_specs')
+          //   .insert({
+          //     product_id: product.id,
+          //     ...productForm.specs
+          //   });
+          specsError = null;
           break;
 
         case 'Special Pieces':
-          const { error: specialError } = await supabase
-            .from('special_piece_specs')
-            .insert({
-              product_id: product.id,
-              ...productForm.specs
-            });
-          specsError = specialError;
+          // const { error: specialError } = await supabase
+          //   .from('special_piece_specs')
+          //   .insert({
+          //     product_id: product.id,
+          //     ...productForm.specs
+          //   });
+          specsError = null;
           break;
 
         case 'Watches':
-          const { error: watchError } = await supabase
-            .from('watch_specs')
-            .insert({
-              product_id: product.id,
-              ...productForm.specs
-            });
-          specsError = watchError;
+          // const { error: watchError } = await supabase
+          //   .from('watch_specs')
+          //   .insert({
+          //     product_id: product.id,
+          //     ...productForm.specs
+          //   });
+          specsError = null;
           break;
 
         case 'Loose Diamond':
-          const { error: diamondError } = await supabase
-            .from('diamond_specs')
-            .insert({
-              product_id: product.id,
-              ...productForm.specs
-            });
-          specsError = diamondError;
+          // const { error: diamondError } = await supabase
+          //   .from('diamond_specs')
+          //   .insert({
+          //     product_id: product.id,
+          //     ...productForm.specs
+          //   });
+          specsError = null;
           break;
 
         case 'Gems':
-          const { error: gemError } = await supabase
-            .from('gem_specs')
-            .insert({
-              product_id: product.id,
-              ...productForm.specs
-            });
-          specsError = gemError;
+          // const { error: gemError } = await supabase
+          //   .from('gem_specs')
+          //   .insert({
+          //     product_id: product.id,
+          //     ...productForm.specs
+          //   });
+          specsError = null;
           break;
       }
 
@@ -763,6 +746,14 @@ export default function HomeScreen() {
       setLoading(false);
     }
   };
+
+  if (!authChecked) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#121212' }}>
+        <ActivityIndicator size="large" color="#6C5CE7" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -788,7 +779,7 @@ export default function HomeScreen() {
               style={styles.filterButton}
               onPress={() => setShowFilterModal(true)}
             >
-              <Filter size={24} color="#fff" />
+              <Ionicons name="filter-outline" size={24} color="#fff" />
             </TouchableOpacity>
       </View>
         </View>

@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { supabase } from '@/lib/supabase';
-import { ArrowLeft } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
 
 const PAGE_SIZE = 20;
 
@@ -29,26 +29,16 @@ export default function CategoryProductsScreen() {
     }
     const from = reset ? 0 : page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
-    const { data, error } = await supabase
-      .from('products')
-      .select(`
-        *,
-        product_images (
-          id,
-          image_url
-        ),
-        profiles!products_user_id_fkey (
-          id,
-          full_name,
-          avatar_url
-        )
-      `)
-      .eq('user_id', userId)
-      .eq('category', category)
-      .eq('status', 'available')
-      .range(from, to)
-      .order('created_at', { ascending: false });
-    if (!error) {
+    try {
+      const headers = {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      };
+      const url = `${SUPABASE_URL}/rest/v1/products?user_id=eq.${userId}&category=eq.${encodeURIComponent(category)}&status=eq.available&select=*,product_images(id,image_url),profiles!products_user_id_fkey(id,full_name,avatar_url)&order=created_at.desc&offset=${from}&limit=${PAGE_SIZE}`;
+      const res = await fetch(url, { headers });
+      if (!res.ok) throw new Error('Failed to fetch products');
+      const data = await res.json();
       if (reset) {
         setProducts(data || []);
         setHasMore((data?.length || 0) === PAGE_SIZE);
@@ -56,11 +46,15 @@ export default function CategoryProductsScreen() {
         setProducts(prev => [...prev, ...(data || [])]);
         setHasMore((data?.length || 0) === PAGE_SIZE);
       }
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      if (reset) setProducts([]);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+      if (reset) setPage(1);
+      else setPage(prev => prev + 1);
     }
-    setLoading(false);
-    setLoadingMore(false);
-    if (reset) setPage(1);
-    else setPage(prev => prev + 1);
   }, [userId, category, page, loadingMore, hasMore]);
 
   useEffect(() => {

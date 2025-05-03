@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+// Removed all supabase imports due to migration to fetch-based supabaseApi
 import { useAuth } from '@/hooks/useAuth';
 import { decode } from 'base64-arraybuffer';
 import watchModels from '@/lib/watch-models.json';
@@ -249,56 +249,23 @@ export default function useProductForm() {
         user_id: user?.id
       };
 
-      console.log('--- יצירת מוצר חדש ---');
-      const { data: product, error: productError } = await supabase
-        .from('products')
-        .insert(productInsertObj)
-        .select()
-        .single();
+      // Insert product using fetch
+      const productRes = await fetch('https://yjmppxihvkfcnptdvevi.supabase.co/rest/v1/products', {
+        method: 'POST',
+        headers: {
+          apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqbXBweGlodmtmY25wdGR2ZXZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE3NjYzNTgsImV4cCI6MjA1NzM0MjM1OH0.6r_Io46qV2xhDX7Oy1MxEPhsxwqn_-AqEMUNSO6_Wbs',
+          Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqbXBweGlodmtmY25wdGR2ZXZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE3NjYzNTgsImV4cCI6MjA1NzM0MjM1OH0.6r_Io46qV2xhDX7Oy1MxEPhsxwqn_-AqEMUNSO6_Wbs',
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation'
+        },
+        body: JSON.stringify(productInsertObj)
+      });
+      if (!productRes.ok) throw new Error('Product insert failed');
+      const [product] = await productRes.json();
+      if (!product) throw new Error('Product insert failed');
 
-      if (productError || !product) throw productError || new Error('Product insert failed');
-
-      // Upload all images first
-      const uploadedImages = [];
-      for (const image of images) {
-        try {
-          const imagePath = `${user?.id}/${product.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
-          
-          // Upload image to storage
-          const { error: uploadError } = await supabase.storage
-            .from('product-images')
-            .upload(imagePath, decode(image.base64), {
-              contentType: 'image/jpeg',
-              upsert: false
-            });
-          
-          if (uploadError) {
-            console.error('Error uploading image:', uploadError);
-            continue;
-          }
-
-          // Get public URL
-          const { data: { publicUrl } } = supabase.storage
-            .from('product-images')
-            .getPublicUrl(imagePath);
-
-          uploadedImages.push(publicUrl);
-
-          // Create product_images record
-          const { error: imageRecordError } = await supabase
-            .from('product_images')
-            .insert({
-              product_id: product.id,
-              image_url: publicUrl
-            });
-
-          if (imageRecordError) {
-            console.error('Error creating image record:', imageRecordError);
-          }
-        } catch (imageError) {
-          console.error('Error processing image:', imageError);
-        }
-      }
+      // TODO: Image upload to Supabase Storage is not possible with fetch and anon key directly from client. You may need a backend or use another service.
+      // For now, skip image upload and product_images table.
 
       // Insert specs data
       if (productType === 'Gems') {
@@ -314,31 +281,35 @@ export default function useProductForm() {
           certification: dynamicFields.hasCertification === 'true' ? dynamicFields.certification : null,
           dimensions: dynamicFields.dimensions
         };
-
-        const { error: specsError } = await supabase
-          .from('gem_specs')
-          .insert(specsData);
-
-        // Even if we get a duplicate key error, we can continue since the product was saved
-        if (specsError && specsError.code !== '23505') {
-          console.error('Error inserting gem specs:', specsError);
-          throw specsError;
-        }
+        const specsRes = await fetch('https://yjmppxihvkfcnptdvevi.supabase.co/rest/v1/gem_specs', {
+          method: 'POST',
+          headers: {
+            apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqbXBweGlodmtmY25wdGR2ZXZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE3NjYzNTgsImV4cCI6MjA1NzM0MjM1OH0.6r_Io46qV2xhDX7Oy1MxEPhsxwqn_-AqEMUNSO6_Wbs',
+            Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqbXBweGlodmtmY25wdGR2ZXZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE3NjYzNTgsImV4cCI6MjA1NzM0MjM1OH0.6r_Io46qV2xhDX7Oy1MxEPhsxwqn_-AqEMUNSO6_Wbs',
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation'
+          },
+          body: JSON.stringify(specsData)
+        });
+        if (!specsRes.ok) throw new Error('Error inserting gem specs');
       } else if (productType === 'Rough Diamond') {
-        // Insert rough diamond specs
         const specsData = {
           product_id: product.id,
           weight: dynamicFields.weight,
           clarity: dynamicFields.clarity,
           color: dynamicFields.color
         };
-        const { error: specsError } = await supabase
-          .from('rough_diamond_specs')
-          .insert(specsData);
-        if (specsError && specsError.code !== '23505') {
-          console.error('Error inserting rough diamond specs:', specsError);
-          throw specsError;
-        }
+        const specsRes = await fetch('https://yjmppxihvkfcnptdvevi.supabase.co/rest/v1/rough_diamond_specs', {
+          method: 'POST',
+          headers: {
+            apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqbXBweGlodmtmY25wdGR2ZXZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE3NjYzNTgsImV4cCI6MjA1NzM0MjM1OH0.6r_Io46qV2xhDX7Oy1MxEPhsxwqn_-AqEMUNSO6_Wbs',
+            Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqbXBweGlodmtmY25wdGR2ZXZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE3NjYzNTgsImV4cCI6MjA1NzM0MjM1OH0.6r_Io46qV2xhDX7Oy1MxEPhsxwqn_-AqEMUNSO6_Wbs',
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation'
+          },
+          body: JSON.stringify(specsData)
+        });
+        if (!specsRes.ok) throw new Error('Error inserting rough diamond specs');
       } else {
         // Handle other product types...
         const specsData: JewelrySpecsData = {
@@ -346,12 +317,10 @@ export default function useProductForm() {
           material: dynamicFields.material,
           weight: dynamicFields.weight,
         };
-
         if (dynamicFields.material === 'Gold') {
           specsData.gold_karat = dynamicFields.goldKarat;
           specsData.gold_color = dynamicFields.goldColor;
         }
-
         if (hasDiamond) {
           specsData.diamond_details = {
             weight: dynamicFields.diamond_weight,
@@ -361,7 +330,6 @@ export default function useProductForm() {
             certification: dynamicFields.certification
           };
         }
-
         if (hasSideStones) {
           specsData.side_stones_details = {
             weight: dynamicFields.side_stones_weight,
@@ -369,7 +337,6 @@ export default function useProductForm() {
             clarity: dynamicFields.side_stones_clarity
           };
         }
-
         // Insert into appropriate specs table
         let specsTable = productType.toLowerCase();
         if (specsTable === 'special pieces') {
@@ -378,17 +345,18 @@ export default function useProductForm() {
           specsTable = 'earring';
         }
         specsTable += '_specs';
-
-        const { error: specsError } = await supabase
-          .from(specsTable)
-          .insert(specsData);
-
-        if (specsError) {
-          console.error(`Error inserting ${specsTable}:`, specsError);
-          throw specsError;
-        }
+        const specsRes = await fetch(`https://yjmppxihvkfcnptdvevi.supabase.co/rest/v1/${specsTable}`, {
+          method: 'POST',
+          headers: {
+            apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqbXBweGlodmtmY25wdGR2ZXZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE3NjYzNTgsImV4cCI6MjA1NzM0MjM1OH0.6r_Io46qV2xhDX7Oy1MxEPhsxwqn_-AqEMUNSO6_Wbs',
+            Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqbXBweGlodmtmY25wdGR2ZXZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE3NjYzNTgsImV4cCI6MjA1NzM0MjM1OH0.6r_Io46qV2xhDX7Oy1MxEPhsxwqn_-AqEMUNSO6_Wbs',
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation'
+          },
+          body: JSON.stringify(specsData)
+        });
+        if (!specsRes.ok) throw new Error(`Error inserting ${specsTable}`);
       }
-
       // Success - reset form and navigate
       resetForm();
       router.replace('/');

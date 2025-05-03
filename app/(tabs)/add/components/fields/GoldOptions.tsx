@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal, ScrollView, StyleSheet } from 'react-native';
-import { ChevronDown, X } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 interface GoldOptionsProps {
   karat: string;
@@ -41,7 +41,7 @@ const GoldOptions: React.FC<GoldOptionsProps> = ({
           <Text style={styles.selectButtonText}>
             {karat || 'Select Gold Karat'}
           </Text>
-          <ChevronDown size={20} color="#666" />
+          <Ionicons name="chevron-down" size={24} color="black" />
         </TouchableOpacity>
         {karatError && <Text style={styles.errorText}>Required field</Text>}
         <Modal
@@ -55,7 +55,7 @@ const GoldOptions: React.FC<GoldOptionsProps> = ({
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Gold Karat</Text>
                 <TouchableOpacity onPress={() => setShowKaratModal(false)} style={styles.modalCloseButton}>
-                  <X size={24} color="#000" />
+                  <Ionicons name="close" size={24} color="black" />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalScrollView}>
@@ -87,7 +87,7 @@ const GoldOptions: React.FC<GoldOptionsProps> = ({
           <Text style={styles.selectButtonText}>
             {color || 'Select Gold Color'}
           </Text>
-          <ChevronDown size={20} color="#666" />
+          <Ionicons name="chevron-down" size={24} color="black" />
         </TouchableOpacity>
         {colorError && <Text style={styles.errorText}>Required field</Text>}
         <Modal
@@ -101,7 +101,7 @@ const GoldOptions: React.FC<GoldOptionsProps> = ({
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Gold Color</Text>
                 <TouchableOpacity onPress={() => setShowColorModal(false)} style={styles.modalCloseButton}>
-                  <X size={24} color="#000" />
+                  <Ionicons name="close" size={24} color="black" />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalScrollView}>

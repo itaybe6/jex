@@ -1,16 +1,18 @@
 import React from 'react';
 import { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Image, TextInput, ScrollView, Platform, ActivityIndicator, Animated, Dimensions, KeyboardAvoidingView, Easing } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image, TextInput, ScrollView, Platform, ActivityIndicator, Animated, Dimensions, KeyboardAvoidingView, Easing, Alert } from 'react-native';
 import { router } from 'expo-router';
-import { Diamond, CircleAlert as AlertCircle, Eye, EyeOff } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-import { supabase } from '@/lib/supabase';
+import { getProfile, signUp, signIn } from '@/lib/supabaseApi';
 import CustomText from '../../components/CustomText';
 import AuroraBackground from '../../components/AuroraBackground';
 import { LinearGradient } from 'expo-linear-gradient';
 import BackgroundLines from "@/components/BackgroundLines";
 import GoogleLogo from '../../components/GoogleLogo';
+import { saveToken, getToken } from '../../lib/secureStorage';
+import { useFonts } from 'expo-font';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -27,7 +29,15 @@ const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
 const MemoizedBackgroundLines = React.memo(BackgroundLines);
 
-export default function SignIn() {
+export default function SignInOld() {
+  // Load fonts for web and native
+  const [fontsLoaded] = useFonts({
+    'Montserrat-Medium': require('../../assets/fonts/Montserrat-Medium.ttf'),
+    'Montserrat-Regular': require('../../assets/fonts/Montserrat-Regular.ttf'),
+    'Montserrat-Bold': require('../../assets/fonts/Montserrat-Bold.ttf'),
+  });
+
+  // All hooks must be called before any return or conditional
   const [mode, setMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,12 +50,64 @@ export default function SignIn() {
   const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null);
   const errorAnimation = useRef(new Animated.Value(0)).current;
   const [isButtonActive, setIsButtonActive] = useState(false);
-
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
     androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
   });
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkAuth = async () => {
+      try {
+        const token = await getToken('access_token');
+        if (token) {
+          const response = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/auth/v1/user`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+            },
+          });
+          if (response.ok && isMounted) {
+            router.replace('/(tabs)');
+            return;
+          }
+        }
+      } catch (error) {
+        // Do not redirect if error
+        console.error('Auth check error:', error);
+      } finally {
+        if (isMounted) setCheckingAuth(false);
+      }
+    };
+    checkAuth();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Google Sign-In handler
+  const handleGoogleSignIn = async (idToken: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      // דוגמה ל-Supabase (אם היית משתמש בו):
+      // const { data, error: signInError } = await supabase.auth.signInWithIdToken({
+      //   provider: 'google',
+      //   token: idToken,
+      // });
+      // if (signInError) throw signInError;
+      // if (data.session) {
+      //   router.replace('/(tabs)');
+      // }
+      // אם עברת ל-fetch, תצטרך לממש את זה מול ה-API שלך
+      // TODO: Implement Google sign-in with fetch if not using Supabase
+      alert('Google sign-in logic not implemented. Add your API call here.');
+    } catch (error: any) {
+      setError({ message: error.message, type: 'general' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (error) {
@@ -101,21 +163,6 @@ export default function SignIn() {
     return null;
   };
 
-  const createProfile = async (userId: string, fullName: string, phone: string) => {
-    try {
-      const { error } = await supabase.from('profiles').insert({
-        id: userId,
-        full_name: fullName,
-        phone: phone,
-      });
-      
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error creating profile:', error);
-      throw error;
-    }
-  };
-
   const handleEmailAuth = async () => {
     try {
       setLoading(true);
@@ -128,52 +175,54 @@ export default function SignIn() {
       }
 
       if (mode === 'signup') {
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName,
-              phone: phone,
-            }
-          },
-        });
-
-        if (signUpError) {
-          console.error('Signup error:', signUpError);
-          if (signUpError.message.includes('already registered')) {
-            setError({ message: 'Email is already registered', type: 'email' });
-            return;
-          }
-          throw signUpError;
+        const result = await signUp(email, password);
+        if (result.error || result.msg) {
+          setError({ message: result.error?.message || result.msg || 'Sign up failed', type: 'general' });
+          return;
         }
-
-        if (data.user) {
-          await createProfile(data.user.id, fullName, phone);
-          if (data.session) {
-            router.replace('/(tabs)');
+        if (result.access_token) {
+          await saveToken('access_token', result.access_token);
+          // Fetch userId from Supabase
+          const userRes = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/auth/v1/user`, {
+            headers: {
+              'Authorization': `Bearer ${result.access_token}`,
+              'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+            },
+          });
+          const userData = await userRes.json();
+          const userId = userData.id || userData.sub;
+          if (userId) {
+            router.replace({ pathname: '/user/[id]', params: { id: userId } });
           } else {
             setMode('confirmation');
             setConfirmationMessage('A verification email has been sent. Please verify your email to continue.');
           }
+          return;
+        } else {
+          setMode('confirmation');
+          setConfirmationMessage('A verification email has been sent. Please verify your email to continue.');
+          return;
         }
       } else {
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (signInError) {
-          console.error('Signin error:', signInError);
-          if (signInError.message.includes('Invalid login credentials')) {
-            setError({ message: 'Invalid email or password', type: 'general' });
-            return;
-          }
-          throw signInError;
+        const result = await signIn(email, password);
+        if (result.error || result.msg) {
+          setError({ message: result.error?.message || result.msg || 'Sign in failed', type: 'general' });
+          return;
         }
-
-        if (data.session) {
-          router.replace('/(tabs)');
+        if (result.access_token) {
+          await saveToken('access_token', result.access_token);
+          // Fetch userId from Supabase
+          const userRes = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/auth/v1/user`, {
+            headers: {
+              'Authorization': `Bearer ${result.access_token}`,
+              'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+            },
+          });
+          const userData = await userRes.json();
+          const userId = userData.id || userData.sub;
+          if (userId) {
+            router.replace({ pathname: '/user/[id]', params: { id: userId } });
+          }
         }
       }
     } catch (error: any) {
@@ -184,66 +233,8 @@ export default function SignIn() {
     }
   };
 
-  const handleGoogleSignIn = async (idToken: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const { data, error: signInError } = await supabase.auth.signInWithIdToken({
-        provider: 'google',
-        token: idToken,
-      });
-
-      if (signInError) {
-        console.error('Google auth error:', signInError);
-        throw signInError;
-      }
-
-      if (data.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select()
-          .eq('id', data.user.id)
-          .single();
-
-        if (!profile) {
-          await createProfile(
-            data.user.id, 
-            data.user.user_metadata.full_name || 'New User',
-            data.user.user_metadata.phone || ''
-          );
-        }
-      }
-
-      if (data.session) {
-        router.replace('/(tabs)');
-      }
-    } catch (error: any) {
-      console.error('Google signin error:', error);
-      setError({ message: 'Error signing in with Google. Please try again later.', type: 'general' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleResendConfirmation = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const { error: resendError } = await supabase.auth.resend({
-        type: 'signup',
-        email,
-      });
-
-      if (resendError) throw resendError;
-
-      setConfirmationMessage('A new verification email has been sent');
-    } catch (error: any) {
-      setError({ message: error.message, type: 'general' });
-    } finally {
-      setLoading(false);
-    }
+    setError({ message: 'Resend confirmation is not supported with REST API. Please check your email or contact support.', type: 'general' });
   };
 
   const ErrorMessage = ({ error }: { error: ErrorType }) => (
@@ -257,10 +248,12 @@ export default function SignIn() {
         }
       ]}
     >
-      <AlertCircle size={20} color="#c62828" />
+      <Ionicons name="alert-circle" size={24} color="#c62828" />
       <CustomText style={styles.errorText}>{error.message}</CustomText>
     </Animated.View>
   );
+
+  if (checkingAuth || !fontsLoaded) return null;
 
   if (mode === 'confirmation') {
     return (
@@ -269,7 +262,7 @@ export default function SignIn() {
         <AuroraBackground>
           <View style={[styles.container, styles.confirmationContainer]}>
             <View style={styles.header}>
-              <Diamond size={48} color="#007AFF" />
+              <Ionicons name="diamond" size={48} color="#007AFF" />
               <CustomText style={styles.title}>JEX</CustomText>
             </View>
             <View style={styles.confirmationContent}>
@@ -364,9 +357,9 @@ export default function SignIn() {
                 activeOpacity={0.7}
               >
                 {showPassword ? (
-                  <EyeOff size={22} color="#0A1F44" />
+                  <Ionicons name="eye-off" size={24} color="#0A1F44" />
                 ) : (
-                  <Eye size={22} color="#0A1F44" />
+                  <Ionicons name="eye" size={24} color="#0A1F44" />
                 )}
               </TouchableOpacity>
             </View>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, FlatList, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { Search as SearchIcon, X } from 'lucide-react-native';
-import { supabase } from '@/lib/supabase';
+import { Ionicons } from '@expo/vector-icons';
+// import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 
 type Profile = {
@@ -36,14 +36,14 @@ export default function SearchScreen() {
   const searchProfiles = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, avatar_url, title')
-        .ilike('full_name', `%${debouncedQuery}%`)
-        .limit(20);
+      // const { data, error } = await supabase
+      //   .from('profiles')
+      //   .select('id, full_name, avatar_url, title')
+      //   .ilike('full_name', `%${debouncedQuery}%`)
+      //   .limit(20);
 
-      if (error) throw error;
-      setProfiles(data || []);
+      // if (error) throw error;
+      setProfiles([]);
     } catch (error) {
       console.error('Error searching profiles:', error);
     } finally {
@@ -80,7 +80,7 @@ export default function SearchScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Search Users</Text>
         <View style={styles.searchContainer}>
-          <SearchIcon size={20} color="#666" style={styles.searchIcon} />
+          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search users by name..."
@@ -93,7 +93,7 @@ export default function SearchScreen() {
               onPress={() => setSearchQuery('')}
               style={styles.clearButton}
             >
-              <X size={20} color="#666" />
+              <Ionicons name="close" size={20} color="#666" />
             </TouchableOpacity>
           )}
         </View>
@@ -118,7 +118,7 @@ export default function SearchScreen() {
         </View>
       ) : (
         <View style={styles.initialContainer}>
-          <SearchIcon size={48} color="#ccc" />
+          <Ionicons name="search" size={48} color="#ccc" />
           <Text style={styles.initialText}>Find Users</Text>
           <Text style={styles.initialSubtext}>Enter a name to start searching</Text>
         </View>

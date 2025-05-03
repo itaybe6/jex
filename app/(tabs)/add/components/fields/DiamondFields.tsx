@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView, StyleSheet } from 'react-native';
-import { ChevronDown, X } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 const COLOR_GRADES = [
   'D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
@@ -49,7 +49,7 @@ const DiamondFields: React.FC<DiamondFieldsProps> = ({ fields, errors, onChange,
           <Text style={styles.selectButtonText}>
             {fields.diamond_color || 'Select Diamond Color'}
           </Text>
-          <ChevronDown size={20} color="#666" />
+          <Ionicons name="chevron-down" size={20} color="#666" />
         </TouchableOpacity>
         <Modal
           visible={!!showModals.diamond_color}
@@ -62,7 +62,7 @@ const DiamondFields: React.FC<DiamondFieldsProps> = ({ fields, errors, onChange,
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Diamond Color</Text>
                 <TouchableOpacity onPress={() => toggleModal('diamond_color', false)} style={styles.modalCloseButton}>
-                  <X size={24} color="#000" />
+                  <Ionicons name="close" size={24} color="#000" />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalScrollView}>
@@ -95,7 +95,7 @@ const DiamondFields: React.FC<DiamondFieldsProps> = ({ fields, errors, onChange,
           <Text style={styles.selectButtonText}>
             {fields.clarity || 'Select Clarity'}
           </Text>
-          <ChevronDown size={20} color="#666" />
+          <Ionicons name="chevron-down" size={20} color="#666" />
         </TouchableOpacity>
         <Modal
           visible={!!showModals.clarity}
@@ -108,7 +108,7 @@ const DiamondFields: React.FC<DiamondFieldsProps> = ({ fields, errors, onChange,
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Clarity</Text>
                 <TouchableOpacity onPress={() => toggleModal('clarity', false)} style={styles.modalCloseButton}>
-                  <X size={24} color="#000" />
+                  <Ionicons name="close" size={24} color="#000" />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalScrollView}>
@@ -141,7 +141,7 @@ const DiamondFields: React.FC<DiamondFieldsProps> = ({ fields, errors, onChange,
           <Text style={styles.selectButtonText}>
             {fields.cut_grade || 'Select Cut Grade'}
           </Text>
-          <ChevronDown size={20} color="#666" />
+          <Ionicons name="chevron-down" size={20} color="#666" />
         </TouchableOpacity>
         <Modal
           visible={!!showModals.cut_grade}
@@ -154,7 +154,7 @@ const DiamondFields: React.FC<DiamondFieldsProps> = ({ fields, errors, onChange,
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Cut Grade</Text>
                 <TouchableOpacity onPress={() => toggleModal('cut_grade', false)} style={styles.modalCloseButton}>
-                  <X size={24} color="#000" />
+                  <Ionicons name="close" size={24} color="#000" />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalScrollView}>
@@ -187,7 +187,7 @@ const DiamondFields: React.FC<DiamondFieldsProps> = ({ fields, errors, onChange,
           <Text style={styles.selectButtonText}>
             {fields.certification || 'Select Certification'}
           </Text>
-          <ChevronDown size={20} color="#666" />
+          <Ionicons name="chevron-down" size={20} color="#666" />
         </TouchableOpacity>
         <Modal
           visible={!!showModals.certification}
@@ -200,7 +200,7 @@ const DiamondFields: React.FC<DiamondFieldsProps> = ({ fields, errors, onChange,
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Certification</Text>
                 <TouchableOpacity onPress={() => toggleModal('certification', false)} style={styles.modalCloseButton}>
-                  <X size={24} color="#000" />
+                  <Ionicons name="close" size={24} color="#000" />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalScrollView}>

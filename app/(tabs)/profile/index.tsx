@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Modal, Linking } from 'react-native';
-import { Settings, Plus, Link as LinkIcon, X, ChevronRight, ClipboardList, Bell } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlatList } from 'react-native';
 import React from 'react';
+import { getToken } from '../../../lib/secureStorage';
 
 const GRID_SPACING = 8; // Increased spacing between items
 const NUM_COLUMNS = 3;
@@ -36,16 +36,22 @@ type TrustMark = {
   };
 };
 
-type Product = {
+interface Product {
   id: string;
   title: string;
   price: number;
   category: string;
-  product_images?: {
-    id: string;
-    image_url: string;
-  }[];
-};
+  product_images?: { id: string; image_url: string }[];
+}
+
+interface Request {
+  id: string;
+  title: string;
+  status: string;
+  created_at: string;
+  details: any;
+  // Add more fields as needed
+}
 
 type ProductsByCategory = {
   [key: string]: Product[];
@@ -59,6 +65,7 @@ type Category = {
 
 export default function ProfileScreen() {
   const { user } = useAuth();
+  console.log('user from useAuth:', user);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [productsByCategory, setProductsByCategory] = useState<ProductsByCategory>({});
   const [loading, setLoading] = useState(true);
@@ -69,10 +76,11 @@ export default function ProfileScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'catalog' | 'requests'>('catalog');
-  const [requests, setRequests] = useState<any[]>([]);
+  const [requests, setRequests] = useState<Request[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
 
   useEffect(() => {
+    console.log('useEffect ran, user:', user);
     if (user) {
       fetchProfile();
       fetchProducts();
@@ -92,32 +100,23 @@ export default function ProfileScreen() {
   const fetchProfile = async () => {
     try {
       if (!user) return;
-
-      // First get the profile data
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError) throw profileError;
-
-      // Then get the completed transactions count where user was either buyer or seller
-      const { data: transactionsCount, error: countError } = await supabase
-        .from('transactions')
-        .select('id', { count: 'exact' })
-        .or(`seller_id.eq.${user.id},buyer_id.eq.${user.id}`)
-        .eq('status', 'completed');
-
-      if (countError) throw countError;
-
-      // Combine the data
-      const profile = {
-        ...profileData,
-        sold_count: transactionsCount.length
-      };
-      
-      setProfile(profile);
+      const token = await getToken('access_token');
+      if (!token) return;
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+          },
+        }
+      );
+      console.log('Profile fetch status:', response.status);
+      const data = await response.json();
+      console.log('Profile fetch data:', data);
+      if (data && data.length > 0) {
+        setProfile(data[0]);
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
@@ -126,31 +125,27 @@ export default function ProfileScreen() {
   const fetchProducts = async () => {
     try {
       if (!user) return;
-
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          product_images (
-            id,
-            image_url
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Group products by category
-      const grouped = (data || []).reduce<ProductsByCategory>((acc, product) => {
+      const token = await getToken('access_token');
+      if (!token) return;
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/products?user_id=eq.${user.id}&select=*,product_images(id,image_url)&order=created_at.desc`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+          },
+        }
+      );
+      if (!response.ok) throw new Error('Failed to fetch products');
+      const data: Product[] = await response.json();
+      // Group by category
+      const grouped = (data || []).reduce((acc: Record<string, Product[]>, product: Product) => {
         if (!acc[product.category]) {
           acc[product.category] = [];
         }
         acc[product.category].push(product);
         return acc;
-      }, {});
-
-      console.log('Loaded productsByCategory:', grouped);
+      }, {} as Record<string, Product[]>);
       setProductsByCategory(grouped);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -164,27 +159,28 @@ export default function ProfileScreen() {
       if (!user) return;
       
       setLoadingTrustMarks(true);
-      const { data, error } = await supabase
-        .from('trust_marks')
-        .select(`
-          id,
-          created_at,
-          truster:profiles!trust_marks_truster_id_fkey (
-            id,
-            full_name,
-            avatar_url,
-            title
-          )
-        `)
-        .eq('trusted_id', user.id)
-        .order('created_at', { ascending: false });
+      // TODO: Migrate to fetch-based API
+      // const { data, error } = await supabase
+      //   .from('trust_marks')
+      //   .select(`
+      //     id,
+      //     created_at,
+      //     truster:profiles!trust_marks_truster_id_fkey (
+      //       id,
+      //       full_name,
+      //       avatar_url,
+      //       title
+      //     )
+      //   `)
+      //   .eq('trusted_id', user.id)
+      //   .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setTrustMarks(data.map((trustMark: any) => ({
-        id: trustMark.id,
-        created_at: trustMark.created_at,
-        truster: trustMark.truster,
-      })) || []);
+      // if (error) throw error;
+      // setTrustMarks(data.map((trustMark: any) => ({
+      //   id: trustMark.id,
+      //   created_at: trustMark.created_at,
+      //   truster: trustMark.truster,
+      // })) || []);
     } catch (error) {
       console.error('Error fetching trust marks:', error);
     } finally {
@@ -204,10 +200,6 @@ export default function ProfileScreen() {
 
   const handleEditProfile = () => {
     router.push('/profile/edit');
-  };
-
-  const handleAddProduct = () => {
-    router.push('/profile/add-product');
   };
 
   const handleProductPress = (productId: string) => {
@@ -230,46 +222,6 @@ export default function ProfileScreen() {
 
   const handleSettingsPress = () => {
     router.push('/(tabs)/settings');
-  };
-
-  const fetchUserProducts = async () => {
-    if (!user) return;
-
-    const { data: userProducts, error } = await supabase
-      .from('products')
-      .select(`
-        id,
-        name,
-        price,
-        images,
-        category_id,
-        profiles (
-          id,
-          full_name
-        )
-      `)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching products:', error);
-      return;
-    }
-
-    // Group products by category
-    const { data: categoriesData } = await supabase
-      .from('categories')
-      .select('*')
-      .order('name');
-
-    if (categoriesData) {
-      const groupedProducts = categoriesData.map(category => ({
-        ...category,
-        products: userProducts?.filter(product => product.category_id === category.id) || []
-      }));
-
-      setCategories(groupedProducts);
-    }
   };
 
   const toggleCategory = (categoryId: string) => {
@@ -353,7 +305,7 @@ export default function ProfileScreen() {
         <TouchableOpacity
           onPress={() => router.push({
             pathname: '/(tabs)/profile/category-products',
-            params: { category, userId: user.id }
+            params: { category, userId: user?.id }
           })}
           style={styles.showMoreButton}
         >
@@ -378,7 +330,7 @@ export default function ProfileScreen() {
               onPress={() => setShowTrustMarks(false)}
               style={styles.modalCloseButton}
             >
-              <X size={24} color="#fff" />
+              <Ionicons name="close" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
 
@@ -423,15 +375,23 @@ export default function ProfileScreen() {
     if (!user) return;
     setLoadingRequests(true);
     try {
-      const { data, error } = await supabase
-        .from('requests')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
+      const token = await getToken('access_token');
+      if (!token) return;
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/requests?user_id=eq.${user.id}&order=created_at.desc`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+          },
+        }
+      );
+      if (!response.ok) throw new Error('Failed to fetch requests');
+      const data: Request[] = await response.json();
       setRequests(data || []);
     } catch (err) {
       setRequests([]);
+      console.error('Error fetching requests:', err);
     } finally {
       setLoadingRequests(false);
     }
@@ -451,8 +411,13 @@ export default function ProfileScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F5F8FC' }} edges={['left', 'right']}>
-      <ScrollView style={{ backgroundColor: 'transparent', flex: 1 }} contentContainerStyle={{ paddingTop: 0 }}>
+    <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
+      <ScrollView 
+        style={{ flex: 1, backgroundColor: '#F5F8FC' }} 
+        contentContainerStyle={{ 
+          paddingBottom: 100,
+        }}
+      >
         {/* User Card */}
         <View style={[styles.userCard, { marginTop: 80, paddingTop: 0 }]}>
           <View style={styles.profileImageWrapper}>
@@ -478,7 +443,7 @@ export default function ProfileScreen() {
               <Text style={styles.websiteText} numberOfLines={1}>
                 {profile.website}
               </Text>
-              <LinkIcon size={16} color="#007AFF" style={{ marginRight: 4 }} />
+              <Ionicons name="link-outline" size={16} color="#007AFF" style={{ marginRight: 4 }} />
             </TouchableOpacity>
           ) : null}
           <View style={styles.statsRow}>
@@ -517,14 +482,14 @@ export default function ProfileScreen() {
         {activeTab === 'catalog' && (
           totalProducts > 0 ? (
             <View style={styles.categoriesContainer}>
-              {Object.entries(productsByCategory).map(([category, products]) => (
+              {Object.entries(productsByCategory as Record<string, Product[]>).map(([category, products]) => (
                 <View key={category} style={styles.categorySection}>
                   <View style={styles.categoryHeader}>
                     <Text style={styles.categoryTitle}>{category}</Text>
                     <Text style={styles.categoryCount}>{products.length} {products.length === 1 ? 'item' : 'items'}</Text>
                   </View>
                   <View style={styles.productsRow}>
-                    {products.map(product => {
+                    {(products as Product[]).map((product: Product) => {
                       const imageUrl = product.product_images?.[0]?.image_url || 'https://via.placeholder.com/150';
                       
                       return (
@@ -557,22 +522,22 @@ export default function ProfileScreen() {
             ) : requests.length === 0 ? (
               <Text style={{ fontFamily: 'Montserrat-Bold', fontSize: 18, color: '#0E2657', marginTop: 32, textAlign: 'center' }}>No requests found</Text>
             ) : (
-              requests.map((req) => (
-                <View key={req.id} style={[styles.productCard, { flexDirection: 'column', alignItems: 'flex-start', marginBottom: 16, minWidth: '100%', maxWidth: '100%' }]}> 
+              requests.map((request: Request) => (
+                <View key={request.id} style={[styles.productCard, { flexDirection: 'column', alignItems: 'flex-start', marginBottom: 16, minWidth: '100%', maxWidth: '100%' }]}> 
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                    <ClipboardList size={22} color="#6C5CE7" style={{ marginRight: 10 }} />
+                    <Ionicons name="list-outline" size={22} color="#6C5CE7" style={{ marginRight: 10 }} />
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontFamily: 'Montserrat-Bold', color: '#0E2657', fontSize: 15, marginBottom: 2 }}>{req.details.weight_from}-{req.details.weight_to || req.details.weight_from}ct, {req.details.clarity}, Color {req.details.color}</Text>
-                      {req.details.price && (
-                        <Text style={{ fontFamily: 'Montserrat-Medium', color: '#6C5CE7', fontSize: 14, marginBottom: 2 }}>Budget: {req.details.price} ₪</Text>
+                      <Text style={{ fontFamily: 'Montserrat-Bold', color: '#0E2657', fontSize: 15, marginBottom: 2 }}>{request.details.weight_from}-{request.details.weight_to || request.details.weight_from}ct, {request.details.clarity}, Color {request.details.color}</Text>
+                      {request.details.price && (
+                        <Text style={{ fontFamily: 'Montserrat-Medium', color: '#6C5CE7', fontSize: 14, marginBottom: 2 }}>Budget: {request.details.price} ₪</Text>
                       )}
                     </View>
-                    <View style={{ borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4, alignSelf: 'flex-start', marginLeft: 8, minWidth: 60, alignItems: 'center', backgroundColor: req.details.status === 'active' ? '#4CAF50' : '#888' }}>
-                      <Text style={{ color: '#fff', fontFamily: 'Montserrat-Bold', fontSize: 13 }}>{req.details.status === 'active' ? 'Active' : req.details.status}</Text>
+                    <View style={{ borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4, alignSelf: 'flex-start', marginLeft: 8, minWidth: 60, alignItems: 'center', backgroundColor: request.details.status === 'active' ? '#4CAF50' : '#888' }}>
+                      <Text style={{ color: '#fff', fontFamily: 'Montserrat-Bold', fontSize: 13 }}>{request.details.status === 'active' ? 'Active' : request.details.status}</Text>
                     </View>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 6, width: '100%' }}>
-                    <Text style={{ color: '#7B8CA6', fontFamily: 'Montserrat-Regular', fontSize: 13 }}>{new Date(req.created_at).toLocaleDateString()}</Text>
+                    <Text style={{ color: '#7B8CA6', fontFamily: 'Montserrat-Regular', fontSize: 13 }}>{new Date(request.created_at).toLocaleDateString()}</Text>
                   </View>
                 </View>
               ))
@@ -588,7 +553,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#F5F8FC',
   },
   loadingContainer: {
     justifyContent: 'center',
