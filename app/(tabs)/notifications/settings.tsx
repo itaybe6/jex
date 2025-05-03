@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { supabase } from '@/lib/supabase';
+// import { supabase } from '@/lib/supabase'; // Removed, migrate to fetch-based API
 import { useAuth } from '@/hooks/useAuth';
 import { Icon } from '../../../components/Icon';
 import React from 'react';
@@ -78,33 +78,29 @@ export default function NotificationSettingsScreen() {
   const fetchPreferences = async () => {
     try {
       if (!user) return;
-
-      const { data, error } = await supabase
-        .from('notification_preferences')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') throw error;
-
-      if (data) {
-        setPreferences(data);
-      } else {
-        const defaultPreferences = {
-          enabled_types: ['new_product', 'new_request'],
-          specific_filters: []
-        };
-
-        const { error: insertError } = await supabase
-          .from('notification_preferences')
-          .insert({
-            user_id: user.id,
-            ...defaultPreferences
-          });
-
-        if (insertError) throw insertError;
-        setPreferences(defaultPreferences);
-      }
+      // TODO: Migrate to fetch-based API
+      // const { data, error } = await supabase
+      //   .from('notification_preferences')
+      //   .select('*')
+      //   .eq('user_id', user.id)
+      //   .single();
+      // if (error && error.code !== 'PGRST116') throw error;
+      // if (data) {
+      //   setPreferences(data);
+      // } else {
+      //   const defaultPreferences = {
+      //     enabled_types: ['new_product', 'new_request'],
+      //     specific_filters: []
+      //   };
+      //   const { error: insertError } = await supabase
+      //     .from('notification_preferences')
+      //     .insert({
+      //       user_id: user.id,
+      //       ...defaultPreferences
+      //     });
+      //   if (insertError) throw insertError;
+      //   setPreferences(defaultPreferences);
+      // }
     } catch (error) {
       console.error('Error fetching preferences:', error);
     }
@@ -113,14 +109,12 @@ export default function NotificationSettingsScreen() {
   const handleRemoveFilter = async (filterId: string) => {
     try {
       const updatedFilters = preferences.specific_filters.filter(f => f.id !== filterId);
-
-      const { error } = await supabase
-        .from('notification_preferences')
-        .update({ specific_filters: updatedFilters })
-        .eq('user_id', user?.id);
-
-      if (error) throw error;
-
+      // TODO: Migrate to fetch-based API
+      // const { error } = await supabase
+      //   .from('notification_preferences')
+      //   .update({ specific_filters: updatedFilters })
+      //   .eq('user_id', user?.id);
+      // if (error) throw error;
       setPreferences(prev => ({
         ...prev,
         specific_filters: updatedFilters

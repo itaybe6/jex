@@ -2,7 +2,7 @@ import React from 'react';
 import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { router } from 'expo-router';
-import { supabase } from '@/lib/supabase';
+// import { supabase } from '@/lib/supabase'; // Removed, migrate to fetch-based API
 import { useAuth } from '@/hooks/useAuth';
 import { Icon } from '../../../components/Icon';
 import { Select } from '../../../components/Select';
@@ -116,27 +116,27 @@ export default function AddFilterScreen() {
         ...filterFields,
         filter_type: type
       }));
-      const { data: existingData } = await supabase
-        .from('notification_preferences')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-      if (existingData) {
-        const { error } = await supabase
-          .from('notification_preferences')
-          .update({
-            specific_filters: [...(existingData.specific_filters || []), ...newFilters]
-          })
-          .eq('user_id', user.id);
-        if (error) throw error;
+      // const { data: existingData } = await supabase
+      //   .from('notification_preferences')
+      //   .select('*')
+      //   .eq('user_id', user.id)
+      //   .single();
+      if (/* existingData */ false) {
+        // const { error } = await supabase
+        //   .from('notification_preferences')
+        //   .update({
+        //     specific_filters: [...(existingData.specific_filters || []), ...newFilters]
+        //   })
+        //   .eq('user_id', user.id);
+        // if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('notification_preferences')
-          .insert({
-            user_id: user.id,
-            specific_filters: newFilters
-          });
-        if (error) throw error;
+        // const { error } = await supabase
+        //   .from('notification_preferences')
+        //   .insert({
+        //     user_id: user.id,
+        //     specific_filters: newFilters
+        //   });
+        // if (error) throw error;
       }
       router.back();
     } catch (error) {

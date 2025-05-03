@@ -1,5 +1,5 @@
 import { View, Text, Modal, TouchableOpacity, ScrollView, StyleSheet, TextInput } from 'react-native';
-import { X } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { FilterField, FilterParams, FilterState } from '@/types/filter';
 import { FILTER_FIELDS_BY_CATEGORY, PRICE_FILTER_FIELDS, CATEGORY_LABELS, WATCH_BRANDS_MODELS, GEM_TYPES } from '@/constants/filters';
@@ -515,7 +515,7 @@ export default function FilterModal({
               {selectedCategory ? `Filter ${selectedCategory}` : 'Filter Products'}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <X size={24} color="#fff" />
+              <Ionicons name="close" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
 

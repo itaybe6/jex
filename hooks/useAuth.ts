@@ -1,30 +1,40 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { Session } from '@supabase/supabase-js';
+import { getToken } from '../lib/secureStorage';
 
 export function useAuth() {
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      
-      setSession(session);
-      setLoading(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
+    const fetchUser = async () => {
+      setLoading(true);
+      try {
+        const token = await getToken('access_token');
+        if (!token) {
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+        const response = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/auth/v1/user`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+          },
+        });
+        if (!response.ok) {
+          setUser(null);
+        } else {
+          const data = await response.json();
+          setUser(data);
+        }
+      } catch (e) {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUser();
   }, []);
 
-  return {
-    session,
-    loading,
-    user: session?.user ?? null,
-  };
+  return { user, loading };
 }

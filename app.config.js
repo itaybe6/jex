@@ -1,35 +1,39 @@
-export default {
+module.exports = {
   expo: {
-    name: "jex-mobile",
-    slug: "jex-mobile",
-    version: "1.0.0",
-    orientation: "portrait",
-    icon: "./assets/images/icon.png",
-    scheme: "myapp",
-    userInterfaceStyle: "automatic",
-    newArchEnabled: true,
+    name: 'JEX Mobile',
+    slug: 'jex-mobile-new',
+    version: '1.0.0',
+    orientation: 'portrait',
+    icon: './assets/icon.png',
+    userInterfaceStyle: 'light',
+    splash: {
+      image: './assets/splash.png',
+      resizeMode: 'contain',
+      backgroundColor: '#ffffff'
+    },
+    assetBundlePatterns: [
+      '**/*'
+    ],
     ios: {
-      supportsTablet: true,
-      bundleIdentifier: "com.jex.mobile"
+      supportsTablet: true
     },
     android: {
-      package: "com.jex.mobile",
+      package: 'com.anonymous.jexmobilenew',
       adaptiveIcon: {
-        foregroundImage: "./assets/images/icon.png",
-        backgroundColor: "#ffffff"
+        foregroundImage: './assets/adaptive-icon.png',
+        backgroundColor: '#ffffff'
       }
     },
+    scheme: 'jex-mobile-new',
     web: {
-      bundler: "metro",
-      output: "single",
-      favicon: "./assets/images/favicon.png"
+      favicon: './assets/favicon.png'
     },
     plugins: [
-      "expo-router",
-      "@react-native-google-signin/google-signin"
+      'expo-router',
+      'expo-secure-store'
     ],
     experiments: {
       typedRoutes: true
     }
   }
-}
+};

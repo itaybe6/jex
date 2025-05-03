@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal, ScrollView, StyleSheet } from 'react-native';
-import { ChevronDown, X } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 interface ProductTypeSelectProps {
   value: string;
@@ -22,7 +22,7 @@ const ProductTypeSelect: React.FC<ProductTypeSelectProps> = ({ value, onSelect, 
         <Text style={styles.selectButtonText}>
           {value || 'Select product type'}
         </Text>
-        <ChevronDown size={20} color="#666" />
+        <Ionicons name="chevron-down" size={24} color="black" />
       </TouchableOpacity>
       {error && <Text style={styles.errorText}>Required field</Text>}
       <Modal
@@ -36,7 +36,7 @@ const ProductTypeSelect: React.FC<ProductTypeSelectProps> = ({ value, onSelect, 
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Product Type</Text>
               <TouchableOpacity onPress={() => setShowModal(false)} style={styles.modalCloseButton}>
-                <X size={24} color="#000" />
+                <Ionicons name="close" size={24} color="black" />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.modalScrollView}>

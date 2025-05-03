@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Alert, Modal, Linking } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { supabase } from '@/lib/supabase';
-import { Link as LinkIcon, Shield, X, MessageCircle, User, ClipboardList } from 'lucide-react-native';
+// import { supabase } from '@/lib/supabase';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
 
 const GRID_SPACING = 2;
@@ -69,29 +69,29 @@ export default function UserProfileScreen() {
     try {
 
       // First get the profile data
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      // const { data: profileData, error: profileError } = await supabase
+      //   .from('profiles')
+      //   .select('*')
+      //   .eq('id', userId)
+      //   .single();
 
-      if (profileError) throw profileError;
+      // if (profileError) throw profileError;
       // Then get the completed transactions count where user was either buyer or seller
-      const { data: transactionsCount, error: countError } = await supabase
-        .from('transactions')
-        .select('id', { count: 'exact' })
-        .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`)
-        .eq('status', 'completed');
+      // const { data: transactionsCount, error: countError } = await supabase
+      //   .from('transactions')
+      //   .select('id', { count: 'exact' })
+      //   .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`)
+      //   .eq('status', 'completed');
 
-      if (countError) throw countError;
+      // if (countError) throw countError;
 
       // Combine the data
-      const profile = {
-        ...profileData,
-        sold_count: transactionsCount.length
-      };
+      // const profile = {
+      //   ...profileData,
+      //   sold_count: transactionsCount.length
+      // };
       
-      setProfile(profile);
+      // setProfile(profile);
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
@@ -101,15 +101,15 @@ export default function UserProfileScreen() {
     try {
       if (!user) return;
 
-      const { data, error } = await supabase
-        .from('trust_marks')
-        .select('id')
-        .eq('truster_id', user.id)
-        .eq('trusted_id', userId)
-        .maybeSingle();
+      // const { data, error } = await supabase
+      //   .from('trust_marks')
+      //   .select('id')
+      //   .eq('truster_id', user.id)
+      //   .eq('trusted_id', userId)
+      //   .maybeSingle();
 
-      if (error) throw error;
-      setHasTrusted(!!data);
+      // if (error) throw error;
+      setHasTrusted(!!user);
     } catch (error) {
       console.error('Error checking trust status:', error);
     }
@@ -130,32 +130,32 @@ export default function UserProfileScreen() {
       setTrustLoading(true);
 
       if (hasTrusted) {
-        const { error: deleteError } = await supabase
-          .from('trust_marks')
-          .delete()
-          .eq('truster_id', user.id)
-          .eq('trusted_id', userId);
+        // const { error: deleteError } = await supabase
+        //   .from('trust_marks')
+        //   .delete()
+        //   .eq('truster_id', user.id)
+        //   .eq('trusted_id', userId);
 
-        if (deleteError) throw deleteError;
+        // if (deleteError) throw deleteError;
         setHasTrusted(false);
-        setProfile(prev => prev ? {
-          ...prev,
-          trust_count: Math.max(0, prev.trust_count - 1)
-        } : null);
+        // setProfile(prev => prev ? {
+        //   ...prev,
+        //   trust_count: Math.max(0, prev.trust_count - 1)
+        // } : null);
       } else {
-        const { error: insertError } = await supabase
-          .from('trust_marks')
-          .insert({
-            truster_id: user.id,
-            trusted_id: userId
-          });
+        // const { error: insertError } = await supabase
+        //   .from('trust_marks')
+        //   .insert({
+        //     truster_id: user.id,
+        //     trusted_id: userId
+        //   });
 
-        if (insertError) throw insertError;
+        // if (insertError) throw insertError;
         setHasTrusted(true);
-        setProfile(prev => prev ? {
-          ...prev,
-          trust_count: prev.trust_count + 1
-        } : null);
+        // setProfile(prev => prev ? {
+        //   ...prev,
+        //   trust_count: prev.trust_count + 1
+        // } : null);
       }
     } catch (error) {
       console.error('Error updating trust mark:', error);
@@ -189,22 +189,22 @@ export default function UserProfileScreen() {
   const fetchTrustMarks = async () => {
     try {
       setLoadingTrustMarks(true);
-      const { data, error } = await supabase
-        .from('trust_marks')
-        .select(`
-          id,
-          truster:truster_id (
-            id,
-            full_name,
-            avatar_url,
-            title
-          )
-        `)
-        .eq('trusted_id', userId)
-        .order('created_at', { ascending: false });
+      // const { data, error } = await supabase
+      //   .from('trust_marks')
+      //   .select(`
+      //     id,
+      //     truster:truster_id (
+      //       id,
+      //       full_name,
+      //       avatar_url,
+      //       title
+      //     )
+      //   `)
+      //   .eq('trusted_id', userId)
+      //   .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setTrustMarks(data);
+      // if (error) throw error;
+      setTrustMarks([]);
     } catch (error) {
       console.error('Error fetching trust marks:', error);
       Alert.alert('Error', 'Failed to load trust marks');
@@ -215,24 +215,24 @@ export default function UserProfileScreen() {
 
   const fetchProducts = async () => {
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+      // const { data, error } = await supabase
+      //   .from('products')
+      //   .select('*')
+      //   .eq('user_id', userId)
+      //   .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      // if (error) throw error;
 
       // Group products by category
-      const grouped = (data || []).reduce<ProductsByCategory>((acc, product) => {
-        if (!acc[product.category]) {
-          acc[product.category] = [];
-        }
-        acc[product.category].push(product);
-        return acc;
-      }, {});
+      // const grouped = (data || []).reduce<ProductsByCategory>((acc, product) => {
+      //   if (!acc[product.category]) {
+      //     acc[product.category] = [];
+      //   }
+      //   acc[product.category].push(product);
+      //   return acc;
+      // }, {});
 
-      setProductsByCategory(grouped);
+      // setProductsByCategory(grouped);
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
@@ -243,13 +243,13 @@ export default function UserProfileScreen() {
   const fetchUserRequests = async () => {
     setLoadingRequests(true);
     try {
-      const { data, error } = await supabase
-        .from('diamond_requests')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setRequests(data || []);
+      // const { data, error } = await supabase
+      //   .from('diamond_requests')
+      //   .select('*')
+      //   .eq('user_id', userId)
+      //   .order('created_at', { ascending: false });
+      // if (error) throw error;
+      setRequests([]);
     } catch (err) {
       setRequests([]);
     } finally {
@@ -315,12 +315,12 @@ export default function UserProfileScreen() {
   );
 
   const fetchSoldCount = async () => {
-    const { count, error } = await supabase
-      .from('transactions')
-      .select('*', { count: 'exact', head: true })
-      .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`)
-      .eq('status', 'completed');
-    if (!error) setSoldCount(count || 0);
+    // const { count, error } = await supabase
+    //   .from('transactions')
+    //   .select('*', { count: 'exact', head: true })
+    //   .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`)
+    //   .eq('status', 'completed');
+    // if (!error) setSoldCount(count || 0);
   };
 
   if (loading || !profile) {
@@ -346,7 +346,7 @@ export default function UserProfileScreen() {
           />
         ) : (
           <View style={[styles.avatar, styles.defaultAvatar]}>
-            <User size={50} color="#666" />
+            <Ionicons name="person" size={50} color="#666" />
         </View>
         )}
         <Text style={styles.name}>{profile?.full_name}</Text>
@@ -377,7 +377,7 @@ export default function UserProfileScreen() {
             onPress={handleTrustMark}
             disabled={trustLoading}
           >
-              <Shield size={20} color={hasTrusted ? '#fff' : '#007AFF'} />
+              <Ionicons name="shield-checkmark-outline" size={20} color={hasTrusted ? '#fff' : '#007AFF'} />
               <Text style={[styles.actionButtonText, hasTrusted && styles.actionButtonTextActive]}>
               {hasTrusted ? 'Trusted' : 'Mark as Trusted'}
             </Text>
@@ -389,7 +389,7 @@ export default function UserProfileScreen() {
               style={[styles.actionButton, styles.whatsappButton]}
               onPress={handleWhatsAppPress}
           >
-              <MessageCircle size={20} color="#fff" />
+              <Ionicons name="chatbubble-outline" size={20} color="#fff" />
               <Text style={[styles.actionButtonText, styles.whatsappButtonText]}>
                 WhatsApp
             </Text>
@@ -398,7 +398,7 @@ export default function UserProfileScreen() {
 
           {profile?.website && (
             <TouchableOpacity style={styles.actionButton} onPress={handleWebsitePress}>
-              <LinkIcon size={20} color="#007AFF" />
+              <Ionicons name="link-outline" size={20} color="#007AFF" />
               <Text style={styles.actionButtonText}>Website</Text>
             </TouchableOpacity>
           )}
@@ -445,7 +445,7 @@ export default function UserProfileScreen() {
               requests.map((req) => (
                 <View key={req.id} style={styles.requestCardImproved}>
                   <View style={styles.requestHeaderImproved}>
-                    <ClipboardList size={22} color="#6C5CE7" style={{ marginRight: 10 }} />
+                    <Ionicons name="list-outline" size={22} color="#6C5CE7" style={{ marginRight: 10 }} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.requestTitleImproved}>{req.cut} {req.min_weight}-{req.max_weight || req.min_weight}ct, {req.clarity}, Color {req.color}</Text>
                       {req.price && (
@@ -480,7 +480,7 @@ export default function UserProfileScreen() {
                 onPress={() => setShowTrustMarks(false)}
                 style={styles.modalCloseButton}
               >
-                <X size={24} color="#000" />
+                <Ionicons name="close" size={24} color="#000" />
               </TouchableOpacity>
             </View>
 

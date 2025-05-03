@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, TextInput, Modal, ScrollView, StyleSheet } from 'react-native';
-import { ChevronDown, X } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 interface WatchFieldsProps {
   brand: string;
@@ -45,7 +45,7 @@ const WatchFields: React.FC<WatchFieldsProps> = ({
           <Text style={styles.selectButtonText}>
             {brand || 'Select brand'}
           </Text>
-          <ChevronDown size={20} color="#666" />
+          <Ionicons name="chevron-down" size={24} color="black" />
         </TouchableOpacity>
         {errors.brand && <Text style={styles.errorText}>Required field</Text>}
         <Modal
@@ -59,7 +59,7 @@ const WatchFields: React.FC<WatchFieldsProps> = ({
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Brand</Text>
                 <TouchableOpacity onPress={() => setShowBrandModal(false)} style={styles.modalCloseButton}>
-                  <X size={24} color="#000" />
+                  <Ionicons name="close" size={24} color="black" />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalScrollView}>
@@ -95,7 +95,7 @@ const WatchFields: React.FC<WatchFieldsProps> = ({
                 <Text style={styles.selectButtonText}>
                   {model || 'Select model'}
                 </Text>
-                <ChevronDown size={20} color="#666" />
+                <Ionicons name="chevron-down" size={24} color="black" />
               </TouchableOpacity>
               {errors.model && <Text style={styles.errorText}>Required field</Text>}
               <Modal
@@ -109,7 +109,7 @@ const WatchFields: React.FC<WatchFieldsProps> = ({
                     <View style={styles.modalHeader}>
                       <Text style={styles.modalTitle}>Select Model</Text>
                       <TouchableOpacity onPress={() => setShowModelModal(false)} style={styles.modalCloseButton}>
-                        <X size={24} color="#000" />
+                        <Ionicons name="close" size={24} color="black" />
                       </TouchableOpacity>
                     </View>
                     <ScrollView style={styles.modalScrollView}>

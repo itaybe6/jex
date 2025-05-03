@@ -2,8 +2,8 @@ import React, { Fragment } from 'react';
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Linking, Modal, Alert } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { supabase } from '@/lib/supabase';
-import { ArrowLeft, MessageCircle, Clock, X, Edit, Trash } from 'lucide-react-native';
+// import { supabase } from '@/lib/supabase';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -90,96 +90,98 @@ export default function ProductScreen() {
   const fetchProduct = async () => {
     try {
       // First, get the product category
-      const { data: productData, error: productError } = await supabase
-        .from('products')
-        .select('category')
-        .eq('id', id)
-        .single();
+      // const { data: productData, error: productError } = await supabase
+      //   .from('products')
+      //   .select('category')
+      //   .eq('id', id)
+      //   .single();
 
-      if (productError) throw productError;
+      // if (productError) throw productError;
 
       // Build the query based on the category
-      let query = `
-        *,
-        profiles!products_user_id_fkey (
-          id,
-          full_name,
-          avatar_url,
-          phone
-        ),
-        product_images (
-          image_url
-        )`;
+      // let query = `
+      //   *,
+      //   profiles!products_user_id_fkey (
+      //     id,
+      //     full_name,
+      //     avatar_url,
+      //     phone
+      //   ),
+      //   product_images (
+      //     image_url
+      //   )`;
 
-      // Add the appropriate specs table based on category
-      switch (productData.category) {
-        case 'Ring':
-          query += `, ring_specs(*)`;
-          break;
-        case 'Bracelet':
-          query += `, bracelet_specs(*)`;
-          break;
-        case 'Necklace':
-          query += `, necklace_specs(*)`;
-          break;
-        case 'Earrings':
-          query += `, earring_specs(*)`;
-          break;
-        case 'Special pieces':
-          query += `, special_piece_specs(*)`;
-          break;
-        case 'Watches':
-          query += `, watch_specs(*)`;
-          break;
-        case 'Gems':
-          query += `, gem_specs(*)`;
-          break;
-      }
+      // // Add the appropriate specs table based on category
+      // switch (productData.category) {
+      //   case 'Ring':
+      //     query += `, ring_specs(*)`;
+      //     break;
+      //   case 'Bracelet':
+      //     query += `, bracelet_specs(*)`;
+      //     break;
+      //   case 'Necklace':
+      //     query += `, necklace_specs(*)`;
+      //     break;
+      //   case 'Earrings':
+      //     query += `, earring_specs(*)`;
+      //     break;
+      //   case 'Special pieces':
+      //     query += `, special_piece_specs(*)`;
+      //     break;
+      //   case 'Watches':
+      //     query += `, watch_specs(*)`;
+      //     break;
+      //   case 'Gems':
+      //     query += `, gem_specs(*)`;
+      //     break;
+      // }
 
       // Get the full product data with the appropriate specs
-      const { data, error } = await supabase
-        .from('products')
-        .select(query)
-        .eq('id', id)
-        .single();
+      // const { data, error } = await supabase
+      //   .from('products')
+      //   .select(query)
+      //   .eq('id', id)
+      //   .single();
 
-      if (error) throw error;
+      // if (error) throw error;
 
       // Get the specs based on the category
-      const getSpecs = (data: Product): SpecsType | undefined => {
-        switch (productData.category) {
-          case 'Ring':
-            return data.ring_specs?.[0];
-          case 'Bracelet':
-            return data.bracelet_specs?.[0];
-          case 'Necklace':
-            return data.necklace_specs?.[0];
-          case 'Earrings':
-            return data.earring_specs?.[0];
-          case 'Special pieces':
-            return data.special_piece_specs?.[0];
-          case 'Watches':
-            return data.watch_specs?.[0];
-          case 'Gems':
-            return data.gem_specs?.[0];
-          default:
-            return undefined;
-        }
-      };
+      // const getSpecs = (data: Product): SpecsType | undefined => {
+      //   switch (productData.category) {
+      //     case 'Ring':
+      //       return data.ring_specs?.[0];
+      //     case 'Bracelet':
+      //       return data.bracelet_specs?.[0];
+      //     case 'Necklace':
+      //       return data.necklace_specs?.[0];
+      //     case 'Earrings':
+      //       return data.earring_specs?.[0];
+      //     case 'Special pieces':
+      //       return data.special_piece_specs?.[0];
+      //     case 'Watches':
+      //       return data.watch_specs?.[0];
+      //     case 'Gems':
+      //       return data.gem_specs?.[0];
+      //     default:
+      //       return undefined;
+      //   }
+      // };
 
-      const specs = getSpecs(data as Product);
+      // const specs = getSpecs(data as Product);
 
-      const productWithDetails: Product = {
-        ...data as Product,
-        details: {
-          weight: specs?.weight?.toString(),
-          clarity: specs?.clarity,
-          color: specs?.color || specs?.gold_color,
-          size: specs?.size || specs?.diameter?.toString(),
-        }
-      };
+      // const productWithDetails: Product = {
+      //   ...data as Product,
+      //   details: {
+      //     weight: specs?.weight?.toString(),
+      //     clarity: specs?.clarity,
+      //     color: specs?.color || specs?.gold_color,
+      //     size: specs?.size || specs?.diameter?.toString(),
+      //   }
+      // };
 
-      setProduct(productWithDetails);
+      // setProduct(productWithDetails);
+
+      setProduct(null);
     } catch (error) {
       console.error('Error fetching product:', error);
     } finally {
@@ -242,13 +244,13 @@ export default function ProductScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const { error } = await supabase
-                .from('products')
-                .delete()
-                .eq('id', product.id)
-                .eq('user_id', user.id);
+              // const { error } = await supabase
+              //   .from('products')
+              //   .delete()
+              //   .eq('id', product.id)
+              //   .eq('user_id', user.id);
 
-              if (error) throw error;
+              // if (error) throw error;
               router.back();
             } catch (error) {
               console.error('Error deleting product:', error);
@@ -266,34 +268,34 @@ export default function ProductScreen() {
     setIsSubmitting(true);
     try {
       // Get user profile for notification
-      const { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('full_name, avatar_url')
-        .eq('id', user.id)
-        .single();
+      // const { data: userProfile, error: profileError } = await supabase
+      //   .from('profiles')
+      //   .select('full_name, avatar_url')
+      //   .eq('id', user.id)
+      //   .single();
 
-      if (profileError) throw profileError;
+      // if (profileError) throw profileError;
 
       // Create notification for product owner
-      const { error: notificationError } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: product.profiles.id,
-          type: 'hold_request',
-          data: {
-            product_id: product.id,
-            product_title: product.title,
-            product_image_url: product.product_images[currentImageIndex].image_url,
-            requester_id: user.id,
-            requester_name: userProfile.full_name,
-            requester_avatar: userProfile.avatar_url,
-            duration_hours: selectedDuration,
-            message: `${userProfile.full_name} ביקש לשמור את המוצר '${product.title}' למשך ${selectedDuration} שעות.`
-          },
-          is_read: false
-        });
+      // const { error: notificationError } = await supabase
+      //   .from('notifications')
+      //   .insert({
+      //     user_id: product.profiles.id,
+      //     type: 'hold_request',
+      //     data: {
+      //       product_id: product.id,
+      //       product_title: product.title,
+      //       product_image_url: product.product_images[currentImageIndex].image_url,
+      //       requester_id: user.id,
+      //       requester_name: userProfile.full_name,
+      //       requester_avatar: userProfile.avatar_url,
+      //       duration_hours: selectedDuration,
+      //       message: `${userProfile.full_name} ביקש לשמור את המוצר '${product.title}' למשך ${selectedDuration} שעות.`
+      //     },
+      //     is_read: false
+      //   });
 
-      if (notificationError) throw notificationError;
+      // if (notificationError) throw notificationError;
 
       setShowHoldModal(false);
       setSelectedDuration(null);
@@ -329,15 +331,15 @@ export default function ProductScreen() {
       <ScrollView>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-            <ArrowLeft color="#fff" />
+            <Ionicons name="arrow-back" color="#fff" size={24} />
           </TouchableOpacity>
           {user?.id === product.user_id && (
             <View style={styles.actionButtons}>
               <TouchableOpacity onPress={handleEditPress} style={styles.actionButton}>
-                <Edit color="#fff" size={20} />
+                <Ionicons name="create-outline" color="#fff" size={24} />
               </TouchableOpacity>
               <TouchableOpacity onPress={handleDeletePress} style={styles.actionButton}>
-                <Trash color="#ff4444" size={20} />
+                <Ionicons name="trash-outline" color="#ff4444" size={24} />
               </TouchableOpacity>
             </View>
           )}
@@ -417,7 +419,7 @@ export default function ProductScreen() {
               style={styles.contactButton}
               onPress={handleContactPress}
             >
-              <MessageCircle size={20} color="#fff" style={{ marginRight: 8 }} />
+              <Ionicons name="chatbubble-outline" color="#fff" size={24} style={{ marginRight: 8 }} />
               <Text style={styles.contactButtonText}>Contact via WhatsApp</Text>
             </TouchableOpacity>
           )}

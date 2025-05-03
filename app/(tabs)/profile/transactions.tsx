@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Image, TextInput, Modal, Pressable, Platform } from 'react-native';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/lib/supabase';
-import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 // @ts-ignore
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 
 export default function TransactionsScreen() {
   const { user } = useAuth();
@@ -52,13 +51,14 @@ export default function TransactionsScreen() {
     setLoading(true);
     setError(null);
     try {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select(`*, products(*), profiles:seller_id(full_name, avatar_url), buyer:buyer_id(full_name, avatar_url)`)
-        .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setTransactions(data || []);
+      // TODO: Replace supabase with fetch-based migration
+      // const { data, error } = await supabase
+      //   .from('transactions')
+      //   .select(`*, products(*), profiles:seller_id(full_name, avatar_url), buyer:buyer_id(full_name, avatar_url)`)
+      //   .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`)
+      //   .order('created_at', { ascending: false });
+      // if (error) throw error;
+      setTransactions([]);
     } catch (err: any) {
       setError(err.message || 'Failed to load transactions');
     } finally {
