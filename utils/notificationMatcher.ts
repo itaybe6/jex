@@ -33,6 +33,7 @@ export function isMatch(filter: any, product: any): boolean {
     if (key.endsWith('_from')) {
       const baseKey = key.replace('_from', '');
       if (product[baseKey] === undefined || product[baseKey] < filter[key]) {
+        console.log(`FAILED: product[${baseKey}] < filter[${key}] (${product[baseKey]} < ${filter[key]})`);
         return false;
       }
       continue;
@@ -40,18 +41,24 @@ export function isMatch(filter: any, product: any): boolean {
     if (key.endsWith('_to')) {
       const baseKey = key.replace('_to', '');
       if (product[baseKey] === undefined || product[baseKey] > filter[key]) {
+        console.log(`FAILED: product[${baseKey}] > filter[${key}] (${product[baseKey]} > ${filter[key]})`);
         return false;
       }
       continue;
     }
 
-    // ערך בודד או מערך
     const filterValue = filter[key];
     const productValue = product[key];
+    // Normalize for case-insensitive and trim
+    const norm = (v: any) => typeof v === 'string' ? v.trim().toLowerCase() : v;
     if (Array.isArray(filterValue)) {
-      if (!filterValue.includes(productValue)) return false;
+      const match = filterValue.map(norm).includes(norm(productValue));
+      console.log(`Comparing (array) filter[${key}]=${filterValue} to product[${key}]=${productValue} => ${match}`);
+      if (!match) return false;
     } else if (filterValue !== undefined && filterValue !== null && filterValue !== '') {
-      if (filterValue !== productValue) return false;
+      const match = norm(filterValue) === norm(productValue);
+      console.log(`Comparing filter[${key}]=${filterValue} to product[${key}]=${productValue} => ${match}`);
+      if (!match) return false;
     }
   }
   return true;
@@ -61,33 +68,63 @@ export function isMatch(filter: any, product: any): boolean {
  * מאתר משתמשים עם סינון תואם למוצר חדש, ויוצר עבורם התראה בטבלת notifications
  */
 export async function notifyMatchingUsersOnNewProduct(newProduct: Product) {
+  console.log('notifyMatchingUsersOnNewProduct called with:', newProduct);
   const { data: filters, error } = await supabase
     .from('notification_preferences')
-    .select('user_id, specific_filters');
+    .select('*');
 
   if (error) {
     console.error('Error fetching filters:', error);
     return;
   }
-  if (!filters) return;
+  if (!filters) {
+    console.log('No filters found!');
+    return;
+  }
+
+  console.log('RAW filters:', filters);
+  console.log('All notification_preferences:', filters);
+
+  // שליפת שם ותמונת פרופיל של המוכר
+  let sellerName = 'Unknown User';
+  let sellerAvatar = null;
+  if (newProduct.user_id) {
+    const { data: sellerProfile } = await supabase
+      .from('profiles')
+      .select('full_name, avatar_url')
+      .eq('id', newProduct.user_id)
+      .single();
+    if (sellerProfile && sellerProfile.full_name) {
+      sellerName = sellerProfile.full_name;
+    }
+    if (sellerProfile && sellerProfile.avatar_url) {
+      sellerAvatar = sellerProfile.avatar_url;
+    }
+  }
 
   for (const pref of filters) {
-    const userId = pref.user_id;
+    console.log('User:', pref.user_id, 'Filters:', pref.specific_filters);
+    console.log('Raw specific_filters:', pref.specific_filters, 'Type:', typeof pref.specific_filters, 'JSON:', JSON.stringify(pref.specific_filters));
     for (const filter of pref.specific_filters || []) {
       if (filter.filter_type !== 'new_product') continue;
       if (!isMatch(filter, newProduct)) continue;
 
-      const message = `New product match: ${newProduct.brand || ''} ${newProduct.model || ''} just listed!`;
-      await supabase.from('notifications').insert({
-        user_id: userId,
+      console.log('Creating notification for user:', pref.user_id, 'for product:', newProduct);
+      const { error: notifError } = await supabase.from('notifications').insert({
+        user_id: pref.user_id,
         type: 'new_product',
         product_id: newProduct.id,
         data: {
-          message,
+          message: `New product match: ${newProduct.brand || ''} ${newProduct.model || ''} just listed!`,
           product: newProduct,
+          seller_name: sellerName,
+          seller_avatar_url: sellerAvatar,
         },
         read: false,
       });
+      if (notifError) {
+        console.error('Error inserting notification:', notifError, notifError?.message, notifError?.details);
+      }
     }
   }
 } 

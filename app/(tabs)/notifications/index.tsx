@@ -18,6 +18,8 @@ type Notification = {
   read: boolean;
   user_id: string;
   is_action_done: boolean;
+  product_id?: string;
+  seller_name?: string;
 };
 
 export default function NotificationsScreen() {
@@ -303,7 +305,11 @@ export default function NotificationsScreen() {
       minute: '2-digit',
     });
 
-    const profileImage = notification.data?.sender_avatar_url || 'https://ui-avatars.com/api/?background=0E2657&color=fff&name=' + encodeURIComponent(notification.data?.sender_full_name || 'U');
+    const profileImage =
+      notification.data?.seller_avatar_url ||
+      notification.data?.sender_avatar_url ||
+      'https://ui-avatars.com/api/?background=0E2657&color=fff&name=' +
+        encodeURIComponent(notification.data?.seller_name || notification.data?.sender_full_name || 'U');
 
     return (
       <View style={styles.notificationWrapper}>
@@ -316,7 +322,12 @@ export default function NotificationsScreen() {
             styles.notificationCard,
             !notification.read && styles.unreadCard
           ]}
-          onPress={() => markAsRead(notification.id)}
+          onPress={() => {
+            markAsRead(notification.id);
+            if (notification.product_id) {
+              router.push(`/products/${notification.product_id}`);
+            }
+          }}
           activeOpacity={0.7}
         >
           <View style={styles.textContainer}>
@@ -327,7 +338,7 @@ export default function NotificationsScreen() {
             </Text>
             
             <Text style={styles.userName}>
-              {notification.data?.sender_full_name || 'Unknown User'}
+              {notification.data?.seller_name || notification.data?.sender_full_name || 'Unknown User'}
             </Text>
             
             <Text style={styles.messageText} numberOfLines={2}>

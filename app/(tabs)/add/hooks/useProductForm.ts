@@ -5,6 +5,7 @@ import { decode } from 'base64-arraybuffer';
 import watchModels from '@/lib/watch-models.json';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { notifyMatchingUsersOnNewProduct } from '@/utils/notificationMatcher';
 
 interface ImageData {
   uri: string;
@@ -374,6 +375,20 @@ export default function useProductForm() {
           console.error('Error inserting loose diamond specs:', specsError);
           throw specsError;
         }
+      } else if (productType === 'Watches') {
+        const specsData = {
+          product_id: product.id,
+          brand: dynamicFields.brand,
+          model: dynamicFields.model,
+          diameter: dynamicFields.diameter ? Number(dynamicFields.diameter) : null
+        };
+        const { error: specsError } = await supabase
+          .from('watch_specs')
+          .insert(specsData);
+        if (specsError) {
+          console.error('Error inserting watches_specs:', specsError, specsError?.message, specsError?.details);
+          throw specsError;
+        }
       } else {
         // Handle other product types...
         const specsData: JewelrySpecsData = {
@@ -425,6 +440,10 @@ export default function useProductForm() {
       }
 
       // Success - reset form and navigate
+      await notifyMatchingUsersOnNewProduct({
+        ...product,
+        ...(dynamicFields || {}),
+      });
       resetForm();
       router.replace('/');
     } catch (error) {
