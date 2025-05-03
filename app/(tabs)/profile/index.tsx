@@ -206,9 +206,7 @@ export default function ProfileScreen() {
     router.push('/profile/edit');
   };
 
-  const handleAddProduct = () => {
-    router.push('/profile/add-product');
-  };
+
 
   const handleProductPress = (productId: string) => {
     router.push({

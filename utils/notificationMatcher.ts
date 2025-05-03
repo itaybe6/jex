@@ -102,6 +102,19 @@ export async function notifyMatchingUsersOnNewProduct(newProduct: Product) {
     }
   }
 
+  // שליפת כתובת התמונה הראשית של המוצר מה-DB
+  let productImage = null;
+  const { data: productImages, error: imgError } = await supabase
+    .from('product_images')
+    .select('image_url')
+    .eq('product_id', newProduct.id)
+    .order('id', { ascending: true })
+    .limit(1);
+  if (productImages && productImages.length > 0) {
+    productImage = productImages[0].image_url;
+  }
+  console.log('productImage:', productImage);
+
   for (const pref of filters) {
     console.log('User:', pref.user_id, 'Filters:', pref.specific_filters);
     console.log('Raw specific_filters:', pref.specific_filters, 'Type:', typeof pref.specific_filters, 'JSON:', JSON.stringify(pref.specific_filters));
@@ -119,6 +132,7 @@ export async function notifyMatchingUsersOnNewProduct(newProduct: Product) {
           product: newProduct,
           seller_name: sellerName,
           seller_avatar_url: sellerAvatar,
+          product_image_url: productImage,
         },
         read: false,
       });

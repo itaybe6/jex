@@ -313,10 +313,6 @@ export default function NotificationsScreen() {
 
     return (
       <View style={styles.notificationWrapper}>
-        <Image 
-          source={{ uri: profileImage }}
-          style={styles.profileImage}
-        />
         <TouchableOpacity
           style={[
             styles.notificationCard,
@@ -330,23 +326,32 @@ export default function NotificationsScreen() {
           }}
           activeOpacity={0.7}
         >
-          <View style={styles.textContainer}>
-            <Text style={styles.statusText}>
-              {notification.type === 'waiting_seller_approval' ? 'Waiting Seller Approval' : 
-               notification.type === 'deal_completed' ? 'Deal Completed' : 
-               'New Notification'}
-            </Text>
-            
-            <Text style={styles.userName}>
-              {notification.data?.seller_name || notification.data?.sender_full_name || 'Unknown User'}
-            </Text>
-            
-            <Text style={styles.messageText} numberOfLines={2}>
-              {notification.data?.message || 'No message available'}
-            </Text>
-            
-            <Text style={styles.dateText}>{formattedDate}</Text>
+          <View style={styles.row}>
+            <View style={styles.textContainer}>
+              <Text style={styles.statusText}>
+                {notification.type === 'waiting_seller_approval' ? 'Waiting Seller Approval' : 
+                  notification.type === 'deal_completed' ? 'Deal Completed' : 
+                  'New Notification'}
+              </Text>
+              <Text style={styles.userName}>
+                {notification.data?.seller_name || notification.data?.sender_full_name || 'Unknown User'}
+              </Text>
+              <Text style={styles.messageText} numberOfLines={2}>
+                {notification.data?.message || 'No message available'}
+              </Text>
+              <Text style={styles.dateText}>{formattedDate}</Text>
+            </View>
+            {notification.data?.product_image_url && (
+              <Image
+                source={{ uri: notification.data.product_image_url }}
+                style={styles.productImage}
+              />
+            )}
           </View>
+          <Image 
+            source={{ uri: profileImage }}
+            style={styles.profileImageFloating}
+          />
         </TouchableOpacity>
       </View>
     );
@@ -422,42 +427,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
-    paddingLeft: 40,
     flex: 1,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    minHeight: 80,
+    justifyContent: 'center',
   },
   unreadCard: {
     borderLeftWidth: 3,
     borderLeftColor: '#0E2657',
   },
-  profileImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#E5E7EB',
-    position: 'absolute',
-    left: -24,
-    zIndex: 1,
-    borderWidth: 5,
-    borderColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   textContainer: {
-    gap: 4,
+    flex: 1,
+    justifyContent: 'center',
   },
   statusText: {
     fontSize: 15,
@@ -491,5 +480,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Montserrat-Medium',
     color: '#6B7280',
+  },
+  productImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    backgroundColor: '#E5E7EB',
+    marginLeft: 12,
+  },
+  profileImageFloating: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E5E7EB',
+    position: 'absolute',
+    top: -18,
+    left: 18,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    zIndex: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
   },
 });
