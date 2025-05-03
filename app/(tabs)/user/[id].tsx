@@ -5,6 +5,9 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
 
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
 const GRID_SPACING = 2;
 const NUM_COLUMNS = 3;
 const screenWidth = Dimensions.get('window').width;
@@ -37,7 +40,7 @@ type ProductsByCategory = {
 export default function UserProfileScreen() {
   const params = useLocalSearchParams();
   const userId = typeof params.id === 'string' ? params.id : '';
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   
   const [profile, setProfile] = useState<Profile | null>(null);
   const [productsByCategory, setProductsByCategory] = useState<ProductsByCategory>({});
@@ -67,31 +70,33 @@ export default function UserProfileScreen() {
 
   const fetchProfile = async () => {
     try {
+      // שלב 1: שלוף את הפרופיל
+      const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=*`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!profileRes.ok) throw new Error(await profileRes.text());
+      const profileArr = await profileRes.json();
+      if (!profileArr || !profileArr[0]) throw new Error('Profile not found');
+      const profileData = profileArr[0];
 
-      // First get the profile data
-      // const { data: profileData, error: profileError } = await supabase
-      //   .from('profiles')
-      //   .select('*')
-      //   .eq('id', userId)
-      //   .single();
-
-      // if (profileError) throw profileError;
-      // Then get the completed transactions count where user was either buyer or seller
-      // const { data: transactionsCount, error: countError } = await supabase
-      //   .from('transactions')
-      //   .select('id', { count: 'exact' })
-      //   .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`)
-      //   .eq('status', 'completed');
-
-      // if (countError) throw countError;
-
-      // Combine the data
-      // const profile = {
-      //   ...profileData,
-      //   sold_count: transactionsCount.length
-      // };
-      
-      // setProfile(profile);
+      // שלב 2: שלוף את כמות העסקאות שהושלמו
+      const txRes = await fetch(`${SUPABASE_URL}/rest/v1/transactions?select=id&or=(seller_id.eq.${userId},buyer_id.eq.${userId})&status=eq.completed`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      let sold_count = 0;
+      if (txRes.ok) {
+        const txArr = await txRes.json();
+        sold_count = Array.isArray(txArr) ? txArr.length : 0;
+      }
+      setProfile({ ...profileData, sold_count });
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
@@ -100,16 +105,16 @@ export default function UserProfileScreen() {
   const checkTrustStatus = async () => {
     try {
       if (!user) return;
-
-      // const { data, error } = await supabase
-      //   .from('trust_marks')
-      //   .select('id')
-      //   .eq('truster_id', user.id)
-      //   .eq('trusted_id', userId)
-      //   .maybeSingle();
-
-      // if (error) throw error;
-      setHasTrusted(!!user);
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/trust_marks?select=id&truster_id=eq.${user.id}&trusted_id=eq.${userId}`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setHasTrusted(Array.isArray(data) && data.length > 0);
     } catch (error) {
       console.error('Error checking trust status:', error);
     }
@@ -121,41 +126,40 @@ export default function UserProfileScreen() {
         Alert.alert('Error', 'Please sign in to mark users as trusted');
         return;
       }
-
       if (user.id === userId) {
         Alert.alert('Error', 'You cannot mark yourself as trusted');
         return;
       }
-
       setTrustLoading(true);
-
       if (hasTrusted) {
-        // const { error: deleteError } = await supabase
-        //   .from('trust_marks')
-        //   .delete()
-        //   .eq('truster_id', user.id)
-        //   .eq('trusted_id', userId);
-
-        // if (deleteError) throw deleteError;
+        // מחיקת trust mark
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/trust_marks?truster_id=eq.${user.id}&trusted_id=eq.${userId}`, {
+          method: 'DELETE',
+          headers: {
+            apikey: SUPABASE_ANON_KEY!,
+            Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (!res.ok) throw new Error(await res.text());
         setHasTrusted(false);
-        // setProfile(prev => prev ? {
-        //   ...prev,
-        //   trust_count: Math.max(0, prev.trust_count - 1)
-        // } : null);
       } else {
-        // const { error: insertError } = await supabase
-        //   .from('trust_marks')
-        //   .insert({
-        //     truster_id: user.id,
-        //     trusted_id: userId
-        //   });
-
-        // if (insertError) throw insertError;
+        // יצירת trust mark
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/trust_marks`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY!,
+            Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation',
+          },
+          body: JSON.stringify({
+            truster_id: user.id,
+            trusted_id: userId
+          })
+        });
+        if (!res.ok) throw new Error(await res.text());
         setHasTrusted(true);
-        // setProfile(prev => prev ? {
-        //   ...prev,
-        //   trust_count: prev.trust_count + 1
-        // } : null);
       }
     } catch (error) {
       console.error('Error updating trust mark:', error);
@@ -189,22 +193,16 @@ export default function UserProfileScreen() {
   const fetchTrustMarks = async () => {
     try {
       setLoadingTrustMarks(true);
-      // const { data, error } = await supabase
-      //   .from('trust_marks')
-      //   .select(`
-      //     id,
-      //     truster:truster_id (
-      //       id,
-      //       full_name,
-      //       avatar_url,
-      //       title
-      //     )
-      //   `)
-      //   .eq('trusted_id', userId)
-      //   .order('created_at', { ascending: false });
-
-      // if (error) throw error;
-      setTrustMarks([]);
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/trust_marks?select=id,created_at,truster:truster_id(id,full_name,avatar_url,title)&trusted_id=eq.${userId}&order=created_at.desc`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setTrustMarks(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching trust marks:', error);
       Alert.alert('Error', 'Failed to load trust marks');
@@ -215,24 +213,22 @@ export default function UserProfileScreen() {
 
   const fetchProducts = async () => {
     try {
-      // const { data, error } = await supabase
-      //   .from('products')
-      //   .select('*')
-      //   .eq('user_id', userId)
-      //   .order('created_at', { ascending: false });
-
-      // if (error) throw error;
-
-      // Group products by category
-      // const grouped = (data || []).reduce<ProductsByCategory>((acc, product) => {
-      //   if (!acc[product.category]) {
-      //     acc[product.category] = [];
-      //   }
-      //   acc[product.category].push(product);
-      //   return acc;
-      // }, {});
-
-      // setProductsByCategory(grouped);
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/products?select=id,title,price,image_url,category&user_id=eq.${userId}&order=created_at.desc`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      // קיבוץ לפי קטגוריה
+      const grouped = (data || []).reduce((acc: ProductsByCategory, product: Product) => {
+        if (!acc[product.category]) acc[product.category] = [];
+        acc[product.category].push(product);
+        return acc;
+      }, {} as ProductsByCategory);
+      setProductsByCategory(grouped);
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
@@ -243,13 +239,16 @@ export default function UserProfileScreen() {
   const fetchUserRequests = async () => {
     setLoadingRequests(true);
     try {
-      // const { data, error } = await supabase
-      //   .from('diamond_requests')
-      //   .select('*')
-      //   .eq('user_id', userId)
-      //   .order('created_at', { ascending: false });
-      // if (error) throw error;
-      setRequests([]);
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/diamond_requests?user_id=eq.${userId}&order=created_at.desc`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setRequests(Array.isArray(data) ? data : []);
     } catch (err) {
       setRequests([]);
     } finally {

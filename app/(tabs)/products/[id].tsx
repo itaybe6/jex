@@ -9,6 +9,9 @@ import ImageViewer from 'react-native-image-zoom-viewer';
 import { Product } from '@/types/product';
 import { showAlert } from '@/utils/alert';
 
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
 const HOLD_DURATIONS = [
   { value: 1, label: '1 Hour' },
   { value: 2, label: '2 Hours' },
@@ -37,7 +40,7 @@ const CATEGORY_TO_SPECS_TABLE: { [key: string]: string } = {
 
 export default function ProductScreen() {
   const { id } = useLocalSearchParams();
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [showHoldModal, setShowHoldModal] = useState(false);
@@ -53,55 +56,42 @@ export default function ProductScreen() {
 
   const fetchProduct = async () => {
     try {
-      // TODO: Migrate to fetch-based API
-      // const { data: productData, error: productError } = await supabase
-      //   .from('products')
-      //   .select(`
-      //     *,
-      //     profiles (
-      //       id,
-      //       full_name,
-      //       avatar_url,
-      //       phone
-      //     ),
-      //     product_images (
-      //       image_url
-      //     )
-      //   `)
-      //   .eq('id', id)
-      //   .single();
-      // if (productError) throw productError;
-      // if (!productData) {
-      //   showAlert('שגיאה', 'המוצר לא נמצא');
-      //   return;
-      // }
-      // Extract image URLs
-      // const images = productData.product_images || [];
-      // const imageUrls = images.map((img: { image_url: string }) => img.image_url);
-      // if (imageUrls.length === 0 && productData.image_url) {
-      //   imageUrls.push(productData.image_url);
-      // }
-      // setProductImages(imageUrls);
-      // const specsTable = CATEGORY_TO_SPECS_TABLE[productData.category.toLowerCase()];
-      // if (specsTable) {
-      //   const { data: specsData, error: specsError } = await supabase
-      //     .from(specsTable)
-      //     .select('*')
-      //     .eq('product_id', productData.id)
-      //     .single();
-      //   if (specsError && specsError.code !== 'PGRST116') {
-      //     throw specsError;
-      //   }
-      //   setProduct({
-      //     ...productData,
-      //     specs: specsData || null
-      //   } as Product);
-      // } else {
-      //   setProduct(productData as Product);
-      // }
+      // שלב 1: שלוף את המוצר עם joins (שימוש ב-profiles!user_id)
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${id}&select=*,profiles!user_id(id,full_name,avatar_url,phone),product_images(image_url),ring_specs(*),necklace_specs(*),bracelet_specs(*),earring_specs(*),watch_specs(*),gem_specs(*),special_piece_specs(*)`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const arr = await res.json();
+      if (!arr || !arr[0]) {
+        showAlert('שגיאה', 'המוצר לא נמצא');
+        setProduct(null);
+        return;
+      }
+      const productData = arr[0];
+      console.log('productData:', productData);
+      // שלב 2: קבע specs דינמי
+      const category = productData.category?.toLowerCase();
+      const specsTable = CATEGORY_TO_SPECS_TABLE[category];
+      let specs = null;
+      if (specsTable && Array.isArray(productData[specsTable]) && productData[specsTable].length > 0) {
+        specs = productData[specsTable][0];
+      }
+      // שלב 3: קבע תמונות
+      const images = productData.product_images || [];
+      const imageUrls = images.map((img: { image_url: string }) => img.image_url);
+      if (imageUrls.length === 0 && productData.image_url) {
+        imageUrls.push(productData.image_url);
+      }
+      setProductImages(imageUrls);
+      setProduct({ ...productData, specs } as Product);
     } catch (error) {
       console.error('Error fetching product:', error);
       showAlert('שגיאה', 'אירעה שגיאה בטעינת פרטי המוצר');
+      setProduct(null);
     } finally {
       setLoading(false);
     }
@@ -127,13 +117,18 @@ export default function ProductScreen() {
   const handleMarkAsSold = async () => {
     if (!product) return;
     try {
-      // TODO: Migrate to fetch-based API
-      // const { error } = await supabase
-      //   .from('products')
-      //   .update({ status: 'sold' })
-      //   .eq('id', product.id);
-      // if (error) throw error;
-      // await fetchProduct();
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${product.id}`, {
+        method: 'PATCH',
+        headers: {
+          apikey: SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify({ status: 'sold' })
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchProduct();
     } catch (error) {
       console.error('Error marking product as sold:', error);
       Alert.alert('שגיאה', 'אירעה שגיאה בעדכון סטטוס המוצר');
@@ -147,13 +142,16 @@ export default function ProductScreen() {
   const handleDeletePress = async () => {
     if (!product) return;
     try {
-      // TODO: Migrate to fetch-based API
-      // const { error } = await supabase
-      //   .from('products')
-      //   .delete()
-      //   .eq('id', product.id);
-      // if (error) throw error;
-      // router.back();
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${product.id}`, {
+        method: 'DELETE',
+        headers: {
+          apikey: SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error(await res.text());
+      router.back();
     } catch (error) {
       console.error('Error deleting product:', error);
       Alert.alert('שגיאה', 'אירעה שגיאה במחיקת המוצר');
@@ -200,13 +198,24 @@ export default function ProductScreen() {
   };
 
   const handleHoldRequest = async () => {
-    // TODO: Migrate to fetch-based API
-    // const { error } = await supabase
-    //   .from('products')
-    //   .update({ status: 'hold' })
-    //   .eq('id', product.id);
-    // if (error) throw error;
-    // await fetchProduct();
+    if (!product) return;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${product.id}`, {
+        method: 'PATCH',
+        headers: {
+          apikey: SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify({ status: 'hold' })
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchProduct();
+    } catch (error) {
+      console.error('Error holding product:', error);
+      Alert.alert('שגיאה', 'אירעה שגיאה בהחזקת המוצר');
+    }
   };
 
   if (loading) {
@@ -299,15 +308,15 @@ export default function ProductScreen() {
           <View style={styles.sellerContainer}>
             <TouchableOpacity 
               style={styles.sellerContent}
-              onPress={() => router.push(`/user/${product.profiles.id}`)}
+              onPress={() => product.profiles?.id && router.push(`/user/${product.profiles.id}`)}
             >
               <Image
-                source={{ uri: product.profiles.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }}
+                source={{ uri: product.profiles?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }}
                 style={styles.sellerAvatar}
               />
               <View style={styles.sellerInfo}>
                 <Text style={styles.sellerLabel}>Seller</Text>
-                <Text style={styles.sellerName}>{product.profiles.full_name}</Text>
+                <Text style={styles.sellerName}>{product.profiles?.full_name || ''}</Text>
               </View>
             </TouchableOpacity>
           </View>
