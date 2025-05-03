@@ -10,9 +10,8 @@ function TabBarIcon({ name, focused }: { name: any, focused: boolean }) {
     <View style={{
       flex: 1,
       alignItems: 'center',
-      justifyContent: 'flex-start',
+      justifyContent: 'center',
       height: '100%',
-      paddingTop: 16,
     }}>
       <Ionicons name={name} size={24} color={focused ? '#B0B6C1' : '#0E2657'} />
     </View>
@@ -29,9 +28,11 @@ export default function TabLayout() {
           header: () => <TopHeader />,
           tabBarStyle: {
             backgroundColor: '#fff',
-            paddingBottom: insets.bottom,
-            paddingTop: 0,
-            minHeight: 56,
+            paddingBottom: insets.bottom > 0 ? insets.bottom : 12,
+            paddingTop: 8,
+            height: 85, // או minHeight: 64
+            borderTopWidth: 0.5,
+            borderTopColor: '#fff',
             zIndex: 100,
           },
           tabBarActiveTintColor: '#B0B6C1',

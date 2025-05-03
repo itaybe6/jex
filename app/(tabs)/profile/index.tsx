@@ -430,10 +430,13 @@ export default function ProfileScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F5F8FC' }} edges={['left', 'right']}>
-      <ScrollView style={{ backgroundColor: 'transparent', flex: 1 }} contentContainerStyle={{ paddingTop: 0 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F5F8FC' }} edges={[ 'left', 'right', ]}>
+      <ScrollView 
+        style={{ flex: 1 }} 
+        contentContainerStyle={{ paddingBottom: 0 }}
+      >
         {/* User Card */}
-        <View style={[styles.userCard, { marginTop: 80, paddingTop: 0 }]}>
+        <View style={[styles.userCard, { marginTop: 100, paddingTop: 0 }]}>
           <View style={styles.profileImageWrapper}>
             <Image
               source={{ 
