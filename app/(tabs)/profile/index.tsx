@@ -64,7 +64,7 @@ type Category = {
 };
 
 export default function ProfileScreen() {
-  const { user } = useAuth();
+  const { user } = useAuth() as { user: { id: string } | null };
   console.log('user from useAuth:', user);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [productsByCategory, setProductsByCategory] = useState<ProductsByCategory>({});
@@ -411,15 +411,13 @@ export default function ProfileScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F5F8FC' }} edges={[ 'left', 'right', ]}>
       <ScrollView 
-        style={{ flex: 1, backgroundColor: '#F5F8FC' }} 
-        contentContainerStyle={{ 
-          paddingBottom: 100,
-        }}
+        style={{ flex: 1 }} 
+        contentContainerStyle={{ paddingBottom: 0 }}
       >
         {/* User Card */}
-        <View style={[styles.userCard, { marginTop: 80, paddingTop: 0 }]}>
+        <View style={[styles.userCard, { marginTop: 100, paddingTop: 0 }]}>
           <View style={styles.profileImageWrapper}>
             <Image
               source={{ 

@@ -21,7 +21,7 @@ type Notification = {
 };
 
 export default function NotificationsScreen() {
-  const { user } = useAuth();
+  const { user } = useAuth() as { user: { id: string } | null };
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
