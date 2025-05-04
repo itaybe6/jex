@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 // @ts-ignore
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function TransactionsScreen() {
   const { user } = useAuth();
@@ -51,16 +52,21 @@ export default function TransactionsScreen() {
     setLoading(true);
     setError(null);
     try {
-      // TODO: Replace supabase with fetch-based migration
-      // const { data, error } = await supabase
-      //   .from('transactions')
-      //   .select(`*, products(*), profiles:seller_id(full_name, avatar_url), buyer:buyer_id(full_name, avatar_url)`)
-      //   .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`)
-      //   .order('created_at', { ascending: false });
-      // if (error) throw error;
-      setTransactions([]);
+      const query = encodeURIComponent(`*,products(*),profiles:seller_id(full_name,avatar_url),buyer:buyer_id(full_name,avatar_url)`);
+      const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/transactions?or=(seller_id.eq.${userId},buyer_id.eq.${userId})&select=${query}&order=created_at.desc`;
+      const res = await fetch(url, {
+        headers: {
+          apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setTransactions(Array.isArray(data) ? data : []);
     } catch (err: any) {
       setError(err.message || 'Failed to load transactions');
+      setTransactions([]);
     } finally {
       setLoading(false);
     }
@@ -164,6 +170,20 @@ export default function TransactionsScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Styled Back button at the top */}
+      <TouchableOpacity
+        onPress={() => {
+          if (fromProfileType === 'other' && userId) {
+            router.replace(`/user/${userId}`);
+          } else {
+            router.replace('/profile');
+          }
+        }}
+        style={styles.backButton}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="arrow-back" size={22} color="#fff" style={{ alignSelf: 'center' }} />
+      </TouchableOpacity>
       <View style={styles.searchFilterRow}>
         <TextInput
           style={styles.searchInput}
@@ -290,8 +310,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1a1a1a',
-    paddingTop: 40,
+    paddingTop: 8,
     paddingHorizontal: 16,
+  },
+  backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#23232b',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 0,
+    marginBottom: 8,
+    marginLeft: 0,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   header: {
     fontSize: 24,
