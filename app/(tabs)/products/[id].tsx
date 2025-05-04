@@ -34,8 +34,20 @@ const CATEGORY_TO_SPECS_TABLE: { [key: string]: string } = {
   'bracelet': 'bracelet_specs',
   'earring': 'earring_specs',
   'watch': 'watch_specs',
+  'watches': 'watch_specs',
   'gem': 'gem_specs',
   'special_piece': 'special_piece_specs'
+};
+
+// Helper function to render a spec item if value is valid
+const renderSpecItem = (label: string, value: any, suffix?: string) => {
+  if (value === null || value === undefined || value === '') return null;
+  return (
+    <View style={styles.specRow}>
+      <Text style={styles.specLabel}>{label}:</Text>
+      <Text style={styles.specValue}>{String(value)}{suffix ? ` ${suffix}` : ''}</Text>
+    </View>
+  );
 };
 
 export default function ProductScreen() {
@@ -78,11 +90,19 @@ export default function ProductScreen() {
       const productData = arr[0];
       console.log('productData:', productData);
       // שלב 2: קבע specs דינמי
-      const category = productData.category?.toLowerCase();
+      const category = (productData.category || '').toLowerCase();
       const specsTable = CATEGORY_TO_SPECS_TABLE[category];
-      let specs = null;
-      if (specsTable && Array.isArray(productData[specsTable]) && productData[specsTable].length > 0) {
-        specs = productData[specsTable][0];
+      // Always treat as array
+      const specsArray = Array.isArray(productData[specsTable])
+        ? productData[specsTable]
+        : (productData[specsTable] ? [productData[specsTable]] : []);
+      if (!specsTable || specsArray.length === 0) {
+        console.log('[ProductSpecs] No specs found:', { category, specsTable, hasSpecsArray: !!productData[specsTable], specsArrayLength: specsArray.length });
+        setProduct({ ...productData, specs: null } as Product);
+      } else {
+        const specs = specsArray[0];
+        console.log('[ProductSpecs] Loaded specs:', { category, specsTable, found: !!specs });
+        setProduct({ ...productData, specs } as Product);
       }
       // שלב 3: קבע תמונות
       const images = productData.product_images || [];
@@ -91,7 +111,6 @@ export default function ProductScreen() {
         imageUrls.push(productData.image_url);
       }
       setProductImages(imageUrls);
-      setProduct({ ...productData, specs } as Product);
     } catch (error) {
       console.error('Error fetching product:', error);
       showAlert('שגיאה', 'אירעה שגיאה בטעינת פרטי המוצר');
@@ -163,40 +182,57 @@ export default function ProductScreen() {
   };
 
   const renderSpecs = () => {
-    if (!product?.specs) return null;
-
+    if (!product) return null;
+    if (!product.specs) {
+      return (
+        <View style={styles.specsContainer}>
+          <Text style={[styles.specLabel, { textAlign: 'center', color: '#888', fontStyle: 'italic' }]}>No details available for this product</Text>
+        </View>
+      );
+    }
+    const specs = product.specs as any;
+    const render = (label: string, value: any, suffix?: string) => {
+      if (value === null || value === undefined || value === '') return null;
+      return (
+        <View style={styles.specRow}>
+          <Text style={styles.specLabel}>{label}:</Text>
+          <Text style={styles.specValue}>{String(value)}{suffix ? ` ${suffix}` : ''}</Text>
+        </View>
+      );
+    };
+    // Debug: print all specs
+    console.log('specs:', specs);
     return (
       <View style={styles.specsContainer}>
-        {Object.entries(product.specs).map(([key, value]) => {
-          // Skip internal fields and null values
-          if (
-            value === null || 
-            key === 'product_id' || 
-            key === 'created_at' || 
-            key === 'updated_at'
-          ) return null;
-
-          // Format the value based on its type
-          let displayValue = '';
-          if (typeof value === 'boolean') {
-            displayValue = value ? 'כן' : 'לא';
-          } else if (typeof value === 'number') {
-            displayValue = value.toString();
-          } else if (typeof value === 'string') {
-            displayValue = value;
-          } else if (typeof value === 'object') {
-            displayValue = JSON.stringify(value);
-          }
-
-          return (
-            <View key={key} style={styles.specRow}>
-              <Text style={styles.specLabel}>
-                {key.replace(/_/g, ' ').toUpperCase()}
-              </Text>
-              <Text style={styles.specValue}>{displayValue}</Text>
-            </View>
-          );
-        })}
+        {render('Weight', specs.weight, 'ct')}
+        {render('Material', specs.material)}
+        {render('Subcategory', specs.subcategory)}
+        {/* ...rest of the fields... */}
+        {render('Brand', specs.brand)}
+        {render('Model', specs.model)}
+        {render('Diameter', specs.diameter)}
+        {render('Color', specs.color)}
+        {render('Clarity', specs.clarity)}
+        {render('Cut Grade', specs.cut_grade)}
+        {render('Origin', specs.origin)}
+        {render('Type', specs.type)}
+        {render('Certification', specs.certification)}
+        {/* שדות זהב */}
+        {specs.material === 'gold' && render('Gold Karat', specs.gold_karat)}
+        {specs.material === 'gold' && render('Gold Color', specs.gold_color)}
+        {/* אבני צד */}
+        {specs.side_stones === true && render('Side Stones', 'Yes')}
+        {specs.side_stones === true && render('Side Stones Details', specs.side_stones_details)}
+        {/* יהלומים */}
+        {specs.has_diamond === true && render('Diamond Weight', specs.diamond_weight, 'ct')}
+        {specs.has_diamond === true && render('Cut Grade', specs.cut_grade)}
+        {specs.has_diamond === true && render('Certification', specs.certification)}
+        {/* שדות נוספים אם יש */}
+        {render('Certificate', specs.certificate)}
+        {render('Lab Grown Type', specs.lab_grown_type)}
+        {render('Treatment Type', specs.treatment_type)}
+        {render('Diamond Size From', specs.diamond_size_from)}
+        {render('Diamond Size To', specs.diamond_size_to)}
       </View>
     );
   };
@@ -552,7 +588,7 @@ const styles = StyleSheet.create({
   specValue: {
     fontSize: 16,
     fontFamily: 'Heebo-Medium',
-    color: '#fff',
+    color: '#0E2657',
   },
   sellerContainer: {
     backgroundColor: '#fff',

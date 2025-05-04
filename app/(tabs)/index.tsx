@@ -246,8 +246,17 @@ export default function HomeScreen() {
     fetchTopSellers();
   }, []);
 
+  useEffect(() => {
+    if (accessToken) {
+      fetchProducts();
+      fetchRequests();
+      fetchTopSellers();
+    }
+  }, [accessToken]);
+
   useFocusEffect(
     React.useCallback(() => {
+      console.log('HomeScreen focused, fetching products...');
       fetchProducts();
       fetchRequests();
       fetchTopSellers();
@@ -256,6 +265,7 @@ export default function HomeScreen() {
 
   const fetchProducts = async () => {
     try {
+      setProductsByCategory({});
       const query = [
         '*',
         'profiles!products_user_id_fkey(id,full_name,avatar_url)',

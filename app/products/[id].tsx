@@ -23,8 +23,10 @@ type SpecsType = {
   length?: number;
   diameter?: number;
   size?: string;
+  has_diamond?: boolean;
+  has_side_stones?: boolean;
+  side_stones_details?: string;
 };
-
 type Product = {
   id: string;
   title: string;
@@ -71,10 +73,8 @@ const HOLD_DURATIONS = [
   { value: 11, label: '11 Hours' },
   { value: 12, label: '12 Hours' },
 ];
-
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-
 export default function ProductScreen() {
   const { id } = useLocalSearchParams();
   const { user, accessToken } = useAuth();
@@ -289,6 +289,17 @@ export default function ProductScreen() {
     }
   };
 
+  // Helper function to render a spec item if value is valid
+  const renderSpecItem = (label: string, value: any, suffix?: string) => {
+    if (value === null || value === undefined || value === '') return null;
+    return (
+      <View style={styles.specItem}>
+        <Text style={styles.specLabel}>{label}:</Text>
+        <Text style={styles.specValue}>{String(value)}{suffix ? ` ${suffix}` : ''}</Text>
+      </View>
+    );
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -405,6 +416,51 @@ export default function ProductScreen() {
               )}
             </View>
           )}
+
+          {/* Show all specs fields in a smart, clean, and category-adaptive way */}
+          {(() => {
+            const specs = (() => {
+              switch (product.category) {
+                case 'Ring': return product.ring_specs?.[0];
+                case 'Bracelet': return product.bracelet_specs?.[0];
+                case 'Necklace': return product.necklace_specs?.[0];
+                case 'Earrings': return product.earring_specs?.[0];
+                case 'Special pieces': return product.special_piece_specs?.[0];
+                case 'Watches': return product.watch_specs?.[0];
+                case 'Gems': return product.gem_specs?.[0];
+                default: return undefined;
+              }
+            })();
+            if (!specs) return null;
+            return (
+              <View style={styles.specsContainer}>
+                {/* Universal fields */}
+                {renderSpecItem('Brand', specs.brand)}
+                {renderSpecItem('Model', specs.model)}
+                {renderSpecItem('Type', specs.type)}
+                {renderSpecItem('Origin', specs.origin)}
+                {renderSpecItem('Material', specs.material)}
+                {renderSpecItem('Weight', specs.weight, 'ct')}
+                {renderSpecItem('Size', specs.size)}
+                {renderSpecItem('Length', specs.length)}
+                {renderSpecItem('Diameter', specs.diameter)}
+                {/* Gold-specific fields */}
+                {specs.material === 'gold' && renderSpecItem('Gold Karat', specs.gold_karat)}
+                {specs.material === 'gold' && renderSpecItem('Gold Color', specs.gold_color)}
+                {/* Diamond-specific fields */}
+                {specs.has_diamond === true && renderSpecItem('Diamond Weight', specs.diamond_weight, 'ct')}
+                {specs.has_diamond === true && renderSpecItem('Cut Grade', specs.cut_grade)}
+                {specs.has_diamond === true && renderSpecItem('Certification', specs.certification)}
+                {/* Side stones */}
+                {specs.has_side_stones === true && renderSpecItem('Side Stones Details', specs.side_stones_details)}
+                {/* Gem fields */}
+                {renderSpecItem('Clarity', specs.clarity)}
+                {renderSpecItem('Color', specs.color)}
+                {/* Watches-specific fields */}
+                {/* Add more watch-specific fields here if needed */}
+              </View>
+            );
+          })()}
 
           {product.description && (
             <View style={styles.descriptionContainer}>

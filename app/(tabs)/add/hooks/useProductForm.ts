@@ -68,6 +68,7 @@ export default function useProductForm() {
   const { user, accessToken } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
+    subcategory: '',
     price: '',
     description: '',
     category: '',
@@ -428,7 +429,11 @@ export default function useProductForm() {
           product_id: product.id,
           material: dynamicFields.material,
           weight: dynamicFields.weight,
+          subcategory: formData.title,
         };
+        if (formData.subcategory) {
+          specsData.subcategory = formData.subcategory;
+        }
         if (dynamicFields.material === 'Gold') {
           specsData.gold_karat = dynamicFields.goldKarat;
           specsData.gold_color = dynamicFields.goldColor;
@@ -473,10 +478,7 @@ export default function useProductForm() {
       }
 
       // Success - reset form and navigate
-      await notifyMatchingUsersOnNewProduct({
-        ...product,
-        ...(dynamicFields || {}),
-      });
+      await notifyMatchingUsersOnNewProduct(product, accessToken || '');
       resetForm();
       router.replace('/');
     } catch (error) {
@@ -488,7 +490,7 @@ export default function useProductForm() {
   };
 
   const resetForm = () => {
-    setFormData({ title: '', price: '', description: '', category: '' });
+    setFormData({ title: '', subcategory: '', price: '', description: '', category: '' });
     setDynamicFields({});
     setDynamicErrors({});
     setErrors({});
