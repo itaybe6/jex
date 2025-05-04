@@ -168,6 +168,7 @@ export default function useProductForm() {
   // Validation (simplified for brevity)
   const validate = () => {
     const newErrors: Record<string, boolean> = {};
+    const newDynamicErrors: Record<string, boolean> = {};
     
     if (!formData.category) newErrors.category = true;
     if (!formData.price) newErrors.price = true;
@@ -178,73 +179,80 @@ export default function useProductForm() {
     }
 
     if (formData.category === 'Watches') {
-      if (!dynamicFields.brand) newErrors.brand = true;
-      if (!dynamicFields.model) newErrors.model = true;
+      if (!dynamicFields.brand) newDynamicErrors.brand = true;
+      if (!dynamicFields.model) newDynamicErrors.model = true;
       const diameter = Number(dynamicFields.diameter);
       if (!dynamicFields.diameter || isNaN(diameter) || diameter <= 0 || !(/^\d+(\.\d)?$/).test(dynamicFields.diameter)) {
-        newErrors.diameter = true;
+        newDynamicErrors.diameter = true;
       }
     } else if (formData.category === 'Gems') {
-      if (!dynamicFields.type) newErrors.type = true;
-      if (!dynamicFields.origin) newErrors.origin = true;
+      if (!dynamicFields.type) newDynamicErrors.type = true;
+      if (!dynamicFields.origin) newDynamicErrors.origin = true;
       if (!dynamicFields.weight || isNaN(Number(dynamicFields.weight)) || Number(dynamicFields.weight) <= 0) {
-        newErrors.weight = true;
+        newDynamicErrors.weight = true;
       }
-      if (!dynamicFields.shape) newErrors.shape = true;
-      if (!dynamicFields.clarity) newErrors.clarity = true;
-      if (!dynamicFields.dimensions) newErrors.dimensions = true;
+      if (!dynamicFields.shape) newDynamicErrors.shape = true;
+      if (!dynamicFields.clarity) newDynamicErrors.clarity = true;
+      if (!dynamicFields.dimensions) newDynamicErrors.dimensions = true;
       if (dynamicFields.hasCertification === 'true' && !dynamicFields.certification) {
-        newErrors.certification = true;
+        newDynamicErrors.certification = true;
       }
     } else if (formData.category === 'Rough Diamond') {
       if (!dynamicFields.weight || isNaN(Number(dynamicFields.weight)) || Number(dynamicFields.weight) <= 0) {
-        newErrors.weight = true;
+        newDynamicErrors.weight = true;
       }
-      if (!dynamicFields.clarity) newErrors.clarity = true;
-      if (!dynamicFields.color) newErrors.color = true;
+      if (!dynamicFields.clarity) newDynamicErrors.clarity = true;
+      if (!dynamicFields.color) newDynamicErrors.color = true;
     } else if (formData.category === 'Loose Diamond') {
       if (!dynamicFields.weight || isNaN(Number(dynamicFields.weight)) || Number(dynamicFields.weight) <= 0) {
-        newErrors.weight = true;
+        newDynamicErrors.weight = true;
       }
-      if (!dynamicFields.clarity) newErrors.clarity = true;
-      if (!dynamicFields.color) newErrors.color = true;
-      if (!dynamicFields.shape) newErrors.shape = true;
-      if (!dynamicFields.originType) newErrors.originType = true;
-      if (dynamicFields.shape === 'Round' && !dynamicFields.cut) newErrors.cut = true;
+      if (!dynamicFields.clarity) newDynamicErrors.clarity = true;
+      if (!dynamicFields.color) newDynamicErrors.color = true;
+      if (!dynamicFields.shape) newDynamicErrors.shape = true;
+      if (!dynamicFields.originType) newDynamicErrors.originType = true;
+      if (dynamicFields.shape === 'Round' && !dynamicFields.cut) newDynamicErrors.cut = true;
     } else {
       if (!formData.title) newErrors.title = true;
-      if (!dynamicFields.material) newErrors.material = true;
+      if (!dynamicFields.material) newDynamicErrors.material = true;
       if (dynamicFields.material === 'Gold') {
-        if (!dynamicFields.goldKarat) newErrors.goldKarat = true;
-        if (!dynamicFields.goldColor) newErrors.goldColor = true;
+        if (!dynamicFields.goldKarat) newDynamicErrors.goldKarat = true;
+        if (!dynamicFields.goldColor) newDynamicErrors.goldColor = true;
       }
       if (!dynamicFields.weight || isNaN(Number(dynamicFields.weight)) || Number(dynamicFields.weight) <= 0) {
-        newErrors.weight = true;
+        newDynamicErrors.weight = true;
       }
       if (hasDiamond) {
-        if (!dynamicFields.diamond_weight) newErrors.diamond_weight = true;
-        if (!dynamicFields.diamond_color) newErrors.diamond_color = true;
-        if (!dynamicFields.clarity) newErrors.clarity = true;
-        if (!dynamicFields.side_stones) newErrors.side_stones = true;
-        if (!dynamicFields.cut_grade) newErrors.cut_grade = true;
-        if (!dynamicFields.certification) newErrors.certification = true;
+        if (!dynamicFields.diamond_weight) newDynamicErrors.diamond_weight = true;
+        if (!dynamicFields.diamond_color) newDynamicErrors.diamond_color = true;
+        if (!dynamicFields.clarity) newDynamicErrors.clarity = true;
+        if (!dynamicFields.cut_grade) newDynamicErrors.cut_grade = true;
+        if (!dynamicFields.certification) newDynamicErrors.certification = true;
       }
       if (hasSideStones) {
-        if (!dynamicFields.side_stones_weight) newErrors.side_stones_weight = true;
-        if (!dynamicFields.side_stones_color) newErrors.side_stones_color = true;
-        if (!dynamicFields.side_stones_clarity) newErrors.side_stones_clarity = true;
+        if (!dynamicFields.side_stones_weight) newDynamicErrors.side_stones_weight = true;
+        if (!dynamicFields.side_stones_color) newDynamicErrors.side_stones_color = true;
+        if (!dynamicFields.side_stones_clarity) newDynamicErrors.side_stones_clarity = true;
       }
     }
 
     setErrors(newErrors);
-    setDynamicErrors(newErrors);
+    setDynamicErrors(newDynamicErrors);
     
-    return Object.keys(newErrors).length === 0;
+    const allErrorValues = [
+      ...Object.values(newErrors),
+      ...Object.values(newDynamicErrors)
+    ];
+    return !allErrorValues.some(v => v === true);
   };
 
   // Submit
   const handleSubmit = async () => {
-    if (!validate()) return;
+    console.log('--- Trying to submit product ---');
+    const isValid = validate();
+    console.log('Validation result:', isValid);
+    console.log('Errors:', errors, dynamicErrors);
+    if (!isValid) return;
     try {
       setLoading(true);
       
@@ -416,7 +424,7 @@ export default function useProductForm() {
           throw new Error(err);
         }
       } else {
-        const specsData: JewelrySpecsData = {
+        const specsData: Record<string, any> = {
           product_id: product.id,
           material: dynamicFields.material,
           weight: dynamicFields.weight,
@@ -426,13 +434,12 @@ export default function useProductForm() {
           specsData.gold_color = dynamicFields.goldColor;
         }
         if (hasDiamond) {
-          specsData.diamond_details = {
-            weight: dynamicFields.diamond_weight,
-            color: dynamicFields.diamond_color,
-            clarity: dynamicFields.clarity,
-            cut_grade: dynamicFields.cut_grade,
-            certification: dynamicFields.certification
-          };
+          specsData.has_diamond = true;
+          specsData.diamond_weight = dynamicFields.diamond_weight;
+          specsData.clarity = dynamicFields.clarity;
+          specsData.color = dynamicFields.diamond_color;
+          specsData.cut_grade = dynamicFields.cut_grade;
+          specsData.certification = dynamicFields.certification;
         }
         if (hasSideStones) {
           specsData.side_stones_details = {

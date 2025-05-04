@@ -92,7 +92,6 @@ export default function ProfileScreen() {
   const fetchProfile = async () => {
     try {
       if (!user) return;
-      console.log('user:', user);
 
       // Get profile data
       const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&select=*`, {
@@ -146,7 +145,6 @@ export default function ProfileScreen() {
       });
       if (!res.ok) throw new Error('Error fetching products');
       const data = await res.json();
-      console.log('Fetched products:', data); // DEBUG: print all products with images
       // Group products by category
       const grouped = (data || []).reduce((acc: ProductsByCategory, product: Product) => {
         if (!acc[product.category]) {

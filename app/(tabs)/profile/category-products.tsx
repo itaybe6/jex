@@ -80,8 +80,8 @@ export default function CategoryProductsScreen() {
         style={styles.card}
         activeOpacity={0.85}
         onPress={() => router.push({
-          pathname: '/profile/product/' + item.id,
-          params: { userId }
+          pathname: '/profile/product/[id]',
+          params: { id: item.id, userId }
         })}
       >
         <Image source={{ uri: imageUrl }} style={styles.productImage} />
