@@ -5,6 +5,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
 import { Ionicons } from '@expo/vector-icons';
 import { RefreshControl } from 'react-native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 
 import FilterModal from '../../components/FilterModal';
 import { StatusBar } from 'expo-status-bar';
@@ -211,6 +212,8 @@ const ROUTES = {
 } as const;
 
 export default function HomeScreen() {
+  const navigation = useNavigation();
+  const isFocused = useIsFocused();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -247,25 +250,15 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    if (accessToken) {
+    if (accessToken && isFocused) {
       fetchProducts();
       fetchRequests();
       fetchTopSellers();
     }
-  }, [accessToken]);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      console.log('HomeScreen focused, fetching products...');
-      fetchProducts();
-      fetchRequests();
-      fetchTopSellers();
-    }, [])
-  );
+  }, [accessToken, isFocused]);
 
   const fetchProducts = async () => {
     try {
-      setProductsByCategory({});
       const query = [
         '*',
         'profiles!products_user_id_fkey(id,full_name,avatar_url)',
