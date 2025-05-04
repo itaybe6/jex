@@ -136,7 +136,7 @@ export default function ProfileScreen() {
     try {
       if (!user) return;
 
-      const query = '* , product_images(id,image_url)';
+      const query = '*,product_images:product_images_product_id_fkey(id,image_url)';
       const url = `${SUPABASE_URL}/rest/v1/products?user_id=eq.${user.id}&select=${encodeURIComponent(query)}&order=created_at.desc`;
       const res = await fetch(url, {
         headers: {
@@ -146,6 +146,7 @@ export default function ProfileScreen() {
       });
       if (!res.ok) throw new Error('Error fetching products');
       const data = await res.json();
+      console.log('Fetched products:', data); // DEBUG: print all products with images
       // Group products by category
       const grouped = (data || []).reduce((acc: ProductsByCategory, product: Product) => {
         if (!acc[product.category]) {
