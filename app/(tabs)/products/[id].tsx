@@ -56,15 +56,19 @@ export default function ProductScreen() {
 
   const fetchProduct = async () => {
     try {
-      // שלב 1: שלוף את המוצר עם joins (שימוש ב-profiles!user_id)
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${id}&select=*,profiles!user_id(id,full_name,avatar_url,phone),product_images(image_url),ring_specs(*),necklace_specs(*),bracelet_specs(*),earring_specs(*),watch_specs(*),gem_specs(*),special_piece_specs(*)`, {
+      // שלב 1: שלוף את המוצר עם joins (שימוש ב-profiles!products_user_id_fkey)
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${id}&select=*,profiles!products_user_id_fkey(id,full_name,avatar_url,phone),product_images(image_url),ring_specs(*),necklace_specs(*),bracelet_specs(*),earring_specs(*),watch_specs(*),gem_specs(*),special_piece_specs(*)`, {
         headers: {
           apikey: SUPABASE_ANON_KEY!,
           Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
         },
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const err = await res.text();
+        console.error('Fetch error:', err);
+        throw new Error(err);
+      }
       const arr = await res.json();
       if (!arr || !arr[0]) {
         showAlert('שגיאה', 'המוצר לא נמצא');

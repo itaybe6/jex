@@ -92,6 +92,7 @@ export default function ProfileScreen() {
   const fetchProfile = async () => {
     try {
       if (!user) return;
+      console.log('user:', user);
 
       // Get profile data
       const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&select=*`, {
@@ -100,7 +101,11 @@ export default function ProfileScreen() {
           Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
         },
       });
-      if (!profileRes.ok) throw new Error('Error fetching profile');
+      if (!profileRes.ok) {
+        const err = await profileRes.text();
+        console.error('Profile fetch error:', err);
+        throw new Error('Error fetching profile');
+      }
       const profileArr = await profileRes.json();
       const profileData = profileArr[0];
 
@@ -111,7 +116,11 @@ export default function ProfileScreen() {
           Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
         },
       });
-      if (!txRes.ok) throw new Error('Error fetching transactions');
+      if (!txRes.ok) {
+        const err = await txRes.text();
+        console.error('Transactions fetch error:', err);
+        throw new Error('Error fetching transactions');
+      }
       const transactionsCount = await txRes.json();
 
       setProfile({

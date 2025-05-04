@@ -136,9 +136,7 @@ export default function NotificationsScreen() {
   };
 
   const handleDealAction = async (notification: Notification, approve: boolean) => {
-    console.log('handleDealAction called');
-    console.log('user:', user);
-    console.log('notification:', notification);
+    
     const buyer_id = notification.user_id;
     console.log('buyer_id:', buyer_id, 'seller_id:', notification.data?.seller_id, 'user.id:', user?.id, 'transaction_id:', notification.data?.transaction_id);
     setActionLoading(notification.id);

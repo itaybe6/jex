@@ -134,9 +134,9 @@ export default function AddRequestScreen() {
           Prefer: 'return=representation',
         },
         body: JSON.stringify({
-          user_id: user?.id,
-          category,
-          details,
+        user_id: user?.id,
+        category,
+        details,
         })
       });
       if (!res.ok) {

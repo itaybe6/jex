@@ -106,6 +106,13 @@ export default function TabLayout() {
             header: () => null
           }}
         />
+        <Tabs.Screen
+          name="user/[id]/products"
+          options={{
+  
+              href: null
+          }}
+        />
       </Tabs>
     </SafeAreaView>
   );

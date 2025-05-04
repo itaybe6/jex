@@ -123,7 +123,7 @@ export default function ProductScreen() {
       const productRes = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${id}&select=${encodeURIComponent(selectQuery)}`, {
         headers: {
           apikey: SUPABASE_ANON_KEY!,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
         },
       });
@@ -358,6 +358,24 @@ export default function ProductScreen() {
         <View style={styles.detailsContainer}>
           <Text style={styles.price}>${product.price?.toLocaleString()}</Text>
           <Text style={styles.category}>{product.category}</Text>
+
+          {/* Seller Info */}
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: '#fff',
+            borderRadius: 12,
+            padding: 12,
+            marginBottom: 16,
+          }}>
+            <Image
+              source={{ uri: product.profiles?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }}
+              style={{ width: 40, height: 40, borderRadius: 20, marginRight: 12, backgroundColor: '#eee' }}
+            />
+            <Text style={{ color: '#222', fontWeight: 'bold', fontSize: 16 }}>
+              {product.profiles?.full_name || 'Seller'}
+            </Text>
+          </View>
 
           {product.details && (
             <View style={styles.specsContainer}>

@@ -258,7 +258,7 @@ export default function HomeScreen() {
     try {
       const query = [
         '*',
-        'profiles!products_user_id_fkey(full_name,avatar_url)',
+        'profiles!products_user_id_fkey(id,full_name,avatar_url)',
         'product_images(image_url)',
         'ring_specs!ring_specs_product_id_fkey(*)',
         'necklace_specs!necklace_specs_product_id_fkey(*)',
@@ -279,13 +279,13 @@ export default function HomeScreen() {
       if (!res.ok) throw new Error('Error fetching products');
       const products = await res.json();
       // Group products by category
-      const grouped = (products || []).reduce<ProductsByCategory>((acc, product) => {
+      const grouped = (products || []).reduce((acc: ProductsByCategory, product: Product) => {
         if (!acc[product.category]) {
           acc[product.category] = [];
         }
         acc[product.category].push(product);
         return acc;
-      }, {});
+      }, {} as ProductsByCategory);
       setProductsByCategory(grouped);
       setLoading(false);
     } catch (error) {

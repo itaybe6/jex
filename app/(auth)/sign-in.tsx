@@ -192,7 +192,7 @@ export default function SignInOld() {
           const userData = await userRes.json();
           const userId = userData.id || userData.sub;
           if (userId) {
-            router.replace({ pathname: '/user/[id]', params: { id: userId } });
+            router.replace('/(tabs)');
           } else {
             setMode('confirmation');
             setConfirmationMessage('A verification email has been sent. Please verify your email to continue.');
@@ -221,7 +221,7 @@ export default function SignInOld() {
           const userData = await userRes.json();
           const userId = userData.id || userData.sub;
           if (userId) {
-            router.replace({ pathname: '/user/[id]', params: { id: userId } });
+            router.replace('/(tabs)');
           }
         }
       }
