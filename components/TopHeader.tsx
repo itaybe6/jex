@@ -2,15 +2,17 @@ import { View, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
 
 export function TopHeader() {
   return (
-    <SafeAreaView style={{ backgroundColor: '#0E2657' }} edges={['top', 'left', 'right']}>
-      <View style={styles.header}>
-        <Image source={require('@/assets/images/new whote head-05.png')} style={styles.logoImg} resizeMode="contain" />
+    <SafeAreaView style={{ backgroundColor: '#F5F8FC' }} edges={['top', 'left', 'right']}>
+      <StatusBar style="dark" backgroundColor="#F5F8FC" />
+      <View style={[styles.header, { backgroundColor: '#F5F8FC', shadowColor: 'transparent', borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}>
+        <Image source={require('@/assets/images/logo b-03.png')} style={styles.logoImg} resizeMode="contain" />
         <Link href="/notifications" asChild>
           <TouchableOpacity style={styles.iconButton}>
-            <Ionicons name="notifications-outline" size={26} color="#fff" />
+            <Ionicons name="notifications-outline" size={26} color="#0E2657" />
           </TouchableOpacity>
         </Link>
       </View>

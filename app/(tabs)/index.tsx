@@ -437,22 +437,20 @@ export default function HomeScreen() {
                 resizeMode="cover"
               />
               <View style={styles.productInfo}>
-                <Text style={styles.productTitle} numberOfLines={2}>
-                  {product.title}
-                </Text>
-                <Text style={styles.productPrice}>₪{product.price.toLocaleString()}</Text>
-                <View style={styles.sellerInfo}>
-                  <Image 
-                    source={{ 
-                      uri: product.profiles?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' 
-                    }} 
-                    style={styles.avatar} 
-                  />
-                  <Text style={styles.sellerName}>{product.profiles?.full_name}</Text>
+                <View style={styles.productTitleRow}>
+                  <Text style={styles.productTitle} numberOfLines={2}>{product.title}</Text>
+                  <Text style={styles.productPrice}>₪{product.price.toLocaleString()}</Text>
                 </View>
-                <Text style={styles.timeAgo}>
-                  {formatTimeAgo(product.created_at)}
-                </Text>
+                <View style={styles.productMetaRow}>
+                  <View style={styles.sellerInfo}>
+                    <Image 
+                      source={{ uri: product.profiles?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }} 
+                      style={styles.avatar} 
+                    />
+                    <Text style={styles.sellerName}>{product.profiles?.full_name}</Text>
+                  </View>
+                  <Text style={styles.timeAgo}>{formatTimeAgo(product.created_at)}</Text>
+                </View>
               </View>
             </TouchableOpacity>
           );
@@ -827,7 +825,7 @@ export default function HomeScreen() {
               style={styles.filterButton}
               onPress={() => setShowFilterModal(true)}
             >
-              <Ionicons name="filter" size={24} color="#fff" />
+              <Ionicons name="filter" size={24} color="#0E2657" />
             </TouchableOpacity>
       </View>
         </View>
@@ -856,10 +854,10 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#F5F8FC',
   },
   safeArea: {
-    backgroundColor: '#121212',
+    backgroundColor: '#F5F8FC',
   },
   header: {
     flexDirection: 'row',
@@ -867,7 +865,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 12,
-    backgroundColor: '#121212',
+    backgroundColor: '#F5F8FC',
   },
   headerButtons: {
     flex: 1,
@@ -877,7 +875,7 @@ const styles = StyleSheet.create({
   },
   tabButtons: {
     flexDirection: 'row',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#E3EAF3',
     borderRadius: 100,
     padding: 4,
   },
@@ -885,22 +883,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 100,
+    backgroundColor: '#E3EAF3',
   },
   tabButtonActive: {
-    backgroundColor: '#fff',
+    backgroundColor: '#0E2657',
   },
   tabButtonText: {
-    color: '#888',
-    fontFamily: 'Heebo-Medium',
+    color: '#0E2657',
+    fontFamily: 'Montserrat-Medium',
     fontSize: 14,
   },
   tabButtonTextActive: {
-    color: '#000',
+    color: '#fff',
+    fontFamily: 'Montserrat-Bold',
   },
   filterButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: '#2a2a2a',
+    backgroundColor: 'transparent',
     position: 'absolute',
     right: 8,
   },
@@ -908,27 +908,27 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#121212',
+    backgroundColor: '#F5F8FC',
   },
   loadingText: {
     fontSize: 16,
-    fontFamily: 'Heebo-Regular',
-    color: '#fff',
+    fontFamily: 'Montserrat-Regular',
+    color: '#0E2657',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#121212',
+    backgroundColor: '#F5F8FC',
   },
   emptyText: {
     fontSize: 16,
-    fontFamily: 'Heebo-Regular',
-    color: '#fff',
+    fontFamily: 'Montserrat-Regular',
+    color: '#0E2657',
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#F5F8FC',
   },
   categorySection: {
     marginBottom: 24,
@@ -946,7 +946,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   gridItem: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#fff',
     borderRadius: 16,
     marginBottom: 10,
     shadowColor: '#000',
@@ -954,9 +954,9 @@ const styles = StyleSheet.create({
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
     overflow: 'hidden',
   },
   gridItemImage: {
@@ -1045,22 +1045,23 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     marginRight: 6,
+    backgroundColor: '#E3EAF3',
   },
   sellerName: {
     fontSize: 12,
-    color: '#ccc',
-    fontFamily: 'Heebo-Regular',
+    color: '#0E2657',
+    fontFamily: 'Montserrat-Regular',
   },
   timeAgo: {
     fontSize: 12,
-    fontFamily: 'Heebo-Regular',
-    color: '#888',
+    fontFamily: 'Montserrat-Regular',
+    color: '#7B8CA6',
   },
   requestsContainer: {
     padding: 16,
   },
   requestCard: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -1074,12 +1075,12 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 18,
     color: '#6C5CE7',
-    fontFamily: 'Heebo-Bold',
+    fontFamily: 'Montserrat-Bold',
   },
   requestTitle: {
     fontSize: 18,
-    color: '#fff',
-    fontFamily: 'Heebo-Bold',
+    color: '#0E2657',
+    fontFamily: 'Montserrat-Bold',
     marginBottom: 12,
   },
   specsList: {
@@ -1090,9 +1091,9 @@ const styles = StyleSheet.create({
   },
   specsItem: {
     fontSize: 14,
-    color: '#fff',
-    fontFamily: 'Heebo-Regular',
-    backgroundColor: '#2a2a2a',
+    color: '#0E2657',
+    fontFamily: 'Montserrat-Regular',
+    backgroundColor: '#E3EAF3',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
@@ -1106,7 +1107,7 @@ const styles = StyleSheet.create({
   respondButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontFamily: 'Heebo-Medium',
+    fontFamily: 'Montserrat-Medium',
   },
   modalContainer: {
     flex: 1,
@@ -1114,7 +1115,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#111',
+    backgroundColor: '#fff',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: '80%',
@@ -1125,12 +1126,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: '#E3EAF3',
   },
   modalTitle: {
     fontSize: 20,
-    fontFamily: 'Heebo-Bold',
-    color: '#fff',
+    fontFamily: 'Montserrat-Bold',
+    color: '#0E2657',
   },
   modalBody: {
     padding: 16,
@@ -1138,7 +1139,7 @@ const styles = StyleSheet.create({
   userInfoModal: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#222',
+    backgroundColor: '#E3EAF3',
     padding: 12,
     borderRadius: 12,
     marginBottom: 16,
@@ -1148,25 +1149,26 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     marginRight: 12,
+    backgroundColor: '#E3EAF3',
   },
   userNameModal: {
     fontSize: 16,
-    fontFamily: 'Heebo-Bold',
-    color: '#fff',
+    fontFamily: 'Montserrat-Bold',
+    color: '#0E2657',
     marginBottom: 4,
   },
   timeAgoModal: {
     fontSize: 14,
-    fontFamily: 'Heebo-Regular',
-    color: '#666',
+    fontFamily: 'Montserrat-Regular',
+    color: '#7B8CA6',
   },
   detailSection: {
     marginBottom: 24,
   },
   detailTitle: {
     fontSize: 18,
-    fontFamily: 'Heebo-Bold',
-    color: '#fff',
+    fontFamily: 'Montserrat-Bold',
+    color: '#0E2657',
     marginBottom: 12,
   },
   detailRow: {
@@ -1175,22 +1177,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: '#E3EAF3',
   },
   detailLabel: {
     fontSize: 16,
-    fontFamily: 'Heebo-Regular',
-    color: '#666',
+    fontFamily: 'Montserrat-Regular',
+    color: '#7B8CA6',
   },
   detailValue: {
     fontSize: 16,
-    fontFamily: 'Heebo-Medium',
-    color: '#fff',
+    fontFamily: 'Montserrat-Medium',
+    color: '#0E2657',
   },
   topSellersSection: {
     paddingTop: 4,
     paddingBottom: 0,
-    backgroundColor: '#121212',
+    backgroundColor: '#F5F8FC',
   },
   topSellersList: {
     paddingHorizontal: 16,
@@ -1208,7 +1210,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#E3EAF3',
     borderWidth: 2,
     borderColor: '#6C5CE7',
   },
@@ -1223,65 +1225,99 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#121212',
+    borderColor: '#F5F8FC',
   },
   trustCount: {
     color: '#fff',
     fontSize: 12,
-    fontFamily: 'Heebo-Bold',
+    fontFamily: 'Montserrat-Bold',
   },
   topSellerName: {
-    color: '#fff',
+    color: '#0E2657',
     fontSize: 12,
-    fontFamily: 'Heebo-Medium',
+    fontFamily: 'Montserrat-Medium',
     textAlign: 'center',
   },
   productsGrid: {
     padding: 16,
   },
   productItem: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 16,
-    marginBottom: 10,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    marginBottom: 24,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
     overflow: 'hidden',
+    padding: 0,
   },
   productImage: {
     width: '100%',
-    height: 180,
-    resizeMode: 'cover',
+    height: 270,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    backgroundColor: '#E3EAF3',
   },
   productInfo: {
-    padding: 8,
-    backgroundColor: '#1a1a1a',
+    padding: 16,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  productTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 6,
   },
   productTitle: {
-    fontSize: 15,
-    fontFamily: 'Heebo-Medium',
-    color: '#fff',
-    marginBottom: 6,
-    lineHeight: 20,
+    fontSize: 17,
+    fontFamily: 'Montserrat-Bold',
+    color: '#0E2657',
+    textAlign: 'left',
+    flex: 1,
   },
   productPrice: {
-    fontSize: 16,
-    fontFamily: 'Heebo-Bold',
-    color: '#6C5CE7',
+    fontSize: 17,
+    fontFamily: 'Montserrat-Bold',
+    color: '#0E2657',
+    textAlign: 'right',
+    marginLeft: 12,
+  },
+  productMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 2,
+    marginBottom: 0,
   },
   sellerInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginBottom: 4,
   },
-  userName: {
-    fontSize: 14,
-    fontFamily: 'Heebo-Medium',
-    color: '#fff',
+  avatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    marginRight: 8,
+    backgroundColor: '#E3EAF3',
+  },
+  sellerName: {
+    fontSize: 13,
+    color: '#0E2657',
+    fontFamily: 'Montserrat-Regular',
+    marginRight: 8,
+    textAlign: 'left',
+  },
+  timeAgo: {
+    fontSize: 12,
+    fontFamily: 'Montserrat-Regular',
+    color: '#7B8CA6',
+    textAlign: 'left',
+    marginTop: 2,
   },
 });
