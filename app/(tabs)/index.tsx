@@ -566,7 +566,7 @@ export default function HomeScreen() {
                   style={styles.avatar} 
                 />
                 <View>
-                  <Text style={styles.userName}>{request.profiles.full_name}</Text>
+                  <Text style={styles.sellerName}>{request.profiles.full_name}</Text>
                   <Text style={styles.timeAgo}>{formatTimeAgo(request.created_at)}</Text>
         </View>
               </View>
@@ -1040,23 +1040,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   },
-  avatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    marginRight: 6,
-    backgroundColor: '#E3EAF3',
-  },
-  sellerName: {
-    fontSize: 12,
-    color: '#0E2657',
-    fontFamily: 'Montserrat-Regular',
-  },
-  timeAgo: {
-    fontSize: 12,
-    fontFamily: 'Montserrat-Regular',
-    color: '#7B8CA6',
-  },
+  avatar: { width: 28, height: 28, borderRadius: 14, marginRight: 8, backgroundColor: '#E3EAF3' },
+  sellerName: { fontSize: 13, color: '#0E2657', fontFamily: 'Montserrat-Regular' },
+  timeAgo: { fontSize: 12, fontFamily: 'Montserrat-Regular', color: '#7B8CA6' },
   requestsContainer: {
     padding: 16,
   },
@@ -1298,26 +1284,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
-  },
-  avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    marginRight: 8,
-    backgroundColor: '#E3EAF3',
-  },
-  sellerName: {
-    fontSize: 13,
-    color: '#0E2657',
-    fontFamily: 'Montserrat-Regular',
-    marginRight: 8,
-    textAlign: 'left',
-  },
-  timeAgo: {
-    fontSize: 12,
-    fontFamily: 'Montserrat-Regular',
-    color: '#7B8CA6',
-    textAlign: 'left',
-    marginTop: 2,
   },
 });
