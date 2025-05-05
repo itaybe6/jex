@@ -213,7 +213,7 @@ export default function UserProfileScreen() {
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/products?select=id,title,price,image_url,category&user_id=eq.${userId}&order=created_at.desc`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/products?select=id,title,price,category,product_images(image_url)&user_id=eq.${userId}&order=created_at.desc`, {
         headers: {
           apikey: SUPABASE_ANON_KEY!,
           Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
@@ -222,10 +222,12 @@ export default function UserProfileScreen() {
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
-      // קיבוץ לפי קטגוריה
-      const grouped = (data || []).reduce((acc: ProductsByCategory, product: Product) => {
+      // קיבוץ לפי קטגוריה, עם תמונה ראשית מהמוצר
+      const grouped = (data || []).reduce((acc: ProductsByCategory, product: any) => {
+        const image_url = product.product_images?.[0]?.image_url || null;
+        const productWithImage = { ...product, image_url };
         if (!acc[product.category]) acc[product.category] = [];
-        acc[product.category].push(product);
+        acc[product.category].push(productWithImage);
         return acc;
       }, {} as ProductsByCategory);
       setProductsByCategory(grouped);
@@ -239,7 +241,7 @@ export default function UserProfileScreen() {
   const fetchUserRequests = async () => {
     setLoadingRequests(true);
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/diamond_requests?user_id=eq.${userId}&order=created_at.desc`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/requests?user_id=eq.${userId}&order=created_at.desc`, {
         headers: {
           apikey: SUPABASE_ANON_KEY!,
           Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
@@ -293,7 +295,7 @@ export default function UserProfileScreen() {
       onPress={() => router.push({ pathname: '/products/[id]', params: { id: product.id, userId } })}
     >
       <Image 
-        source={{ uri: product.image_url }} 
+        source={{ uri: product.image_url || 'https://via.placeholder.com/150?text=No+Image' }} 
         style={styles.gridImage}
         resizeMode="cover"
       />
@@ -310,16 +312,36 @@ export default function UserProfileScreen() {
       <View style={styles.gridContainer}>
         {products.map(product => renderProductItem(product))}
       </View>
+      {products.length > 3 && (
+        <TouchableOpacity
+          onPress={() => router.push({
+            pathname: '/(tabs)/profile/category-products',
+            params: { category, userId }
+          })}
+          style={styles.showMoreButton}
+        >
+          <Text style={styles.showMoreText}>Show More</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
   const fetchSoldCount = async () => {
-    // const { count, error } = await supabase
-    //   .from('transactions')
-    //   .select('*', { count: 'exact', head: true })
-    //   .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`)
-    //   .eq('status', 'completed');
-    // if (!error) setSoldCount(count || 0);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/transactions?select=id&or=(seller_id.eq.${userId},buyer_id.eq.${userId})&status=eq.completed`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setSoldCount(Array.isArray(data) ? data.length : 0);
+    } catch (error) {
+      setSoldCount(0);
+      console.error('Error fetching sold count:', error);
+    }
   };
 
   if (loading || !profile) {
@@ -346,11 +368,10 @@ export default function UserProfileScreen() {
         ) : (
           <View style={[styles.avatar, styles.defaultAvatar]}>
             <Ionicons name="person" size={50} color="#666" />
-        </View>
+          </View>
         )}
         <Text style={styles.name}>{profile?.full_name}</Text>
         {profile?.title && <Text style={styles.title}>{profile.title}</Text>}
-        
         <View style={styles.statsContainer}>
           <TouchableOpacity
             style={styles.statItem}
@@ -368,33 +389,30 @@ export default function UserProfileScreen() {
             <Text style={styles.statLabel}>Transactions</Text>
           </View>
         </View>
-
         <View style={styles.actionsContainer}>
           {user?.id !== userId && (
-          <TouchableOpacity 
+            <TouchableOpacity 
               style={[styles.actionButton, hasTrusted && styles.actionButtonActive]}
-            onPress={handleTrustMark}
-            disabled={trustLoading}
-          >
+              onPress={handleTrustMark}
+              disabled={trustLoading}
+            >
               <Ionicons name="shield-checkmark-outline" size={20} color={hasTrusted ? '#fff' : '#007AFF'} />
               <Text style={[styles.actionButtonText, hasTrusted && styles.actionButtonTextActive]}>
-              {hasTrusted ? 'Trusted' : 'Mark as Trusted'}
-            </Text>
-          </TouchableOpacity>
-        )}
-
+                {hasTrusted ? 'Trusted' : 'Mark as Trusted'}
+              </Text>
+            </TouchableOpacity>
+          )}
           {profile?.phone && (
-          <TouchableOpacity 
+            <TouchableOpacity 
               style={[styles.actionButton, styles.whatsappButton]}
               onPress={handleWhatsAppPress}
-          >
+            >
               <Ionicons name="chatbubble-outline" size={20} color="#fff" />
               <Text style={[styles.actionButtonText, styles.whatsappButtonText]}>
                 WhatsApp
-            </Text>
-          </TouchableOpacity>
+              </Text>
+            </TouchableOpacity>
           )}
-
           {profile?.website && (
             <TouchableOpacity style={styles.actionButton} onPress={handleWebsitePress}>
               <Ionicons name="link-outline" size={20} color="#007AFF" />
@@ -402,10 +420,8 @@ export default function UserProfileScreen() {
             </TouchableOpacity>
           )}
         </View>
-
         {profile?.bio && <Text style={styles.bio}>{profile.bio}</Text>}
       </View>
-
       <View style={styles.catalogSection}>
         <View style={styles.tabButtonsRow}>
           <TouchableOpacity
@@ -464,7 +480,6 @@ export default function UserProfileScreen() {
           </View>
         )}
       </View>
-
       <Modal
         visible={showTrustMarks}
         animationType="slide"
@@ -482,7 +497,6 @@ export default function UserProfileScreen() {
                 <Ionicons name="close" size={24} color="#000" />
               </TouchableOpacity>
             </View>
-
             {loadingTrustMarks ? (
               <View style={styles.modalLoadingContainer}>
                 <Text style={styles.modalLoadingText}>Loading...</Text>
@@ -614,7 +628,7 @@ const styles = StyleSheet.create({
   catalogSection: {
     paddingHorizontal: 20,
     paddingTop: 0,
-    marginTop: -70,  // הוספה!
+    marginTop: 20,  // הוספה!
 
     borderTopWidth: 0.5,
     borderTopColor: '#2a2a2a',
@@ -861,5 +875,17 @@ const styles = StyleSheet.create({
     fontFamily: 'Heebo-Regular',
     marginTop: 12,
     textAlign: 'center',
+  },
+  showMoreButton: {
+    padding: 10,
+    backgroundColor: '#6C5CE7',
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  showMoreText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Heebo-Medium',
   },
 });

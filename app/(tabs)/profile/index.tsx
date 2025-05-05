@@ -333,16 +333,17 @@ export default function ProfileScreen() {
             </View>
           ))}
         </View>
-        
-        <TouchableOpacity
-          onPress={() => router.push({
-            pathname: '/(tabs)/profile/category-products',
-            params: { category, userId: user?.id }
-          })}
-          style={styles.showMoreButton}
-        >
-          <Text style={styles.showMoreText}>Show More</Text>
-        </TouchableOpacity>
+        {products.length > 3 && (
+          <TouchableOpacity
+            onPress={() => router.push({
+              pathname: '/(tabs)/profile/category-products',
+              params: { category, userId: user?.id }
+            })}
+            style={styles.showMoreButton}
+          >
+            <Text style={styles.showMoreText}>Show More</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
