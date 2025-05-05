@@ -289,6 +289,7 @@ export default function ProductScreen() {
     }
   };
 
+  console.log('product: 2222222222222222222222222222', product);
   // Helper function to render a spec item if value is valid
   const renderSpecItem = (label: string, value: any, suffix?: string) => {
     if (value === null || value === undefined || value === '') return null;

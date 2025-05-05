@@ -310,14 +310,22 @@ export default function UserProfileScreen() {
     <View key={category} style={styles.categorySection}>
       <Text style={styles.categoryTitle}>{category}</Text>
       <View style={styles.gridContainer}>
-        {products.map(product => renderProductItem(product))}
+        {products.slice(0, 3).map(product => renderProductItem(product))}
       </View>
       {products.length > 3 && (
         <TouchableOpacity
-          onPress={() => router.push({
-            pathname: '/(tabs)/profile/category-products',
-            params: { category, userId }
-          })}
+          onPress={() => {
+            let backPath = '';
+            if (userId === user?.id) {
+              backPath = '/(tabs)/profile';
+            } else {
+              backPath = `/user/${userId}`;
+            }
+            router.push({
+              pathname: '/(tabs)/category-products',
+              params: { category, userId, backPath }
+            });
+          }}
           style={styles.showMoreButton}
         >
           <Text style={styles.showMoreText}>Show More</Text>

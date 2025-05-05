@@ -115,6 +115,12 @@ export default function TabLayout() {
               href: null
           }}
         />
+        <Tabs.Screen
+          name="category-products"
+          options={{
+            href: null
+          }}
+        />
       </Tabs>
     </SafeAreaView>
   );

@@ -30,7 +30,7 @@ const CATEGORY_SPECS_MAP: Record<string, string> = {
 };
 
 export default function CategoryProductsScreen() {
-  const { category, userId } = useLocalSearchParams();
+  const { category, userId, backPath } = useLocalSearchParams();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -172,7 +172,13 @@ export default function CategoryProductsScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F5F8FC' }}>
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backButton} onPress={() => {
+           if (typeof backPath === 'string') {
+            router.replace(backPath as any);
+          } else {
+            router.back();
+          }
+          }}>
             <Ionicons name="arrow-back" size={24} color="#0E2657" />
           </TouchableOpacity>
           <Text style={styles.header}>{category}</Text>
