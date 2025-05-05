@@ -336,8 +336,8 @@ export default function ProfileScreen() {
         {products.length > 3 && (
           <TouchableOpacity
             onPress={() => router.push({
-              pathname: '/(tabs)/profile/category-products',
-              params: { category, userId: user?.id }
+              pathname: '/(tabs)/category-products',
+              params: { category, userId: user?.id, backPath: '/(tabs)/profile' }
             })}
             style={styles.showMoreButton}
           >
