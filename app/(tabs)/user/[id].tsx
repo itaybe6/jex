@@ -292,7 +292,7 @@ export default function UserProfileScreen() {
     <TouchableOpacity 
       key={product.id}
       style={styles.gridItem}
-      onPress={() => router.push({ pathname: '/products/[id]', params: { id: product.id, userId } })}
+      onPress={() => router.push({ pathname: '/(tabs)/products/[id]', params: { id: product.id, userId } })}
     >
       <Image 
         source={{ uri: product.image_url || 'https://via.placeholder.com/150?text=No+Image' }} 

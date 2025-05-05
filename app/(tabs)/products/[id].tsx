@@ -36,7 +36,12 @@ const CATEGORY_TO_SPECS_TABLE: { [key: string]: string } = {
   'watch': 'watch_specs',
   'watches': 'watch_specs',
   'gem': 'gem_specs',
-  'special_piece': 'special_piece_specs'
+  'gems': 'gem_specs',
+  'special_piece': 'special_piece_specs',
+  'special pieces': 'special_piece_specs',
+  'loose diamond': 'loose_diamonds_specs',
+  'loose diamonds': 'loose_diamonds_specs',
+  'rough diamond': 'rough_diamond_specs',
 };
 
 // Helper function to render a spec item if value is valid
@@ -51,6 +56,7 @@ const renderSpecItem = (label: string, value: any, suffix?: string) => {
 };
 
 export default function ProductScreen() {
+  console.log('PRODUCT PAGE LOADED: app/(tabs)/products/[id].tsx');
   const { id } = useLocalSearchParams();
   const { user, accessToken } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
@@ -69,7 +75,7 @@ export default function ProductScreen() {
   const fetchProduct = async () => {
     try {
       // שלב 1: שלוף את המוצר עם joins (שימוש ב-profiles!products_user_id_fkey)
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${id}&select=*,profiles!products_user_id_fkey(id,full_name,avatar_url,phone),product_images(image_url),ring_specs(*),necklace_specs(*),bracelet_specs(*),earring_specs(*),watch_specs(*),gem_specs(*),special_piece_specs(*)`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${id}&select=*,profiles!products_user_id_fkey(id,full_name,avatar_url,phone),product_images(image_url),ring_specs(*),necklace_specs(*),bracelet_specs(*),earring_specs(*),watch_specs(*),gem_specs(*),special_piece_specs(*),loose_diamonds_specs(*),rough_diamond_specs(*)`, {
         headers: {
           apikey: SUPABASE_ANON_KEY!,
           Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
@@ -89,9 +95,11 @@ export default function ProductScreen() {
       }
       const productData = arr[0];
       console.log('productData:', productData);
-      // שלב 2: קבע specs דינמי
       const category = (productData.category || '').toLowerCase();
+      console.log('category:', productData.category, '->', category);
       const specsTable = CATEGORY_TO_SPECS_TABLE[category];
+      console.log('specsTable:', specsTable);
+      console.log('productData[specsTable]:', productData[specsTable]);
       // Always treat as array
       const specsArray = Array.isArray(productData[specsTable])
         ? productData[specsTable]
@@ -101,7 +109,7 @@ export default function ProductScreen() {
         setProduct({ ...productData, specs: null } as Product);
       } else {
         const specs = specsArray[0];
-        console.log('[ProductSpecs] Loaded specs:', { category, specsTable, found: !!specs });
+        console.log('[ProductSpecs] Loaded specs:', { category, specsTable, found: !!specs, specs });
         setProduct({ ...productData, specs } as Product);
       }
       // שלב 3: קבע תמונות
@@ -233,6 +241,12 @@ export default function ProductScreen() {
         {render('Treatment Type', specs.treatment_type)}
         {render('Diamond Size From', specs.diamond_size_from)}
         {render('Diamond Size To', specs.diamond_size_to)}
+        {/* שדות ייחודיים ל-loose diamonds */}
+        {render('Shape', specs.shape)}
+        {render('Fluorescence', specs.fluorescence)}
+        {render('Polish', specs.polish)}
+        {render('Symmetry', specs.symmetry)}
+        {render('Origin Type', specs.origin_type)}
       </View>
     );
   };
