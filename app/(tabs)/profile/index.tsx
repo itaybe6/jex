@@ -507,31 +507,9 @@ export default function ProfileScreen() {
         {activeTab === 'catalog' && (
           totalProducts > 0 ? (
             <View style={styles.categoriesContainer}>
-              {Object.entries(productsByCategory).map(([category, products]) => (
-                <View key={category} style={styles.categorySection}>
-                  <View style={styles.categoryHeader}>
-                    <Text style={styles.categoryTitle}>{category}</Text>
-                    <Text style={styles.categoryCount}>{products.length} {products.length === 1 ? 'item' : 'items'}</Text>
-                  </View>
-                  <View style={styles.productsRow}>
-                    {products.map(product => {
-                      const imageUrl = product.product_images?.[0]?.image_url || 'https://via.placeholder.com/150';
-                      
-                      return (
-                        <TouchableOpacity
-                          key={product.id}
-                          style={styles.productCard}
-                          onPress={() => handleProductPress(product.id)}
-                        >
-                          <Image source={{ uri: imageUrl }} style={styles.productImage} resizeMode="cover" />
-                          <Text style={styles.productTitle} numberOfLines={2}>{product.title}</Text>
-                          <Text style={styles.productPrice}>${product.price.toLocaleString()}</Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-              ))}
+              {Object.entries(productsByCategory).map(([category, products]) =>
+                renderCategorySection(category, products)
+              )}
             </View>
           ) : (
             <View style={{ alignItems: 'center', margin: 32 }}>
