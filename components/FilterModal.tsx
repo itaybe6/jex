@@ -1,8 +1,21 @@
-import { View, Text, Modal, TouchableOpacity, ScrollView, StyleSheet, TextInput } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { View, Text, Modal, TouchableOpacity, ScrollView, StyleSheet, TextInput, Image } from 'react-native';
+import { Ionicons, Feather, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useState } from 'react';
 import { FilterField, FilterParams, FilterState } from '@/types/filter';
 import { FILTER_FIELDS_BY_CATEGORY, PRICE_FILTER_FIELDS, CATEGORY_LABELS, WATCH_BRANDS_MODELS, GEM_TYPES } from '@/constants/filters';
+
+const CATEGORY_ICONS = {
+  'Rings': <MaterialCommunityIcons name="ring" size={32} color="#0E2657" />,
+  'Necklaces': <MaterialCommunityIcons name="necklace" size={32} color="#0E2657" />,
+  'Earrings': <MaterialCommunityIcons name="dots-horizontal" size={32} color="#0E2657" />,
+  'Bracelets': <MaterialCommunityIcons name="link" size={32} color="#0E2657" />,
+  'Special Pieces': <MaterialCommunityIcons name="star-four-points-outline" size={32} color="#0E2657" />,
+  'Loose Diamonds': <MaterialCommunityIcons name="diamond-stone" size={32} color="#0E2657" />,
+  'Rough Diamonds': <MaterialCommunityIcons name="diamond-outline" size={32} color="#0E2657" />,
+  'Gems': <FontAwesome5 name="gem" size={32} color="#0E2657" />,
+  'Watches': <Feather name="watch" size={32} color="#0E2657" />,
+};
 
 type FilterModalProps = {
   visible: boolean;
@@ -82,10 +95,10 @@ export default function FilterModal({
     if (watchPriceTo) filters['price_to'] = [watchPriceTo];
     if (selectedWatchBrands.length) filters['brand'] = selectedWatchBrands;
     if (selectedWatchModels.length) filters['model'] = selectedWatchModels;
-    onApplyFilters({
+    onApplyFilters([{
       category: 'Watches',
       filters
-    });
+    }]);
     onClose();
   };
 
@@ -97,6 +110,10 @@ export default function FilterModal({
     setSelectedWatchModels([]);
     setWatchPriceFrom('');
     setWatchPriceTo('');
+    setSelectedGemTypes([]);
+    setGemsPriceFrom('');
+    setGemsPriceTo('');
+    onFiltersChange([]);
   };
 
   const handleCategorySelect = (category: string) => {
@@ -107,6 +124,9 @@ export default function FilterModal({
     setSelectedWatchModels([]);
     setWatchPriceFrom('');
     setWatchPriceTo('');
+    setSelectedGemTypes([]);
+    setGemsPriceFrom('');
+    setGemsPriceTo('');
   };
 
   const handleFilterSelect = (fieldKey: string, value: string) => {
@@ -151,10 +171,10 @@ export default function FilterModal({
       }
     });
 
-    onApplyFilters({
+    onApplyFilters([{
       category: selectedCategory,
       filters
-    });
+    }]);
     onClose();
   };
 
@@ -176,10 +196,10 @@ export default function FilterModal({
     // Add other fields (certification_status, type) from selectedFilters
     if (selectedFilters['certification_status']) filters['certification_status'] = selectedFilters['certification_status'];
     if (selectedFilters['type']) filters['type'] = selectedFilters['type'];
-    onApplyFilters({
+    onApplyFilters([{
       category: 'Gems',
       filters
-    });
+    }]);
     onClose();
   };
 
@@ -190,7 +210,7 @@ export default function FilterModal({
       case 'multi-select':
         return (
           <View key={field.key} style={styles.filterSection}>
-            <Text style={styles.filterLabel}>{field.label}</Text>
+            <Text style={[styles.filterLabel, { fontFamily: 'Montserrat-Medium' }]}>{field.label}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {field.options?.map(option => (
                 <TouchableOpacity
@@ -203,6 +223,7 @@ export default function FilterModal({
                 >
                   <Text style={[
                     styles.filterOptionText,
+                    { fontFamily: 'Montserrat-Medium' },
                     (selectedFilters[field.key] || []).includes(option) && styles.filterOptionTextSelected
                   ]}>
                     {option}
@@ -217,7 +238,7 @@ export default function FilterModal({
       case 'number':
         return (
           <View key={field.key} style={styles.filterSection}>
-            <Text style={styles.filterLabel}>{field.label}</Text>
+            <Text style={[styles.filterLabel, { fontFamily: 'Montserrat-Medium' }]}>{field.label}</Text>
             <View style={styles.rangeInputContainer}>
               <TextInput
                 style={styles.rangeInput}
@@ -242,7 +263,7 @@ export default function FilterModal({
         return (
           <View key={field.key} style={styles.filterSection}>
             <View style={styles.booleanContainer}>
-              <Text style={styles.filterLabel}>{field.label}</Text>
+              <Text style={[styles.filterLabel, { fontFamily: 'Montserrat-Medium' }]}>{field.label}</Text>
               <TouchableOpacity
                 style={[styles.booleanButton, booleanFilters[field.key] && styles.booleanButtonSelected]}
                 onPress={() => handleBooleanFilterToggle(field.key)}
@@ -262,173 +283,198 @@ export default function FilterModal({
   };
 
   const renderWatchesFields = () => (
-    <ScrollView style={styles.filtersContainer}>
-      {/* Price Range */}
-      <View style={styles.filterSection}>
-        <Text style={styles.filterLabel}>Price ($)</Text>
-        <View style={styles.rangeInputContainer}>
-          <TextInput
-            style={styles.rangeInput}
-            placeholder="From"
-            keyboardType="numeric"
-            value={watchPriceFrom}
-            onChangeText={setWatchPriceFrom}
-          />
-          <Text style={styles.rangeSeparator}>-</Text>
-          <TextInput
-            style={styles.rangeInput}
-            placeholder="To"
-            keyboardType="numeric"
-            value={watchPriceTo}
-            onChangeText={setWatchPriceTo}
-          />
-        </View>
-      </View>
-      {/* Brand Multi-select */}
-      <View style={styles.filterSection}>
-        <Text style={styles.filterLabel}>Brand</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {Object.keys(WATCH_BRANDS_MODELS).map(brand => (
-            <TouchableOpacity
-              key={brand}
-              style={[
-                styles.filterOption,
-                selectedWatchBrands.includes(brand) && styles.filterOptionSelected
-              ]}
-              onPress={() => handleWatchBrandSelect(brand)}
-            >
-              <Text style={[
-                styles.filterOptionText,
-                selectedWatchBrands.includes(brand) && styles.filterOptionTextSelected
-              ]}>
-                {brand}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-      {/* Model Multi-select (only if brand selected) */}
-      {selectedWatchBrands.length > 0 && (
+    <View style={{ flex: 1 }}>
+      {/* כפתור חזור */}
+      <TouchableOpacity
+        style={{ flexDirection: 'row', alignItems: 'center', padding: 20, paddingBottom: 0 }}
+        onPress={() => setSelectedCategory('')}
+      >
+        <Ionicons name="arrow-back" size={22} color="#0E2657" style={{ marginRight: 8 }} />
+        <Text style={{ color: '#0E2657', fontFamily: 'Montserrat-Medium', fontSize: 16 }}>Back</Text>
+      </TouchableOpacity>
+      <ScrollView style={styles.filtersContainer}>
+        {/* Price Range */}
         <View style={styles.filterSection}>
-          <Text style={styles.filterLabel}>Model</Text>
+          <Text style={[styles.filterLabel, { fontFamily: 'Montserrat-Medium' }]}>Price ($)</Text>
+          <View style={styles.rangeInputContainer}>
+            <TextInput
+              style={styles.rangeInput}
+              placeholder="From"
+              keyboardType="numeric"
+              value={watchPriceFrom}
+              onChangeText={setWatchPriceFrom}
+            />
+            <Text style={styles.rangeSeparator}>-</Text>
+            <TextInput
+              style={styles.rangeInput}
+              placeholder="To"
+              keyboardType="numeric"
+              value={watchPriceTo}
+              onChangeText={setWatchPriceTo}
+            />
+          </View>
+        </View>
+        {/* Brand Multi-select */}
+        <View style={styles.filterSection}>
+          <Text style={[styles.filterLabel, { fontFamily: 'Montserrat-Medium' }]}>Brand</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {getAvailableWatchModels().map(model => (
+            {Object.keys(WATCH_BRANDS_MODELS).map(brand => (
               <TouchableOpacity
-                key={model}
+                key={brand}
                 style={[
                   styles.filterOption,
-                  selectedWatchModels.includes(model) && styles.filterOptionSelected
+                  selectedWatchBrands.includes(brand) && styles.filterOptionSelected
                 ]}
-                onPress={() => handleWatchModelSelect(model)}
+                onPress={() => handleWatchBrandSelect(brand)}
               >
                 <Text style={[
                   styles.filterOptionText,
-                  selectedWatchModels.includes(model) && styles.filterOptionTextSelected
+                  { fontFamily: 'Montserrat-Medium' },
+                  selectedWatchBrands.includes(brand) && styles.filterOptionTextSelected
                 ]}>
-                  {model}
+                  {brand}
                 </Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
-      )}
-    </ScrollView>
+        {/* Model Multi-select (only if brand selected) */}
+        {selectedWatchBrands.length > 0 && (
+          <View style={styles.filterSection}>
+            <Text style={[styles.filterLabel, { fontFamily: 'Montserrat-Medium' }]}>Model</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {getAvailableWatchModels().map(model => (
+                <TouchableOpacity
+                  key={model}
+                  style={[
+                    styles.filterOption,
+                    selectedWatchModels.includes(model) && styles.filterOptionSelected
+                  ]}
+                  onPress={() => handleWatchModelSelect(model)}
+                >
+                  <Text style={[
+                    styles.filterOptionText,
+                    { fontFamily: 'Montserrat-Medium' },
+                    selectedWatchModels.includes(model) && styles.filterOptionTextSelected
+                  ]}>
+                    {model}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 
   // Gems: render only relevant fields
   const renderGemsFields = () => (
-    <ScrollView style={styles.filtersContainer}>
-      {/* Price Range */}
-      <View style={styles.filterSection}>
-        <Text style={styles.filterLabel}>Price ($)</Text>
-        <View style={styles.rangeInputContainer}>
-          <TextInput
-            style={styles.rangeInput}
-            placeholder="From"
-            keyboardType="numeric"
-            value={gemsPriceFrom}
-            onChangeText={setGemsPriceFrom}
-          />
-          <Text style={styles.rangeSeparator}>-</Text>
-          <TextInput
-            style={styles.rangeInput}
-            placeholder="To"
-            keyboardType="numeric"
-            value={gemsPriceTo}
-            onChangeText={setGemsPriceTo}
-          />
+    <View style={{ flex: 1 }}>
+      {/* כפתור חזור */}
+      <TouchableOpacity
+        style={{ flexDirection: 'row', alignItems: 'center', padding: 20, paddingBottom: 0 }}
+        onPress={() => setSelectedCategory('')}
+      >
+        <Ionicons name="arrow-back" size={22} color="#0E2657" style={{ marginRight: 8 }} />
+        <Text style={{ color: '#0E2657', fontFamily: 'Montserrat-Medium', fontSize: 16 }}>Back</Text>
+      </TouchableOpacity>
+      <ScrollView style={styles.filtersContainer}>
+        {/* Price Range */}
+        <View style={styles.filterSection}>
+          <Text style={[styles.filterLabel, { fontFamily: 'Montserrat-Medium' }]}>Price ($)</Text>
+          <View style={styles.rangeInputContainer}>
+            <TextInput
+              style={styles.rangeInput}
+              placeholder="From"
+              keyboardType="numeric"
+              value={gemsPriceFrom}
+              onChangeText={setGemsPriceFrom}
+            />
+            <Text style={styles.rangeSeparator}>-</Text>
+            <TextInput
+              style={styles.rangeInput}
+              placeholder="To"
+              keyboardType="numeric"
+              value={gemsPriceTo}
+              onChangeText={setGemsPriceTo}
+            />
+          </View>
         </View>
-      </View>
-      {/* Gem Type Multi-select */}
-      <View style={styles.filterSection}>
-        <Text style={styles.filterLabel}>Gem Type</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {GEM_TYPES.map(gem => (
-            <TouchableOpacity
-              key={gem}
-              style={[
-                styles.filterOption,
-                selectedGemTypes.includes(gem) && styles.filterOptionSelected
-              ]}
-              onPress={() => handleGemTypeSelect(gem)}
-            >
-              <Text style={[
-                styles.filterOptionText,
-                selectedGemTypes.includes(gem) && styles.filterOptionTextSelected
-              ]}>
-                {gem}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-      {/* Certification Status */}
-      <View style={styles.filterSection}>
-        <Text style={styles.filterLabel}>Certification Status</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {['Certificated', 'None Certificated'].map(option => (
-            <TouchableOpacity
-              key={option}
-              style={[
-                styles.filterOption,
-                (selectedFilters['certification_status'] || []).includes(option) && styles.filterOptionSelected
-              ]}
-              onPress={() => handleFilterSelect('certification_status', option)}
-            >
-              <Text style={[
-                styles.filterOptionText,
-                (selectedFilters['certification_status'] || []).includes(option) && styles.filterOptionTextSelected
-              ]}>
-                {option}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-      {/* Type */}
-      <View style={styles.filterSection}>
-        <Text style={styles.filterLabel}>Type</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {['Natural', 'Lab Grown', 'Treated'].map(option => (
-            <TouchableOpacity
-              key={option}
-              style={[
-                styles.filterOption,
-                (selectedFilters['type'] || []).includes(option) && styles.filterOptionSelected
-              ]}
-              onPress={() => handleFilterSelect('type', option)}
-            >
-              <Text style={[
-                styles.filterOptionText,
-                (selectedFilters['type'] || []).includes(option) && styles.filterOptionTextSelected
-              ]}>
-                {option}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-    </ScrollView>
+        {/* Gem Type Multi-select */}
+        <View style={styles.filterSection}>
+          <Text style={[styles.filterLabel, { fontFamily: 'Montserrat-Medium' }]}>Gem Type</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {GEM_TYPES.map(gem => (
+              <TouchableOpacity
+                key={gem}
+                style={[
+                  styles.filterOption,
+                  selectedGemTypes.includes(gem) && styles.filterOptionSelected
+                ]}
+                onPress={() => handleGemTypeSelect(gem)}
+              >
+                <Text style={[
+                  styles.filterOptionText,
+                  { fontFamily: 'Montserrat-Medium' },
+                  selectedGemTypes.includes(gem) && styles.filterOptionTextSelected
+                ]}>
+                  {gem}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+        {/* Certification Status */}
+        <View style={styles.filterSection}>
+          <Text style={[styles.filterLabel, { fontFamily: 'Montserrat-Medium' }]}>Certification Status</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {['Certificated', 'None Certificated'].map(option => (
+              <TouchableOpacity
+                key={option}
+                style={[
+                  styles.filterOption,
+                  (selectedFilters['certification_status'] || []).includes(option) && styles.filterOptionSelected
+                ]}
+                onPress={() => handleFilterSelect('certification_status', option)}
+              >
+                <Text style={[
+                  styles.filterOptionText,
+                  { fontFamily: 'Montserrat-Medium' },
+                  (selectedFilters['certification_status'] || []).includes(option) && styles.filterOptionTextSelected
+                ]}>
+                  {option}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+        {/* Type */}
+        <View style={styles.filterSection}>
+          <Text style={[styles.filterLabel, { fontFamily: 'Montserrat-Medium' }]}>Type</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {['Natural', 'Lab Grown', 'Treated'].map(option => (
+              <TouchableOpacity
+                key={option}
+                style={[
+                  styles.filterOption,
+                  (selectedFilters['type'] || []).includes(option) && styles.filterOptionSelected
+                ]}
+                onPress={() => handleFilterSelect('type', option)}
+              >
+                <Text style={[
+                  styles.filterOptionText,
+                  { fontFamily: 'Montserrat-Medium' },
+                  (selectedFilters['type'] || []).includes(option) && styles.filterOptionTextSelected
+                ]}>
+                  {option}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </ScrollView>
+    </View>
   );
 
   const renderFilterFields = () => {
@@ -441,31 +487,56 @@ export default function FilterModal({
       return renderGemsFields();
     }
     if (!selectedCategory) {
+      // Grid of categories
+      const categories = Object.keys(FILTER_FIELDS_BY_CATEGORY);
       return (
         <View style={styles.categorySection}>
-          <Text style={styles.sectionTitle}>Select Category</Text>
-          <ScrollView style={{ flexGrow: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
-            {Object.keys(FILTER_FIELDS_BY_CATEGORY).map(category => (
-              <TouchableOpacity
-                key={category}
-                style={[styles.categoryOption, selectedCategory === category && styles.categoryOptionSelected]}
-                onPress={() => handleCategorySelect(category)}
-              >
-                <Text style={[styles.categoryOptionText, selectedCategory === category && styles.categoryOptionTextSelected]}>
-                  {CATEGORY_LABELS[category] || category}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <Text style={[styles.sectionTitle, { fontFamily: 'Montserrat-SemiBold' }]}>Select Category</Text>
+          <ScrollView style={styles.categoryGridScroll} contentContainerStyle={styles.categoryGridContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.categoryGrid}>
+              {categories.map((category, idx) => (
+                <TouchableOpacity
+                  key={category}
+                  style={[
+                    styles.categoryGridItem,
+                    selectedCategory === category && styles.filterOptionSelected
+                  ]}
+                  onPress={() => handleCategorySelect(category)}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.categoryImageWrapper}>
+                    {CATEGORY_ICONS[(CATEGORY_LABELS[category] || category) as keyof typeof CATEGORY_ICONS] || <Feather name="circle" size={32} color="#0E2657" />}
+                  </View>
+                  <Text style={[
+                    styles.categoryGridText,
+                    { fontFamily: 'Montserrat-SemiBold' },
+                    selectedCategory === category && styles.filterOptionTextSelected
+                  ]}>
+                    {CATEGORY_LABELS[category] || category}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </ScrollView>
         </View>
       );
     }
 
+    // הוספת כפתור חזור למסך פילטרים רגיל
     return (
-      <ScrollView style={styles.filtersContainer}>
-        {PRICE_FILTER_FIELDS.map(field => renderFilterField(field))}
-        {FILTER_FIELDS_BY_CATEGORY[selectedCategory]?.map(field => renderFilterField(field))}
-      </ScrollView>
+      <View style={{ flex: 1 }}>
+        <TouchableOpacity
+          style={{ flexDirection: 'row', alignItems: 'center', padding: 20, paddingBottom: 0 }}
+          onPress={() => setSelectedCategory('')}
+        >
+          <Ionicons name="arrow-back" size={22} color="#0E2657" style={{ marginRight: 8 }} />
+          <Text style={{ color: '#0E2657', fontFamily: 'Montserrat-Medium', fontSize: 16 }}>Back</Text>
+        </TouchableOpacity>
+        <ScrollView style={styles.filtersContainer}>
+          {PRICE_FILTER_FIELDS.map(field => renderFilterField(field))}
+          {FILTER_FIELDS_BY_CATEGORY[selectedCategory]?.map(field => renderFilterField(field))}
+        </ScrollView>
+      </View>
     );
   };
 
@@ -511,11 +582,11 @@ export default function FilterModal({
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
+            <Text style={[styles.modalTitle, { fontFamily: 'Montserrat-SemiBold' }]}>
               {selectedCategory ? `Filter ${selectedCategory}` : 'Filter Products'}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color="#fff" />
+              <Ionicons name="close" size={24} color="#0E2657" />
             </TouchableOpacity>
           </View>
 
@@ -540,7 +611,7 @@ export default function FilterModal({
                         {f.category}
                       </Text>
                       <TouchableOpacity onPress={() => handleRemoveFilter(idx)} style={styles.savedFilterRemove}>
-                        <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 16}}>×</Text>
+                        <Text style={{color: '#0E2657', fontFamily: 'Montserrat-SemiBold', fontSize: 16}}>×</Text>
                       </TouchableOpacity>
                     </View>
                   </TouchableOpacity>
@@ -559,11 +630,11 @@ export default function FilterModal({
                       <View style={styles.detailsModalHeader}>
                         <Text style={styles.detailsModalTitle}>{filters[expandedFilterIdx].category}</Text>
                         <TouchableOpacity onPress={() => setExpandedFilterIdx(null)} style={styles.detailsModalClose}>
-                          <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 20}}>×</Text>
+                          <Text style={{color: '#0E2657', fontFamily: 'Montserrat-SemiBold', fontSize: 20}}>×</Text>
                         </TouchableOpacity>
                       </View>
                       <ScrollView style={{maxHeight: 200}}>
-                        <Text style={styles.detailsModalText}>
+                        <Text style={[styles.detailsModalText, {fontFamily: 'Montserrat-Regular'}]}>
                           {Object.entries(filters[expandedFilterIdx].filters).map(([k, v]) => `${k}: ${v.join(', ')}`).join(' | ')}
                         </Text>
                       </ScrollView>
@@ -578,7 +649,7 @@ export default function FilterModal({
 
           <View style={styles.modalFooter}>
             <TouchableOpacity style={styles.footerButton} onPress={resetFilters}>
-              <Text style={styles.footerButtonText}>Clear</Text>
+              <Text style={[styles.footerButtonText, { fontFamily: 'Montserrat-SemiBold' }]}>Clear</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.footerButton, styles.applyButton]}
@@ -608,14 +679,14 @@ export default function FilterModal({
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.18)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    height: '90%',
+    height: '80%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -623,41 +694,66 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: '#E5E7EB',
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
+    color: '#0E2657',
   },
   closeButton: {
     padding: 5,
   },
   categorySection: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 0,
     flex: 1,
+    justifyContent: 'flex-start',
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
+    color: '#0E2657',
     marginBottom: 15,
   },
-  categoryOption: {
-    padding: 15,
-    borderRadius: 8,
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 16,
+    marginTop: 12,
+  },
+  categoryGridItem: {
+    width: '47%',
+    aspectRatio: 1,
+    backgroundColor: '#F5F8FC',
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    padding: 10,
+  },
+  categoryImageWrapper: {
+    width: 48,
+    height: 48,
     marginBottom: 10,
-    backgroundColor: '#2a2a2a',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  categoryOptionSelected: {
-    backgroundColor: '#007AFF',
+  categoryImage: {
+    width: 40,
+    height: 40,
   },
-  categoryOptionText: {
+  categoryGridText: {
     fontSize: 16,
-    color: '#fff',
-  },
-  categoryOptionTextSelected: {
-    fontWeight: 'bold',
+    color: '#0E2657',
+    textAlign: 'center',
   },
   filtersContainer: {
     flex: 1,
@@ -668,24 +764,27 @@ const styles = StyleSheet.create({
   },
   filterLabel: {
     fontSize: 16,
-    color: '#fff',
+    color: '#374151',
     marginBottom: 10,
   },
   filterOption: {
     paddingHorizontal: 15,
     paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#2a2a2a',
+    borderRadius: 12,
+    backgroundColor: '#F5F8FC',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     marginRight: 10,
   },
   filterOptionSelected: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#0E2657',
+    borderColor: '#0E2657',
   },
   filterOptionText: {
-    color: '#fff',
+    color: '#374151',
   },
   filterOptionTextSelected: {
-    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
   rangeInputContainer: {
     flexDirection: 'row',
@@ -693,14 +792,18 @@ const styles = StyleSheet.create({
   },
   rangeInput: {
     flex: 1,
-    backgroundColor: '#2a2a2a',
-    borderRadius: 8,
-    padding: 10,
-    color: '#fff',
+    backgroundColor: '#F5F8FC',
+    borderRadius: 12,
+    padding: 12,
+    color: '#374151',
+    fontFamily: 'Montserrat-Regular',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   rangeSeparator: {
     paddingHorizontal: 10,
-    color: '#fff',
+    color: '#374151',
+    fontFamily: 'Montserrat-Medium',
   },
   booleanContainer: {
     flexDirection: 'row',
@@ -710,55 +813,67 @@ const styles = StyleSheet.create({
   booleanButton: {
     paddingHorizontal: 20,
     paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#2a2a2a',
+    borderRadius: 12,
+    backgroundColor: '#F5F8FC',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   booleanButtonSelected: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#0E2657',
+    borderColor: '#0E2657',
   },
   booleanButtonText: {
-    color: '#fff',
+    color: '#374151',
+    fontFamily: 'Montserrat-Medium',
   },
   booleanButtonTextSelected: {
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontFamily: 'Montserrat-SemiBold',
   },
   modalFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 20,
     borderTopWidth: 1,
-    borderTopColor: '#333',
+    borderTopColor: '#E5E7EB',
   },
   footerButton: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: '#2a2a2a',
+    borderRadius: 12,
+    backgroundColor: '#F5F8FC',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     marginHorizontal: 5,
     alignItems: 'center',
   },
   applyButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#0E2657',
+    borderColor: '#0E2657',
   },
   footerButtonText: {
-    color: '#fff',
+    color: '#374151',
     fontSize: 16,
+    fontFamily: 'Montserrat-Medium',
   },
   applyButtonText: {
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontFamily: 'Montserrat-SemiBold',
   },
   savedFiltersContainer: {
     maxHeight: 100,
-    backgroundColor: '#181818',
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: '#E5E7EB',
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 4,
   },
   savedFiltersTitle: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: '#0E2657',
+    fontFamily: 'Montserrat-SemiBold',
     marginBottom: 4,
   },
   savedFiltersScroll: {
@@ -768,31 +883,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#222',
-    borderRadius: 10,
+    backgroundColor: '#F5F8FC',
+    borderRadius: 12,
     padding: 12,
     marginBottom: 10,
-    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   savedFilterCardRow: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    overflow: 'hidden',
   },
   savedFilterCategory: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: '#0E2657',
+    fontFamily: 'Montserrat-SemiBold',
     fontSize: 16,
-    flexShrink: 1,
-    flexGrow: 1,
-    overflow: 'hidden',
   },
   savedFilterRemove: {
     marginLeft: 12,
     padding: 4,
-    zIndex: 2,
   },
   detailsModalOverlay: {
     flex: 1,
@@ -801,7 +912,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   detailsModalContent: {
-    backgroundColor: '#222',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 24,
     minWidth: 260,
@@ -816,8 +927,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   detailsModalTitle: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: '#0E2657',
+    fontFamily: 'Montserrat-SemiBold',
     fontSize: 18,
     flex: 1,
   },
@@ -826,8 +937,16 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   detailsModalText: {
-    color: '#fff',
+    color: '#374151',
     fontSize: 15,
+    fontFamily: 'Montserrat-Regular',
     marginTop: 4,
+  },
+  categoryGridScroll: {
+    marginTop: 8,
+  },
+  categoryGridContent: {
+    paddingBottom: 0,
+    paddingTop: 0,
   },
 }); 
