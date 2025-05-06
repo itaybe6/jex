@@ -69,14 +69,16 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: '#666',
+    color: '#0E2657',
     marginBottom: 8,
     textAlign: 'left',
-    fontFamily: 'Heebo-Medium',
+    fontFamily: 'Montserrat-Medium',
   },
   selectButton: {
-    backgroundColor: '#2a2a2a',
-    borderRadius: 8,
+    backgroundColor: '#F5F8FC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E3EAF3',
     padding: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -84,15 +86,15 @@ const styles = StyleSheet.create({
   },
   selectButtonText: {
     fontSize: 16,
-    fontFamily: 'Heebo-Regular',
-    color: '#fff',
+    fontFamily: 'Montserrat-Regular',
+    color: '#0E2657',
     textAlign: 'left',
   },
   errorText: {
-    color: '#ff4444',
+    color: '#FF3B30',
     fontSize: 12,
     marginTop: 4,
-    fontFamily: 'Heebo-Regular',
+    fontFamily: 'Montserrat-Regular',
   },
   modalOverlay: {
     flex: 1,
@@ -100,7 +102,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '80%',
@@ -111,12 +113,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#2a2a2a',
+    borderBottomColor: '#E3EAF3',
   },
   modalTitle: {
     fontSize: 18,
-    fontFamily: 'Heebo-Bold',
-    color: '#fff',
+    fontFamily: 'Montserrat-Bold',
+    color: '#0E2657',
   },
   modalCloseButton: {
     padding: 4,
@@ -129,18 +131,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     marginBottom: 8,
+    backgroundColor: '#F5F8FC',
   },
   modalOptionSelected: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#E3EAF3',
   },
   modalOptionText: {
     fontSize: 16,
-    fontFamily: 'Heebo-Regular',
+    fontFamily: 'Montserrat-Regular',
     textAlign: 'left',
-    color: '#fff',
+    color: '#0E2657',
   },
   modalOptionTextSelected: {
-    color: '#fff',
+    color: '#0E2657',
   },
 });
 

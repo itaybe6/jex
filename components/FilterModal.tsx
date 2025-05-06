@@ -491,7 +491,7 @@ export default function FilterModal({
       const categories = Object.keys(FILTER_FIELDS_BY_CATEGORY);
       return (
         <View style={styles.categorySection}>
-          <Text style={[styles.sectionTitle, { fontFamily: 'Montserrat-SemiBold' }]}>Select Category</Text>
+          <Text style={[styles.sectionTitle, { fontFamily: 'Montserrat-Medium' }]}>Select Category</Text>
           <ScrollView style={styles.categoryGridScroll} contentContainerStyle={styles.categoryGridContent} showsVerticalScrollIndicator={false}>
             <View style={styles.categoryGrid}>
               {categories.map((category, idx) => (
@@ -509,7 +509,7 @@ export default function FilterModal({
                   </View>
                   <Text style={[
                     styles.categoryGridText,
-                    { fontFamily: 'Montserrat-SemiBold' },
+                    { fontFamily: 'Montserrat-Medium' },
                     selectedCategory === category && styles.filterOptionTextSelected
                   ]}>
                     {CATEGORY_LABELS[category] || category}
@@ -582,7 +582,7 @@ export default function FilterModal({
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { fontFamily: 'Montserrat-SemiBold' }]}>
+            <Text style={[styles.modalTitle, { fontFamily: 'Montserrat-Medium' }]}>
               {selectedCategory ? `Filter ${selectedCategory}` : 'Filter Products'}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -611,7 +611,7 @@ export default function FilterModal({
                         {f.category}
                       </Text>
                       <TouchableOpacity onPress={() => handleRemoveFilter(idx)} style={styles.savedFilterRemove}>
-                        <Text style={{color: '#0E2657', fontFamily: 'Montserrat-SemiBold', fontSize: 16}}>×</Text>
+                        <Text style={{color: '#0E2657', fontFamily: 'Montserrat-Medium', fontSize: 16}}>×</Text>
                       </TouchableOpacity>
                     </View>
                   </TouchableOpacity>
@@ -630,7 +630,7 @@ export default function FilterModal({
                       <View style={styles.detailsModalHeader}>
                         <Text style={styles.detailsModalTitle}>{filters[expandedFilterIdx].category}</Text>
                         <TouchableOpacity onPress={() => setExpandedFilterIdx(null)} style={styles.detailsModalClose}>
-                          <Text style={{color: '#0E2657', fontFamily: 'Montserrat-SemiBold', fontSize: 20}}>×</Text>
+                          <Text style={{color: '#0E2657', fontFamily: 'Montserrat-Medium', fontSize: 20}}>×</Text>
                         </TouchableOpacity>
                       </View>
                       <ScrollView style={{maxHeight: 200}}>
@@ -649,7 +649,7 @@ export default function FilterModal({
 
           <View style={styles.modalFooter}>
             <TouchableOpacity style={styles.footerButton} onPress={resetFilters}>
-              <Text style={[styles.footerButtonText, { fontFamily: 'Montserrat-SemiBold' }]}>Clear</Text>
+              <Text style={[styles.footerButtonText, { fontFamily: 'Montserrat-Medium' }]}>Clear</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.footerButton, styles.applyButton]}
@@ -828,7 +828,7 @@ const styles = StyleSheet.create({
   },
   booleanButtonTextSelected: {
     color: '#FFFFFF',
-    fontFamily: 'Montserrat-SemiBold',
+    fontFamily: 'Montserrat-Medium',
   },
   modalFooter: {
     flexDirection: 'row',
@@ -860,7 +860,7 @@ const styles = StyleSheet.create({
   },
   applyButtonText: {
     color: '#FFFFFF',
-    fontFamily: 'Montserrat-SemiBold',
+    fontFamily: 'Montserrat-Medium',
   },
   savedFiltersContainer: {
     maxHeight: 100,
@@ -873,7 +873,7 @@ const styles = StyleSheet.create({
   },
   savedFiltersTitle: {
     color: '#0E2657',
-    fontFamily: 'Montserrat-SemiBold',
+    fontFamily: 'Montserrat-Medium',
     marginBottom: 4,
   },
   savedFiltersScroll: {
@@ -898,7 +898,7 @@ const styles = StyleSheet.create({
   },
   savedFilterCategory: {
     color: '#0E2657',
-    fontFamily: 'Montserrat-SemiBold',
+    fontFamily: 'Montserrat-Medium',
     fontSize: 16,
   },
   savedFilterRemove: {
@@ -928,7 +928,7 @@ const styles = StyleSheet.create({
   },
   detailsModalTitle: {
     color: '#0E2657',
-    fontFamily: 'Montserrat-SemiBold',
+    fontFamily: 'Montserrat-Medium',
     fontSize: 18,
     flex: 1,
   },

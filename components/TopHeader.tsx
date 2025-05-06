@@ -16,8 +16,8 @@ export function TopHeader() {
       const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/notifications?user_id=eq.${user.id}&read=eq.false&select=id`;
       const res = await fetch(url, {
         headers: {
-          apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${accessToken || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+          'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+          'Authorization': `Bearer ${accessToken || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
         },
       });
       const data = await res.json();
@@ -27,7 +27,7 @@ export function TopHeader() {
   }, [user, accessToken]);
 
   return (
-    <SafeAreaView style={{ backgroundColor: '#F5F8FC' }} edges={['top', 'left', 'right']}>
+    <>
       <StatusBar style="dark" backgroundColor="#F5F8FC" />
       <View style={[styles.header, { backgroundColor: '#F5F8FC', shadowColor: 'transparent', borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}>
         <Image source={require('@/assets/images/logo b-03.png')} style={styles.logoImg} resizeMode="contain" />
@@ -53,7 +53,7 @@ export function TopHeader() {
           </TouchableOpacity>
         </Link>
       </View>
-    </SafeAreaView>
+    </>
   );
 }
 
@@ -63,18 +63,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 4,
-    paddingBottom: 4,
-    backgroundColor: '#0E2657',
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-    shadowColor: '#0E2657',
-    shadowOpacity: 0.10,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
+    paddingTop: 50,
+    paddingBottom: 0,
+    backgroundColor: '#F5F8FC',
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    height: 100,
   },
   logoImg: {
-    height: 26,
+    height: 32,
     width: 95,
     marginLeft: 0,
   },
