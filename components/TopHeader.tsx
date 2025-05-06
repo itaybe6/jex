@@ -1,10 +1,31 @@
-import { View, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Image, Text } from 'react-native';
 import { Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 
 export function TopHeader() {
+  const { user, accessToken } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      if (!user) return;
+      const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/notifications?user_id=eq.${user.id}&read=eq.false&select=id`;
+      const res = await fetch(url, {
+        headers: {
+          apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+        },
+      });
+      const data = await res.json();
+      setUnreadCount(Array.isArray(data) ? data.length : 0);
+    };
+    fetchUnread();
+  }, [user, accessToken]);
+
   return (
     <SafeAreaView style={{ backgroundColor: '#F5F8FC' }} edges={['top', 'left', 'right']}>
       <StatusBar style="dark" backgroundColor="#F5F8FC" />
@@ -13,6 +34,22 @@ export function TopHeader() {
         <Link href="/notifications" asChild>
           <TouchableOpacity style={styles.iconButton}>
             <Ionicons name="notifications-outline" size={26} color="#0E2657" />
+            {unreadCount > 0 && (
+              <View style={{
+                position: 'absolute',
+                top: 2,
+                right: 2,
+                backgroundColor: '#FF3B30',
+                borderRadius: 8,
+                minWidth: 16,
+                height: 16,
+                justifyContent: 'center',
+                alignItems: 'center',
+                paddingHorizontal: 4,
+              }}>
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>{unreadCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </Link>
       </View>

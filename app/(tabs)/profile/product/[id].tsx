@@ -177,6 +177,13 @@ export default function ProductScreen() {
   const [specs, setSpecs] = useState<any>(null);
   const [specsLoading, setSpecsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saleModalVisible, setSaleModalVisible] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
+  const [selectedBuyer, setSelectedBuyer] = useState<any>(null);
+  const [saleError, setSaleError] = useState<string | null>(null);
+  const [saleLoading, setSaleLoading] = useState(false);
 
   useEffect(() => {
     fetchProduct();
@@ -462,6 +469,151 @@ export default function ProductScreen() {
     );
   };
 
+  const searchProfiles = async (query: string) => {
+    setUserSearchLoading(true);
+    setSaleError(null);
+    try {
+      if (!query.trim()) {
+        setUserSearchResults([]);
+        setUserSearchLoading(false);
+        return;
+      }
+      const url = `${SUPABASE_URL}/rest/v1/profiles?select=id,full_name,avatar_url,title&full_name=ilike.*${query.trim()}*&limit=20`;
+      const res = await fetch(url, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await res.json();
+      setUserSearchResults(Array.isArray(data) ? data.filter((u: any) => u.id !== user?.id) : []);
+    } catch (error) {
+      setSaleError('שגיאה בחיפוש משתמשים');
+      setUserSearchResults([]);
+    } finally {
+      setUserSearchLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (saleModalVisible && userSearch.length > 0) {
+      const timer = setTimeout(() => {
+        searchProfiles(userSearch);
+      }, 300);
+      return () => clearTimeout(timer);
+    } else if (!userSearch) {
+      setUserSearchResults([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userSearch, saleModalVisible]);
+
+  const checkPendingTransaction = async (buyerId: string) => {
+    if (!product?.id) return false;
+    const url = `${SUPABASE_URL}/rest/v1/transactions?product_id=eq.${product.id}&buyer_id=eq.${buyerId}&status=eq.pending&select=id`;
+    const res = await fetch(url, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+      },
+    });
+    const data = await res.json();
+    return Array.isArray(data) && data.length > 0;
+  };
+
+  const handleStartSale = async () => {
+    if (!selectedBuyer || !user || !product) return;
+    setSaleLoading(true);
+    setSaleError(null);
+    try {
+      // Prevent duplicate pending transaction
+      const exists = await checkPendingTransaction(selectedBuyer.id);
+      if (exists) {
+        setSaleError('A pending transaction with this user for this product already exists.');
+        setSaleLoading(false);
+        return;
+      }
+      // Fetch seller profile (for avatar and name)
+      let sellerName = user.full_name || user.user_metadata?.full_name || '';
+      let sellerAvatar = user.avatar_url || user.user_metadata?.avatar_url || null;
+      // If missing, fetch from profiles table
+      if (!sellerAvatar || !sellerName) {
+        try {
+          const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&select=full_name,avatar_url`, {
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            },
+          });
+          const profileData = await profileRes.json();
+          if (profileData && profileData.length > 0) {
+            if (!sellerName) sellerName = profileData[0].full_name;
+            if (!sellerAvatar) sellerAvatar = profileData[0].avatar_url;
+          }
+        } catch (e) {
+          // fallback: do nothing
+        }
+      }
+      // Debug: Log avatar sources
+      console.log('Avatar debug:', { direct: user.avatar_url, metadata: user.user_metadata?.avatar_url, user });
+      // Fetch product image
+      let productImage = product.product_images && product.product_images.length > 0 ? product.product_images[0].image_url : null;
+      // Debug: Log seller info before sending notification
+      console.log('Sending notification with seller info:', { sellerName, sellerAvatar, user });
+      // Create transaction
+      const txRes = await fetch(`${SUPABASE_URL}/rest/v1/transactions`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify({
+          seller_id: user.id,
+          buyer_id: selectedBuyer.id,
+          product_id: product.id,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+        }),
+      });
+      const txData = await txRes.json();
+      if (!txRes.ok) throw new Error(txData?.message || 'Error creating transaction');
+      // Send notification to buyer
+      await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: selectedBuyer.id,
+          type: 'transaction_offer',
+          product_id: product.id,
+          data: {
+            message: `The seller has offered you a deal for the product "${product.title}"`,
+            seller_id: user.id,
+            seller_name: sellerName,
+            seller_avatar_url: sellerAvatar,
+            product_title: product.title,
+            product_image_url: productImage,
+          },
+          read: false,
+        }),
+      });
+      setSaleModalVisible(false);
+      setSelectedBuyer(null);
+      setUserSearch('');
+      setUserSearchResults([]);
+      Alert.alert('Success', 'Sale offer sent successfully!');
+    } catch (error: any) {
+      setSaleError(error?.message || 'Error starting sale');
+    } finally {
+      setSaleLoading(false);
+    }
+  };
+
   if (loading || specsLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -642,6 +794,25 @@ export default function ProductScreen() {
             )}
           </View>
         )}
+        {/* --- Start Sale Button --- */}
+        {user?.id === product?.user_id && !editMode && (
+          <View style={{ marginHorizontal: 16, marginTop: 16 }}>
+            <TouchableOpacity
+              style={{
+                backgroundColor: '#0E2657',
+                borderRadius: 12,
+                paddingVertical: 16,
+                alignItems: 'center',
+                flexDirection: 'row',
+                justifyContent: 'center',
+              }}
+              onPress={() => setSaleModalVisible(true)}
+            >
+              <Ionicons name="swap-horizontal" size={22} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Start Sale</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
       {editMode && (
         <View style={styles.bottomContainer}>
@@ -658,6 +829,63 @@ export default function ProductScreen() {
           </TouchableOpacity>
         </View>
       )}
+      {/* --- Sale Modal --- */}
+      <Modal
+        visible={saleModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSaleModalVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '90%', maxWidth: 400 }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: '#0E2657' }}>בחר קונה</Text>
+            <TextInput
+              style={{ borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, padding: 12, marginBottom: 12, fontSize: 16 }}
+              placeholder="חפש משתמש לפי שם..."
+              value={userSearch}
+              onChangeText={setUserSearch}
+              autoFocus
+            />
+            {userSearchLoading ? (
+              <ActivityIndicator size="small" color="#0E2657" />
+            ) : (
+              <FlatList
+                data={userSearchResults}
+                keyExtractor={item => item.id}
+                style={{ maxHeight: 200, marginBottom: 8 }}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 4, backgroundColor: selectedBuyer?.id === item.id ? '#F5F8FC' : 'transparent', borderRadius: 8 }}
+                    onPress={() => setSelectedBuyer(item)}
+                  >
+                    <Image source={{ uri: item.avatar_url || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=800&auto=format&fit=crop&q=60' }} style={{ width: 36, height: 36, borderRadius: 18, marginRight: 10 }} />
+                    <View>
+                      <Text style={{ fontSize: 16, color: '#0E2657', fontWeight: '500' }}>{item.full_name}</Text>
+                      {item.title && <Text style={{ fontSize: 13, color: '#7B8CA6' }}>{item.title}</Text>}
+                    </View>
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={userSearch.length > 0 && !userSearchLoading ? (
+                  <Text style={{ color: '#7B8CA6', textAlign: 'center', marginTop: 12 }}>לא נמצאו משתמשים</Text>
+                ) : null}
+              />
+            )}
+            {saleError && <Text style={{ color: 'red', marginBottom: 8 }}>{saleError}</Text>}
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 8 }}>
+              <TouchableOpacity onPress={() => setSaleModalVisible(false)} style={{ marginRight: 16 }}>
+                <Text style={{ color: '#0E2657', fontSize: 16 }}>ביטול</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleStartSale}
+                disabled={!selectedBuyer || saleLoading}
+                style={{ backgroundColor: selectedBuyer ? '#0E2657' : '#B0B8C1', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 20 }}
+              >
+                <Text style={{ color: '#fff', fontSize: 16 }}>{saleLoading ? 'שולח...' : 'אישור'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
