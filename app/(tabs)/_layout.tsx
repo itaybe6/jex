@@ -74,10 +74,10 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="settings"
+          name="tools"
           options={{
-            title: 'Settings',
-            tabBarIcon: ({ focused }) => <TabBarIcon name="settings" focused={focused} />,
+            title: 'Tools',
+            tabBarIcon: ({ focused }) => <TabBarIcon name="construct-outline" focused={focused} />,
           }}
         />
         <Tabs.Screen
@@ -89,6 +89,12 @@ export default function TabLayout() {
         />
         <Tabs.Screen
           name="notifications"
+          options={{
+            href: null
+          }}
+        />
+         <Tabs.Screen
+          name="settings"
           options={{
             href: null
           }}

@@ -270,15 +270,15 @@ export default function ProfileScreen() {
 
   const renderProductItem = (product: Product) => {
     const imageUrl = product.product_images?.[0]?.image_url || 'https://via.placeholder.com/150';
-    
+
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         key={product.id}
         style={styles.gridItem}
         onPress={() => handleProductPress(product.id)}
       >
-        <Image 
-          source={{ uri: imageUrl }} 
+        <Image
+          source={{ uri: imageUrl }}
           style={styles.gridImage}
           resizeMode="cover"
         />
@@ -359,7 +359,7 @@ export default function ProfileScreen() {
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Trusted By</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => setShowTrustMarks(false)}
               style={styles.modalCloseButton}
             >
@@ -434,7 +434,7 @@ export default function ProfileScreen() {
   }
 
   const totalProducts = Object.values(productsByCategory).reduce(
-    (sum, products) => sum + products.length, 
+    (sum, products) => sum + products.length,
     0
   );
 
@@ -444,19 +444,25 @@ export default function ProfileScreen() {
         style={{ flex: 1 }} 
         contentContainerStyle={{ paddingBottom: 0 }}
       >
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 20, marginTop: 10 }}>
+          <TouchableOpacity onPress={handleSettingsPress} style={{ padding: 8 }}>
+            <Ionicons name="settings-outline" size={28} color="#0E2657" />
+          </TouchableOpacity>
+        </View>
+
         {/* User Card */}
         <View style={[styles.userCard, { marginTop: 100, paddingTop: 0 }]}>
           <View style={styles.profileImageWrapper}>
             <Image
-              source={{ 
-                uri: profile.avatar_url 
+              source={{
+                uri: profile.avatar_url
                   ? profile.avatar_url + `?t=${new Date().getTime()}`
                   : 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=800&auto=format&fit=crop&q=60'
               }}
               style={styles.profileImage}
             />
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.editButton}
             onPress={handleEditProfile}
           >
@@ -527,7 +533,7 @@ export default function ProfileScreen() {
               <Text style={{ fontFamily: 'Montserrat-Bold', fontSize: 18, color: '#0E2657', marginTop: 32, textAlign: 'center' }}>No requests found</Text>
             ) : (
               requests.map((req) => (
-                <View key={req.id} style={[styles.productCard, { flexDirection: 'column', alignItems: 'flex-start', marginBottom: 16, minWidth: '100%', maxWidth: '100%' }]}> 
+                <View key={req.id} style={[styles.productCard, { flexDirection: 'column', alignItems: 'flex-start', marginBottom: 16, minWidth: '100%', maxWidth: '100%' }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                     <Ionicons name="list" size={22} color="#6C5CE7" style={{ marginRight: 10 }} />
                     <View style={{ flex: 1 }}>
