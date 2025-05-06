@@ -170,11 +170,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   label: {
-    fontSize: 14,
-    color: '#666',
+    color: '#0E2657',
+    fontSize: 16,
     marginBottom: 8,
-    textAlign: 'left',
-    fontFamily: 'Heebo-Medium',
+    fontFamily: 'Montserrat-Medium',
   },
   selectButton: {
     backgroundColor: '#2a2a2a',
@@ -186,23 +185,25 @@ const styles = StyleSheet.create({
   },
   selectButtonText: {
     fontSize: 16,
-    fontFamily: 'Heebo-Regular',
+    fontFamily: 'Montserrat-Regular',
     color: '#fff',
     textAlign: 'left',
   },
   input: {
-    backgroundColor: '#2a2a2a',
-    borderRadius: 8,
+    backgroundColor: '#F5F8FC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E3EAF3',
     padding: 12,
     fontSize: 16,
-    fontFamily: 'Heebo-Regular',
-    color: '#fff',
+    fontFamily: 'Montserrat-Regular',
+    color: '#0E2657',
   },
   errorText: {
-    color: '#ff4444',
-    fontSize: 12,
+    color: '#FF3B30',
     marginTop: 4,
-    fontFamily: 'Heebo-Regular',
+    marginBottom: 8,
+    fontFamily: 'Montserrat-Regular',
   },
   modalOverlay: {
     flex: 1,
@@ -225,7 +226,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontFamily: 'Heebo-Bold',
+    fontFamily: 'Montserrat-Bold',
     color: '#fff',
   },
   modalCloseButton: {
@@ -245,7 +246,7 @@ const styles = StyleSheet.create({
   },
   modalOptionText: {
     fontSize: 16,
-    fontFamily: 'Heebo-Regular',
+    fontFamily: 'Montserrat-Regular',
     textAlign: 'left',
     color: '#fff',
   },

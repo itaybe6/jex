@@ -24,11 +24,16 @@ const SubmitButton: React.FC<SubmitButtonProps> = ({ loading, onPress }) => {
 
 const styles = StyleSheet.create({
   submitButton: {
-    backgroundColor: '#6C5CE7',
+    backgroundColor: '#0E2657',
+    borderRadius: 12,
     paddingVertical: 16,
-    borderRadius: 8,
     alignItems: 'center',
     marginTop: 32,
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   submitButtonDisabled: {
     opacity: 0.6,
@@ -36,7 +41,7 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontFamily: 'Heebo-Medium',
+    fontFamily: 'Montserrat-Medium',
   },
 });
 

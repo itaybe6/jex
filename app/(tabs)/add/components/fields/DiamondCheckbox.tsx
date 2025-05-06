@@ -40,13 +40,13 @@ const styles = StyleSheet.create({
   checkboxInner: {
     width: 16,
     height: 16,
-    backgroundColor: '#6C5CE7',
+    backgroundColor: '#0E2657',
     borderRadius: 2,
   },
   label: {
     fontSize: 14,
     color: '#666',
-    fontFamily: 'Heebo-Medium',
+    fontFamily: 'Montserrat-Medium',
   },
 });
 

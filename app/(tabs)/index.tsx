@@ -802,34 +802,32 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <View style={styles.headerButtons}>
-            <View style={styles.tabButtons}>
+      <View style={styles.header}>
+        <View style={styles.headerButtons}>
+          <View style={styles.tabButtons}>
             <TouchableOpacity 
-                style={[styles.tabButton, !showRequests && styles.tabButtonActive]}
-                onPress={() => setShowRequests(false)}
-              >
-                <Text style={[styles.tabButtonText, !showRequests && styles.tabButtonTextActive]}>For You</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.tabButton, showRequests && styles.tabButtonActive]}
-                onPress={() => setShowRequests(true)}
+              style={[styles.tabButton, !showRequests && styles.tabButtonActive]}
+              onPress={() => setShowRequests(false)}
             >
-                <Text style={[styles.tabButtonText, showRequests && styles.tabButtonTextActive]}>Requests</Text>
+              <Text style={[styles.tabButtonText, !showRequests && styles.tabButtonTextActive]}>For You</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tabButton, showRequests && styles.tabButtonActive]}
+              onPress={() => setShowRequests(true)}
+            >
+              <Text style={[styles.tabButtonText, showRequests && styles.tabButtonTextActive]}>Requests</Text>
             </TouchableOpacity>
           </View>
-            <TouchableOpacity
-              style={styles.filterButton}
-              onPress={() => setShowFilterModal(true)}
-            >
-              <Ionicons name="filter" size={24} color="#0E2657" />
-            </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={styles.filterButton}
+            onPress={() => setShowFilterModal(true)}
+          >
+            <Ionicons name="filter" size={24} color="#0E2657" />
+          </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
       <ScrollView
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -847,7 +845,7 @@ export default function HomeScreen() {
         onFiltersChange={setFilters}
       />
       {renderDetailsModal()}
-    </View>
+    </SafeAreaView>
   );
 }
 

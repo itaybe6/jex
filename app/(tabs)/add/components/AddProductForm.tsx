@@ -66,8 +66,8 @@ const AddProductForm = () => {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
-      <View style={{ padding: 20 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: '#F5F8FC' }}>
+      <View style={{ padding: 20, backgroundColor: '#fff', borderRadius: 18, shadowColor: '#0E2657', shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2, margin: 16 }}>
         <ProductTypeSelect
           value={formData.category}
           onSelect={value => handleChange('category', value)}
@@ -262,22 +262,24 @@ const AddProductForm = () => {
 
 const styles = StyleSheet.create({
   imageButton: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#E3EAF3',
     padding: 15,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     marginVertical: 10,
+    fontFamily: 'Montserrat-Regular',
   },
   errorButton: {
-    backgroundColor: '#ffeeee',
-    borderColor: '#ff4444',
+    backgroundColor: '#fff0f0',
+    borderColor: '#FF3B30',
     borderWidth: 1,
   },
   errorText: {
-    color: '#ff4444',
-    fontSize: 12,
+    color: '#FF3B30',
+    fontSize: 13,
     marginTop: 4,
     marginBottom: 8,
+    fontFamily: 'Montserrat-Regular',
   },
   imagePreviewContainer: {
     flexDirection: 'row',
@@ -293,17 +295,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -5,
     right: -5,
-    backgroundColor: '#ff4444',
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    backgroundColor: '#FF3B30',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
   },
   removeImageText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Montserrat-Bold',
   },
 });
 

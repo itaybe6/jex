@@ -116,24 +116,29 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    color: '#fff',
+    color: '#0E2657',
     fontSize: 16,
     marginBottom: 8,
+    fontFamily: 'Montserrat-SemiBold',
   },
   input: {
-    backgroundColor: '#2a2a2a',
-    color: '#fff',
-    borderRadius: 8,
+    backgroundColor: '#F5F8FC',
+    color: '#0E2657',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E3EAF3',
     padding: 12,
+    fontFamily: 'Montserrat-Regular',
   },
   errorInput: {
     borderColor: '#ff4444',
     borderWidth: 1,
   },
   errorText: {
-    color: '#ff4444',
+    color: '#FF3B30',
     fontSize: 12,
     marginTop: 4,
+    fontFamily: 'Montserrat-Regular',
   },
 });
 
