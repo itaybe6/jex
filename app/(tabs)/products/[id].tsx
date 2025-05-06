@@ -295,21 +295,22 @@ export default function ProductScreen() {
       <Stack.Screen
         options={{
           headerStyle: {
-            backgroundColor: '#0E2657',
+            backgroundColor: '#F5F8FC',
           },
-          headerTintColor: '#fff',
-          headerTitle: 'Product',
+          headerTintColor: '#0E2657',
+          headerTitle: '',
           headerTitleStyle: {
             fontWeight: '600',
+            color: '#0E2657',
           },
           headerShadowVisible: false,
         }}
       />
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={24} color="#0E2657" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{product.title}</Text>
+        <Text style={styles.productTitle}>{product.title}</Text>
         {isOwner && (
           <View style={styles.ownerActions}>
             <TouchableOpacity onPress={handleMarkAsSold} style={[styles.actionButton, styles.soldButton]}>
@@ -327,7 +328,7 @@ export default function ProductScreen() {
 
       <ScrollView 
         style={styles.content}
-        contentContainerStyle={styles.contentContainer}
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: 40 }]}
         showsVerticalScrollIndicator={false}
       >
         {productImages.length > 0 && (
@@ -504,14 +505,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#0E2657',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
-    flex: 1,
-    marginLeft: 12,
+    backgroundColor: '#F5F8FC',
   },
   backButton: {
     padding: 8,
@@ -596,12 +590,12 @@ const styles = StyleSheet.create({
   },
   specLabel: {
     fontSize: 14,
-    fontFamily: 'Heebo-Regular',
+    fontFamily: 'Montserrat-Regular',
     color: '#888',
   },
   specValue: {
     fontSize: 16,
-    fontFamily: 'Heebo-Medium',
+    fontFamily: 'Montserrat-Medium',
     color: '#0E2657',
   },
   sellerContainer: {
@@ -659,15 +653,11 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   bottomButtonsContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#E3EAF3',
-    paddingTop: 12,
-    paddingBottom: 32,
+    paddingTop: 8,
+    paddingBottom: 16,
     paddingHorizontal: 16,
   },
   bottomButtons: {
@@ -677,27 +667,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#6C5CE7',
-    padding: 16,
-    borderRadius: 16,
-    gap: 8,
+    backgroundColor: '#0E2657',
+    padding: 10,
+    borderRadius: 10,
+    gap: 6,
   },
   holdButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: 'Montserrat-Bold',
   },
   contactButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#6C5CE7',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: '#0E2657',
+    borderRadius: 10,
+    padding: 10,
   },
   contactButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: 'Montserrat-Bold',
   },
   modalOverlay: {
@@ -740,8 +730,8 @@ const styles = StyleSheet.create({
     borderColor: '#E3EAF3',
   },
   durationOptionSelected: {
-    backgroundColor: '#6C5CE7',
-    borderColor: '#6C5CE7',
+    backgroundColor: '#0E2657',
+    borderColor: '#0E2657',
   },
   durationOptionText: {
     fontSize: 16,
@@ -769,7 +759,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E3EAF3',
   },
   modalConfirmButton: {
-    backgroundColor: '#6C5CE7',
+    backgroundColor: '#0E2657',
   },
   modalButtonDisabled: {
     opacity: 0.5,
@@ -825,5 +815,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontFamily: 'Montserrat-Bold',
+  },
+  productTitle: {
+    fontSize: 22,
+    fontFamily: 'Montserrat-Bold',
+    color: '#0E2657',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 8,
   },
 }); 
