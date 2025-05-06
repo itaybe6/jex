@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert, Modal, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 // import { supabase } from '@/lib/supabase'; // Removed, migrate to fetch-based API
@@ -45,6 +45,67 @@ function useSupabaseFetch(access_token?: string) {
   };
 }
 
+type DealModalProps = {
+  visible: boolean;
+  onClose: () => void;
+  notification: Notification | null;
+  onApprove: () => void;
+  onReject: () => void;
+  isLoading: boolean;
+};
+
+const DealModal = ({ visible, onClose, notification, onApprove, onReject, isLoading }: DealModalProps) => {
+  if (!notification) return null;
+
+  return (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Deal Details</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close" size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.productDetails}>
+            {notification.data?.product_image_url && (
+              <Image
+                source={{ uri: notification.data.product_image_url }}
+                style={styles.modalProductImage}
+              />
+            )}
+            <Text style={styles.modalMessage}>Do you want to approve or reject this deal?</Text>
+            <Text style={styles.sellerName}>Seller: {notification.data?.seller_name}</Text>
+          </View>
+
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.rejectButton]}
+              onPress={onReject}
+              disabled={isLoading}
+            >
+              <Text style={styles.actionButtonText}>Reject Deal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.approveButton]}
+              onPress={onApprove}
+              disabled={isLoading}
+            >
+              <Text style={styles.actionButtonText}>Approve Deal</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 export default function NotificationsScreen() {
   const { user, accessToken } = useAuth();
   const supabaseFetch = useSupabaseFetch(accessToken || undefined);
@@ -52,10 +113,11 @@ export default function NotificationsScreen() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionDone, setActionDone] = useState<{ [id: string]: boolean }>({});
+  const [selectedDeal, setSelectedDeal] = useState<Notification | null>(null);
+  const [isDealModalVisible, setIsDealModalVisible] = useState(false);
 
   useEffect(() => {
     if (user) {
-      console.log('user in NotificationsScreen:', user);
       fetchNotifications();
       registerForPushNotifications();
     }
@@ -66,14 +128,12 @@ export default function NotificationsScreen() {
       const res = await supabaseFetch(`/rest/v1/notifications?user_id=eq.${user?.id}&select=*&order=created_at.desc`);
       if (!res.ok) {
         const err = await res.text();
-        console.error('Error fetching notifications:', err);
         Alert.alert('Error', 'Failed to load notifications. Please try again later.');
         return;
       }
       const data = await res.json();
       setNotifications(data || []);
     } catch (error) {
-      console.error('Error fetching notifications:', error);
       Alert.alert('Error', 'An unexpected error occurred. Please try again later.');
     }
   };
@@ -110,12 +170,10 @@ export default function NotificationsScreen() {
         });
         if (!res.ok) {
           const err = await res.text();
-          console.error('Error saving push token:', err);
           Alert.alert('Error', 'Failed to save push notification settings. Please try again later.');
         }
       }
     } catch (error) {
-      console.error('Error registering for push notifications:', error);
       Alert.alert('Error', 'Failed to set up push notifications. Please try again later.');
     }
   };
@@ -136,80 +194,79 @@ export default function NotificationsScreen() {
   };
 
   const handleDealAction = async (notification: Notification, approve: boolean) => {
-    
-    const buyer_id = notification.user_id;
-    console.log('buyer_id:', buyer_id, 'seller_id:', notification.data?.seller_id, 'user.id:', user?.id, 'transaction_id:', notification.data?.transaction_id);
     setActionLoading(notification.id);
     setActionError(null);
     try {
-      const { transaction_id, product_title, seller_id, product_id } = notification.data;
-      // Fetch transaction to determine who is acting
-      const txRes = await supabaseFetch(`/rest/v1/transactions?id=eq.${transaction_id}&select=*`);
-      if (!txRes.ok) throw new Error(await txRes.text());
-      const txArr = await txRes.json();
-      const transaction = txArr[0];
-      if (!transaction) throw new Error('Transaction not found');
+      const { transaction_id, product_id, seller_id } = notification.data;
+      // Update transaction status
+      const newStatus = approve ? 'completed' : 'rejected';
+      const response = await supabaseFetch(`/rest/v1/transactions?id=eq.${transaction_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const responseText = await response.text();
 
-      // If user is the buyer and approves, update notification message
-      if (approve && user?.id === buyer_id && transaction.status === 'pending') {
-        // Update transaction status
-        await supabaseFetch(`/rest/v1/transactions?id=eq.${transaction_id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: 'waiting_seller_approval' }),
-        });
-        // Update notification message (optional)
-        await supabaseFetch(`/rest/v1/notifications?id=eq.${notification.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ is_action_done: true }),
-        });
-      }
-      // If user is the buyer and rejects, update notification message
-      else if (!approve && user?.id === buyer_id && transaction.status === 'pending') {
-        await supabaseFetch(`/rest/v1/transactions?id=eq.${transaction_id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: 'rejected_by_buyer' }),
-        });
-        await supabaseFetch(`/rest/v1/notifications?id=eq.${notification.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ is_action_done: true }),
-        });
-      }
-      // If user is the seller and approves, move to completed and delete product
-      else if (approve && user?.id === seller_id && transaction.status === 'waiting_seller_approval') {
-        await supabaseFetch(`/rest/v1/transactions?id=eq.${transaction_id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: 'completed' }),
-        });
-        if (product_id) {
-          await supabaseFetch(`/rest/v1/products?id=eq.${product_id}`, {
-            method: 'DELETE',
-          });
+      if (approve) {
+        // Ensure we have product_id
+        let product_id = notification.data?.product_id;
+        if (!product_id && transaction_id) {
+          try {
+            const txRes = await supabaseFetch(`/rest/v1/transactions?id=eq.${transaction_id}&select=product_id`);
+            const txArr = await txRes.json();
+            product_id = txArr[0]?.product_id;
+          } catch (e) {
+            console.error('Failed to fetch product_id from transaction:', e);
+          }
         }
-        await supabaseFetch(`/rest/v1/notifications?id=eq.${notification.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ is_action_done: true }),
-        });
+        // Update product status to not_available
+        if (product_id) {
+          const productRes = await supabaseFetch(`/rest/v1/products?id=eq.${product_id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'not_available' }),
+          });
+          const productResText = await productRes.text();
+        }
+        // Send notification to seller (in English)
+        if (seller_id) {
+          console.log('Sending notification to seller:', seller_id, approve ? 'deal_completed' : 'deal_rejected');
+          const sellerNotifRes = await supabaseFetch('/rest/v1/notifications', {
+            method: 'POST',
+            body: JSON.stringify({
+              user_id: seller_id,
+              type: approve ? 'deal_completed' : 'deal_rejected',
+              data: {
+                message: approve
+                  ? 'The deal was successfully completed!'
+                  : 'The buyer has rejected the deal.',
+                product_title: notification.data?.product_title,
+                product_image_url: notification.data?.product_image_url,
+                transaction_id: transaction_id,
+              },
+              read: false,
+              is_action_done: true,
+            }),
+          });
+          const sellerNotifText = await sellerNotifRes.text();
+          console.log('Seller notification response:', sellerNotifRes.status, sellerNotifRes.ok, sellerNotifText);
+        }
       }
-      // If seller rejects at waiting_seller_approval
-      else if (!approve && user?.id === seller_id && transaction.status === 'waiting_seller_approval') {
-        await supabaseFetch(`/rest/v1/transactions?id=eq.${transaction_id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: 'rejected_by_seller' }),
-        });
-        await supabaseFetch(`/rest/v1/notifications?id=eq.${notification.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ is_action_done: true }),
-        });
-      }
-      // Fallback: do nothing, just delete notification
-      else {
-        await supabaseFetch(`/rest/v1/notifications?id=eq.${notification.id}`, {
-          method: 'DELETE',
-        });
-        setNotifications(prev => prev.filter(n => n.id !== notification.id));
-      }
+      // Update current notification
+      await supabaseFetch(`/rest/v1/notifications?id=eq.${notification.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_action_done: true }),
+      });
+      // Close modal and refresh notifications
+      setIsDealModalVisible(false);
+      setSelectedDeal(null);
+      fetchNotifications();
+      // Show success message
+      Alert.alert(
+        approve ? 'Deal Approved' : 'Deal Rejected',
+        approve ? 'The deal has been completed successfully.' : 'The deal has been rejected.'
+      );
     } catch (err: any) {
       setActionError(err.message || 'Failed to update deal');
+      Alert.alert('Error', 'Failed to update the deal. Please try again.');
     } finally {
       setActionLoading(null);
     }
@@ -257,7 +314,10 @@ export default function NotificationsScreen() {
           ]}
           onPress={() => {
             markAsRead(notification.id);
-            if (notification.product_id) {
+            if (notification.type === 'transaction_offer') {
+              setSelectedDeal(notification);
+              setIsDealModalVisible(true);
+            } else if (notification.product_id) {
               router.push(`/products/${notification.product_id}`);
             }
           }}
@@ -318,6 +378,18 @@ export default function NotificationsScreen() {
             <Text style={styles.emptyText}>No notifications yet</Text>
           </View>
         }
+      />
+      
+      <DealModal
+        visible={isDealModalVisible}
+        onClose={() => {
+          setIsDealModalVisible(false);
+          setSelectedDeal(null);
+        }}
+        notification={selectedDeal}
+        onApprove={() => selectedDeal && handleDealAction(selectedDeal, true)}
+        onReject={() => selectedDeal && handleDealAction(selectedDeal, false)}
+        isLoading={actionLoading === selectedDeal?.id}
       />
     </SafeAreaView>
   );
@@ -441,5 +513,77 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 2,
     elevation: 2,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontFamily: 'Montserrat-Bold',
+    color: '#111827',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  productDetails: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalProductImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  modalMessage: {
+    fontSize: 16,
+    fontFamily: 'Montserrat-Medium',
+    color: '#111827',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  sellerName: {
+    fontSize: 16,
+    fontFamily: 'Montserrat-Medium',
+    color: '#6B7280',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  approveButton: {
+    backgroundColor: '#0E2657',
+  },
+  rejectButton: {
+    backgroundColor: '#DC2626',
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontFamily: 'Montserrat-SemiBold',
   },
 });

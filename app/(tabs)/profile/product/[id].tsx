@@ -579,6 +579,7 @@ export default function ProductScreen() {
       });
       const txData = await txRes.json();
       if (!txRes.ok) throw new Error(txData?.message || 'Error creating transaction');
+      const transactionId = Array.isArray(txData) ? txData[0]?.id : txData?.id;
       // Send notification to buyer
       await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
         method: 'POST',
@@ -598,6 +599,7 @@ export default function ProductScreen() {
             seller_avatar_url: sellerAvatar,
             product_title: product.title,
             product_image_url: productImage,
+            transaction_id: transactionId,
           },
           read: false,
         }),
