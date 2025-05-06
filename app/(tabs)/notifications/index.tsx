@@ -106,6 +106,19 @@ const DealModal = ({ visible, onClose, notification, onApprove, onReject, isLoad
   );
 };
 
+// Add this helper to fetch a profile by user id
+async function fetchProfile(userId, accessToken) {
+  const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=full_name,avatar_url`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${accessToken || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+    },
+  });
+  const data = await res.json();
+  return Array.isArray(data) && data.length > 0 ? data[0] : {};
+}
+
 export default function NotificationsScreen() {
   const { user, accessToken } = useAuth();
   const supabaseFetch = useSupabaseFetch(accessToken || undefined);
@@ -197,7 +210,7 @@ export default function NotificationsScreen() {
     setActionLoading(notification.id);
     setActionError(null);
     try {
-      const { transaction_id, product_id, seller_id } = notification.data;
+      const { transaction_id, product_id, seller_id, buyer_id } = notification.data;
       // Update transaction status
       const newStatus = approve ? 'completed' : 'rejected';
       const response = await supabaseFetch(`/rest/v1/transactions?id=eq.${transaction_id}`, {
@@ -226,29 +239,27 @@ export default function NotificationsScreen() {
           });
           const productResText = await productRes.text();
         }
-        // Send notification to seller (in English)
-        if (seller_id) {
-          console.log('Sending notification to seller:', seller_id, approve ? 'deal_completed' : 'deal_rejected');
-          const sellerNotifRes = await supabaseFetch('/rest/v1/notifications', {
-            method: 'POST',
-            body: JSON.stringify({
-              user_id: seller_id,
-              type: approve ? 'deal_completed' : 'deal_rejected',
-              data: {
-                message: approve
-                  ? 'The deal was successfully completed!'
-                  : 'The buyer has rejected the deal.',
-                product_title: notification.data?.product_title,
-                product_image_url: notification.data?.product_image_url,
-                transaction_id: transaction_id,
-              },
-              read: false,
-              is_action_done: true,
-            }),
-          });
-          const sellerNotifText = await sellerNotifRes.text();
-          console.log('Seller notification response:', sellerNotifRes.status, sellerNotifRes.ok, sellerNotifText);
-        }
+        // Fetch buyer profile
+        const buyerProfile = await fetchProfile(user.id, accessToken);
+        // Send notification to seller
+        await supabaseFetch(`/rest/v1/notifications`, {
+          method: 'POST',
+          body: JSON.stringify({
+            user_id: seller_id,
+            type: approve ? 'deal_completed' : 'deal_rejected',
+            product_id: product_id,
+            data: {
+              message: approve ? `The buyer has approved the deal for product "${notification.data?.product_title}"` : `The buyer has rejected the deal for product "${notification.data?.product_title}"`,
+              buyer_id: user.id,
+              buyer_name: buyerProfile.full_name || '',
+              buyer_avatar_url: buyerProfile.avatar_url || '',
+              product_title: notification.data?.product_title,
+              product_image_url: notification.data?.product_image_url,
+              transaction_id,
+            },
+            read: false,
+          }),
+        });
       }
       // Update current notification
       await supabaseFetch(`/rest/v1/notifications?id=eq.${notification.id}`, {
@@ -292,6 +303,7 @@ export default function NotificationsScreen() {
   );
 
   const renderNotification = ({ item: notification }: { item: Notification }) => {
+    const isBuyerNotification = notification.type === 'deal_completed' || notification.type === 'deal_rejected';
     const formattedDate = new Date(notification.created_at).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -299,11 +311,14 @@ export default function NotificationsScreen() {
       minute: '2-digit',
     });
 
-    const profileImage =
-      notification.data?.seller_avatar_url ||
-      notification.data?.sender_avatar_url ||
-      'https://ui-avatars.com/api/?background=0E2657&color=fff&name=' +
-        encodeURIComponent(notification.data?.seller_name || notification.data?.sender_full_name || 'U');
+    const profileImage = isBuyerNotification
+      ? notification.data?.buyer_avatar_url ||
+        'https://ui-avatars.com/api/?background=0E2657&color=fff&name=' +
+          encodeURIComponent(notification.data?.buyer_name || 'U')
+      : notification.data?.seller_avatar_url ||
+        notification.data?.sender_avatar_url ||
+        'https://ui-avatars.com/api/?background=0E2657&color=fff&name=' +
+          encodeURIComponent(notification.data?.seller_name || notification.data?.sender_full_name || 'U');
 
     return (
       <View style={styles.notificationWrapper}>
@@ -331,7 +346,9 @@ export default function NotificationsScreen() {
                   'New Notification'}
               </Text>
               <Text style={styles.userName}>
-                {notification.data?.seller_name || notification.data?.sender_full_name || 'Unknown User'}
+                {isBuyerNotification
+                  ? notification.data?.buyer_name || 'Unknown User'
+                  : notification.data?.seller_name || notification.data?.sender_full_name || 'Unknown User'}
               </Text>
               <Text style={styles.messageText} numberOfLines={2}>
                 {notification.data?.message || 'No message available'}

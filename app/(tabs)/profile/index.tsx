@@ -136,7 +136,7 @@ export default function ProfileScreen() {
       if (!user) return;
 
       const query = '*,product_images:product_images_product_id_fkey(id,image_url)';
-      const url = `${SUPABASE_URL}/rest/v1/products?user_id=eq.${user.id}&select=${encodeURIComponent(query)}&order=created_at.desc`;
+      const url = `${SUPABASE_URL}/rest/v1/products?user_id=eq.${user.id}&status=eq.available&select=${encodeURIComponent(query)}&order=created_at.desc`;
       const res = await fetch(url, {
         headers: {
           apikey: SUPABASE_ANON_KEY,

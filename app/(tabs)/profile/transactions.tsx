@@ -48,12 +48,12 @@ export default function TransactionsScreen() {
   }, [navigation, fromProfileType, userId]);
 
   const fetchTransactions = async () => {
-    if (!userId) return;
+    if (!user) return;
     setLoading(true);
     setError(null);
     try {
       const query = encodeURIComponent(`*,products(*),profiles:seller_id(full_name,avatar_url),buyer:buyer_id(full_name,avatar_url)`);
-      const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/transactions?or=(seller_id.eq.${userId},buyer_id.eq.${userId})&select=${query}&order=created_at.desc`;
+      const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/transactions?or=(seller_id.eq.${user.id},buyer_id.eq.${user.id})&select=${query}&order=created_at.desc`;
       const res = await fetch(url, {
         headers: {
           apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
@@ -63,6 +63,7 @@ export default function TransactionsScreen() {
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
+      console.log('Fetched transactions for user:', user.id, data);
       setTransactions(Array.isArray(data) ? data : []);
     } catch (err: any) {
       setError(err.message || 'Failed to load transactions');
@@ -203,7 +204,6 @@ export default function TransactionsScreen() {
         {[
           { label: 'All', value: 'all' },
           { label: 'Pending', value: 'pending' },
-          { label: 'Waiting Seller Approval', value: 'waiting_seller_approval' },
           { label: 'Completed', value: 'completed' },
           { label: 'Rejected', value: 'rejected' },
         ].map(btn => (

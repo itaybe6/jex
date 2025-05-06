@@ -840,10 +840,10 @@ export default function ProductScreen() {
       >
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' }}>
           <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '90%', maxWidth: 400 }}>
-            <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: '#0E2657' }}>בחר קונה</Text>
+            <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: '#0E2657' }}>Select Buyer</Text>
             <TextInput
               style={{ borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, padding: 12, marginBottom: 12, fontSize: 16 }}
-              placeholder="חפש משתמש לפי שם..."
+              placeholder="Search user by name..."
               value={userSearch}
               onChangeText={setUserSearch}
               autoFocus
@@ -868,21 +868,21 @@ export default function ProductScreen() {
                   </TouchableOpacity>
                 )}
                 ListEmptyComponent={userSearch.length > 0 && !userSearchLoading ? (
-                  <Text style={{ color: '#7B8CA6', textAlign: 'center', marginTop: 12 }}>לא נמצאו משתמשים</Text>
+                  <Text style={{ color: '#7B8CA6', textAlign: 'center', marginTop: 12 }}>No users found</Text>
                 ) : null}
               />
             )}
             {saleError && <Text style={{ color: 'red', marginBottom: 8 }}>{saleError}</Text>}
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 8 }}>
               <TouchableOpacity onPress={() => setSaleModalVisible(false)} style={{ marginRight: 16 }}>
-                <Text style={{ color: '#0E2657', fontSize: 16 }}>ביטול</Text>
+                <Text style={{ color: '#0E2657', fontSize: 16 }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleStartSale}
                 disabled={!selectedBuyer || saleLoading}
                 style={{ backgroundColor: selectedBuyer ? '#0E2657' : '#B0B8C1', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 20 }}
               >
-                <Text style={{ color: '#fff', fontSize: 16 }}>{saleLoading ? 'שולח...' : 'אישור'}</Text>
+                <Text style={{ color: '#fff', fontSize: 16 }}>{saleLoading ? 'Sending...' : 'Confirm'}</Text>
               </TouchableOpacity>
             </View>
           </View>
