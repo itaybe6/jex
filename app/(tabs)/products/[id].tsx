@@ -252,23 +252,102 @@ export default function ProductScreen() {
   };
 
   const handleHoldRequest = async () => {
-    if (!product) return;
+    if (!product || !selectedDuration || !user) return;
+    setIsSubmitting(true);
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${product.id}`, {
-        method: 'PATCH',
+      // בדוק שאין בקשה פתוחה
+      const resCheck = await fetch(
+        `${SUPABASE_URL}/rest/v1/hold_requests?product_id=eq.${product.id}&status=in.(pending,approved)&end_time=gt.${new Date().toISOString()}`
+      );
+      const arr = await resCheck.json();
+      if (arr.length > 0) {
+        Alert.alert('שגיאה', 'כבר קיימת בקשה פעילה על מוצר זה');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // שלוף את פרטי הפרופיל של המשתמש הנוכחי
+      let buyerProfile = { full_name: '', avatar_url: '' };
+      try {
+        const profileRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&select=full_name,avatar_url`,
+          {
+            headers: {
+              apikey: SUPABASE_ANON_KEY!,
+              Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            },
+          }
+        );
+        const profileArr = await profileRes.json();
+        if (profileArr && profileArr[0]) {
+          buyerProfile = {
+            full_name: profileArr[0].full_name || '',
+            avatar_url: profileArr[0].avatar_url || '',
+          };
+        }
+      } catch (e) {
+        // אפשר להתעלם משגיאה, פשוט לא יהיה שם/תמונה
+      }
+
+      // צור בקשת Hold
+      const now = new Date();
+      const end_time = new Date(now.getTime() + selectedDuration * 60 * 60 * 1000);
+      const holdRes = await fetch(`${SUPABASE_URL}/rest/v1/hold_requests`, {
+        method: 'POST',
         headers: {
           apikey: SUPABASE_ANON_KEY!,
           Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
           Prefer: 'return=representation',
         },
-        body: JSON.stringify({ status: 'hold' })
+        body: JSON.stringify({
+          product_id: product.id,
+          user_id: user.id,
+          owner_id: product.user_id,
+          duration_hours: selectedDuration,
+          start_time: now.toISOString(),
+          end_time: end_time.toISOString(),
+          status: 'pending'
+        })
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!holdRes.ok) throw new Error(await holdRes.text());
+      const [holdRequest] = await holdRes.json();
+
+      // צור התראה למוכר עם שם ותמונה של הקונה
+      await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify({
+          user_id: product.user_id, // המוכר
+          type: 'hold_request',
+          product_id: product.id,
+          data: {
+            hold_request_id: holdRequest.id,
+            buyer_id: user.id,
+            buyer_name: buyerProfile.full_name,
+            buyer_avatar_url: buyerProfile.avatar_url,
+            product_title: product.title || '',
+            product_image_url: productImages[0] || product.image_url || '',
+            message: `Request Hold ${selectedDuration} Hours`
+          },
+          read: false,
+          is_action_done: false
+        })
+      });
+
+      setShowHoldModal(false);
+      setSelectedDuration(null);
+      Alert.alert('הבקשה נשלחה', 'הבקשה להחזקה נשלחה למוכר. המתן לאישור.');
       await fetchProduct();
     } catch (error) {
-      console.error('Error holding product:', error);
-      Alert.alert('שגיאה', 'אירעה שגיאה בהחזקת המוצר');
+      Alert.alert('שגיאה', 'לא ניתן לשלוח בקשה להחזקה');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

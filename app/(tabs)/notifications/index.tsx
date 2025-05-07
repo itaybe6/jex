@@ -128,6 +128,11 @@ export default function NotificationsScreen() {
   const [actionDone, setActionDone] = useState<{ [id: string]: boolean }>({});
   const [selectedDeal, setSelectedDeal] = useState<Notification | null>(null);
   const [isDealModalVisible, setIsDealModalVisible] = useState(false);
+  const [selectedHoldRequest, setSelectedHoldRequest] = useState<Notification | null>(null);
+  const [isHoldModalVisible, setIsHoldModalVisible] = useState(false);
+  const [selectedApprovedHold, setSelectedApprovedHold] = useState<Notification | null>(null);
+  const [isApprovedHoldModalVisible, setIsApprovedHoldModalVisible] = useState(false);
+  const profileImagePressedRef = React.useRef(false);
 
   useEffect(() => {
     if (user) {
@@ -312,8 +317,143 @@ export default function NotificationsScreen() {
     }, [user])
   );
 
+
+  const handleApproveHold = async () => {
+    if (!selectedHoldRequest) return;
+    try {
+      // 1. עדכן hold_requests ל-approved
+      await supabaseFetch(`/rest/v1/hold_requests?id=eq.${selectedHoldRequest.data.hold_request_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'approved' }),
+      });
+      // 2. עדכן products ל-hold
+      await supabaseFetch(`/rest/v1/products?id=eq.${selectedHoldRequest.product_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'hold' }),
+      });
+      // 3. שלוף את פרטי המוכר
+      let sellerProfile = { full_name: '', avatar_url: '' };
+      try {
+        const profileRes = await supabaseFetch(`/rest/v1/profiles?id=eq.${user.id}&select=full_name,avatar_url`);
+        const profileArr = await profileRes.json();
+        if (profileArr && profileArr[0]) {
+          sellerProfile = {
+            full_name: profileArr[0].full_name || '',
+            avatar_url: profileArr[0].avatar_url || '',
+          };
+        }
+      } catch (e) {}
+      // 4. שלוף את end_time מה-hold_request
+      let end_time = null;
+      try {
+        const holdRequestRes = await supabaseFetch(`/rest/v1/hold_requests?id=eq.${selectedHoldRequest.data.hold_request_id}`);
+        const holdArr = await holdRequestRes.json();
+        console.log('HOLD REQUEST ARRAY:', holdArr);
+        if (holdArr && holdArr[0]) {
+          console.log('HOLD REQUEST OBJECT:', holdArr[0]);
+          end_time = holdArr[0].end_time;
+        } else {
+          console.log('NO HOLD REQUEST FOUND FOR:', selectedHoldRequest.data.hold_request_id);
+        }
+      } catch (e) {}
+      // 5. שלח התראה ל-buyer עם פרטי המוכר ו-end_time
+      console.log('SENDING END TIME TO BUYER:', end_time);
+      await supabaseFetch(`/rest/v1/notifications`, {
+        method: 'POST',
+        body: JSON.stringify({
+          user_id: selectedHoldRequest.data.buyer_id,
+          type: 'hold_request_approved',
+          product_id: selectedHoldRequest.product_id,
+          data: {
+            message: `Your hold request for "${selectedHoldRequest.data.product_title}" was approved.`,
+            product_title: selectedHoldRequest.data.product_title,
+            product_image_url: selectedHoldRequest.data.product_image_url,
+            seller_name: sellerProfile.full_name,
+            seller_avatar_url: sellerProfile.avatar_url,
+            end_time: end_time,
+          },
+          read: false,
+        }),
+      });
+      // 6. עדכן את ההתראה הנוכחית בשרת
+      await supabaseFetch(`/rest/v1/notifications?id=eq.${selectedHoldRequest.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          is_action_done: true,
+          data: {
+            ...selectedHoldRequest.data,
+            message: 'Hold request approved'
+          }
+        }),
+      });
+      setIsHoldModalVisible(false);
+      setSelectedHoldRequest(null);
+      fetchNotifications();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to approve hold request.');
+    }
+  };
+
+  const handleRejectHold = async () => {
+    if (!selectedHoldRequest) return;
+    try {
+      // 1. עדכן hold_requests ל-rejected
+      await supabaseFetch(`/rest/v1/hold_requests?id=eq.${selectedHoldRequest.data.hold_request_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'rejected' }),
+      });
+      // 2. שלוף את פרטי המוכר
+      let sellerProfile = { full_name: '', avatar_url: '' };
+      try {
+        const profileRes = await supabaseFetch(`/rest/v1/profiles?id=eq.${user.id}&select=full_name,avatar_url`);
+        const profileArr = await profileRes.json();
+        if (profileArr && profileArr[0]) {
+          sellerProfile = {
+            full_name: profileArr[0].full_name || '',
+            avatar_url: profileArr[0].avatar_url || '',
+          };
+        }
+      } catch (e) {}
+      // 3. שלח התראה ל-buyer עם פרטי המוכר
+      await supabaseFetch(`/rest/v1/notifications`, {
+        method: 'POST',
+        body: JSON.stringify({
+          user_id: selectedHoldRequest.data.buyer_id,
+          type: 'hold_request_rejected',
+          product_id: selectedHoldRequest.product_id,
+          data: {
+            message: `Your hold request for "${selectedHoldRequest.data.product_title}" was rejected.`,
+            product_title: selectedHoldRequest.data.product_title,
+            product_image_url: selectedHoldRequest.data.product_image_url,
+            seller_name: sellerProfile.full_name,
+            seller_avatar_url: sellerProfile.avatar_url,
+          },
+          read: false,
+        }),
+      });
+      // 4. עדכן את ההתראה הנוכחית בשרת
+      await supabaseFetch(`/rest/v1/notifications?id=eq.${selectedHoldRequest.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          is_action_done: true,
+          data: {
+            ...selectedHoldRequest.data,
+            message: 'Hold request rejected'
+          }
+        }),
+      });
+      setIsHoldModalVisible(false);
+      setSelectedHoldRequest(null);
+      fetchNotifications();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to reject hold request.');
+    }
+  };
+
   const renderNotification = ({ item: notification }: { item: Notification }) => {
+    
     const isBuyerNotification = notification.type === 'deal_completed' || notification.type === 'deal_rejected';
+    const isHoldApproved = notification.type === 'hold_request_approved' || notification.type === 'hold_request_rejected';
     const isHandled =
       notification.type === 'transaction_offer_approved' ||
       notification.type === 'transaction_offer_rejected' ||
@@ -325,17 +465,52 @@ export default function NotificationsScreen() {
       minute: '2-digit',
     });
 
-    const profileImage = isBuyerNotification
-      ? notification.data?.buyer_avatar_url ||
-        'https://ui-avatars.com/api/?background=0E2657&color=fff&name=' +
-          encodeURIComponent(notification.data?.buyer_name || 'U')
-      : notification.data?.seller_avatar_url ||
-        notification.data?.sender_avatar_url ||
-        'https://ui-avatars.com/api/?background=0E2657&color=fff&name=' +
-          encodeURIComponent(notification.data?.seller_name || notification.data?.sender_full_name || 'U');
+    // לוגיקה להצגת תמונה ושם בהתראות הולד
+    let profileImage = '';
+    let userName = '';
+    if (isHoldApproved) {
+      userName = notification.data?.buyer_name || notification.data?.seller_name || 'Unknown User';
+      profileImage = notification.data?.buyer_avatar_url || notification.data?.seller_avatar_url ||
+        'https://ui-avatars.com/api/?background=0E2657&color=fff&name=' + encodeURIComponent(userName);
+    } else if (notification.type === 'hold_request') {
+      userName = notification.data?.buyer_name || 'Unknown User';
+      profileImage = notification.data?.buyer_avatar_url ||
+        'https://ui-avatars.com/api/?background=0E2657&color=fff&name=' + encodeURIComponent(userName);
+    } else if (isBuyerNotification) {
+      userName = notification.data?.buyer_name || 'Unknown User';
+      profileImage = notification.data?.buyer_avatar_url ||
+        'https://ui-avatars.com/api/?background=0E2657&color=fff&name=' + encodeURIComponent(userName);
+    } else {
+      userName = notification.data?.seller_name || notification.data?.sender_full_name || 'Unknown User';
+      profileImage = notification.data?.seller_avatar_url || notification.data?.sender_avatar_url ||
+        'https://ui-avatars.com/api/?background=0E2657&color=fff&name=' + encodeURIComponent(userName);
+    }
+
+    const senderId =
+      isHoldApproved
+        ? notification.data?.buyer_id || notification.data?.seller_id || null
+        : notification.data?.seller_id ||
+          notification.data?.buyer_id ||
+          notification.data?.sender_id ||
+          null;
 
     return (
-      <View style={styles.notificationWrapper}>
+      <View style={styles.notificationWrapper} pointerEvents="box-none">
+        <TouchableOpacity
+          onPress={() => {
+            console.log('PROFILE IMAGE PRESSED', senderId);
+            if (senderId) {
+              router.push(`/user/${senderId}`);
+            }
+          }}
+          style={{ position: 'absolute', top: 0, left: 0, zIndex: 10 }}
+          disabled={!senderId}
+        >
+          <Image
+            source={{ uri: profileImage }}
+            style={styles.profileImageFloating}
+          />
+        </TouchableOpacity>
         <TouchableOpacity
           style={[
             styles.notificationCard,
@@ -343,10 +518,13 @@ export default function NotificationsScreen() {
           ]}
           onPress={() => {
             markAsRead(notification.id);
-            if (
-              notification.type === 'transaction_offer' &&
-              !isHandled
-            ) {
+            if (notification.type === 'hold_request' && !notification.is_action_done) {
+              setSelectedHoldRequest(notification);
+              setIsHoldModalVisible(true);
+            } else if (notification.type === 'hold_request_approved') {
+              setSelectedApprovedHold(notification);
+              setIsApprovedHoldModalVisible(true);
+            } else if (notification.type === 'transaction_offer' && !isHandled) {
               setSelectedDeal(notification);
               setIsDealModalVisible(true);
             } else if (notification.product_id) {
@@ -354,20 +532,28 @@ export default function NotificationsScreen() {
             }
           }}
           activeOpacity={0.7}
-          disabled={isHandled}
+          disabled={isHandled || (notification.type === 'hold_request' && notification.is_action_done)}
         >
           <View style={styles.row}>
             <View style={styles.textContainer}>
-              <Text style={styles.statusText}>
-                {notification.type === 'waiting_seller_approval' ? 'Waiting Seller Approval' : 
-                  notification.type === 'deal_completed' ? 'Deal Completed' : 
-                  'New Notification'}
-              </Text>
-              <Text style={styles.userName}>
-                {isBuyerNotification
-                  ? notification.data?.buyer_name || 'Unknown User'
-                  : notification.data?.seller_name || notification.data?.sender_full_name || 'Unknown User'}
-              </Text>
+              {notification.type === 'hold_request_approved' ? (
+                <>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+                    <Ionicons name="checkmark-circle" size={18} color="green" style={{ marginRight: 4, marginBottom: -2 }} />
+                    <Text style={[styles.statusText, { fontSize: 16, color: '#0E2657', fontWeight: 'bold' }]}>Approved</Text>
+                  </View>
+                  <Text style={styles.userName}>{userName}</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.statusText}>
+                    {notification.type === 'waiting_seller_approval' ? 'Waiting Seller Approval'
+                      : notification.type === 'deal_completed' ? 'Deal Completed'
+                      : 'New Notification'}
+                  </Text>
+                  <Text style={styles.userName}>{userName}</Text>
+                </>
+              )}
               <Text style={styles.messageText} numberOfLines={2}>
                 {notification.data?.message || 'No message available'}
               </Text>
@@ -380,10 +566,6 @@ export default function NotificationsScreen() {
               />
             )}
           </View>
-          <Image 
-            source={{ uri: profileImage }}
-            style={styles.profileImageFloating}
-          />
         </TouchableOpacity>
       </View>
     );
@@ -426,6 +608,103 @@ export default function NotificationsScreen() {
         onReject={() => selectedDeal && handleDealAction(selectedDeal, false)}
         isLoading={actionLoading === selectedDeal?.id}
       />
+
+      {/* Hold Request Modal */}
+      <Modal
+        visible={isHoldModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsHoldModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={styles.modalTitle}>Hold Request</Text>
+              <TouchableOpacity onPress={() => setIsHoldModalVisible(false)} style={{ padding: 4 }}>
+                <Ionicons name="close" size={24} color="#0E2657" />
+              </TouchableOpacity>
+            </View>
+            <Text style={{ marginVertical: 12, fontSize: 16, textAlign: 'center' }}>
+              {selectedHoldRequest?.data?.buyer_name
+                ? `${selectedHoldRequest.data.buyer_name} requests hold for ${selectedHoldRequest.data?.message?.replace('Request Hold ', '').replace(' Hours', '')} hours`
+                : 'Approve hold request for product:'}
+            </Text>
+            <Text style={{ fontWeight: 'bold', fontSize: 18, textAlign: 'center' }}>{selectedHoldRequest?.data?.product_title}</Text>
+            {selectedHoldRequest?.data?.product_image_url && (
+              <Image
+                source={{ uri: selectedHoldRequest.data.product_image_url }}
+                style={{ width: 120, height: 120, borderRadius: 12, alignSelf: 'center', marginVertical: 16 }}
+              />
+            )}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 24 }}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.rejectButton]}
+                onPress={handleRejectHold}
+              >
+                <Text style={styles.actionButtonText}>Reject</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.approveButton]}
+                onPress={handleApproveHold}
+              >
+                <Text style={styles.actionButtonText}>Approve</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Hold Approved Modal */}
+      <Modal
+        visible={isApprovedHoldModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsApprovedHoldModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={styles.modalTitle}>Hold Approved</Text>
+              <TouchableOpacity onPress={() => setIsApprovedHoldModalVisible(false)} style={{ padding: 4 }}>
+                <Ionicons name="close" size={24} color="#0E2657" />
+              </TouchableOpacity>
+            </View>
+            <Text style={{ marginVertical: 12, fontSize: 16, textAlign: 'center' }}>
+              {selectedApprovedHold?.data?.product_title}
+            </Text>
+            {selectedApprovedHold?.data?.product_image_url && (
+              <Image
+                source={{ uri: selectedApprovedHold.data.product_image_url }}
+                style={{ width: 120, height: 120, borderRadius: 12, alignSelf: 'center', marginVertical: 16 }}
+              />
+            )}
+            {selectedApprovedHold?.data?.seller_avatar_url && (
+              <Image
+                source={{ uri: selectedApprovedHold.data.seller_avatar_url }}
+                style={{ width: 48, height: 48, borderRadius: 24, alignSelf: 'center', marginBottom: 8 }}
+              />
+            )}
+            <Text style={{ fontSize: 15, textAlign: 'center', marginBottom: 8 }}>
+              Approved by: {selectedApprovedHold?.data?.seller_name || 'Unknown'}
+            </Text>
+            <Text style={{ fontSize: 16, textAlign: 'center', marginBottom: 8 }}>
+              <Ionicons name="time-outline" size={16} color="#0E2657" /> Hold ends at{' '}
+              {selectedApprovedHold?.data?.end_time
+                ? new Date(selectedApprovedHold.data.end_time).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })
+                : 'Unknown'}
+            </Text>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.approveButton, { marginTop: 16 }]}
+              onPress={() => setIsApprovedHoldModalVisible(false)}
+            >
+              <Text style={styles.actionButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

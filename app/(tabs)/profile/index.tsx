@@ -489,6 +489,18 @@ export default function ProfileScreen() {
               <Text style={styles.statLabel}>Transactions</Text>
             </TouchableOpacity>
           </View>
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#0E2657',
+              padding: 12,
+              borderRadius: 8,
+              marginVertical: 12,
+              alignItems: 'center',
+            }}
+            onPress={() => router.push('/profile/holds')}
+          >
+            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>View Holds</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Navigation Tabs */}

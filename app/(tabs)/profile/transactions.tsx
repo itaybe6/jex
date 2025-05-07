@@ -126,7 +126,7 @@ export default function TransactionsScreen() {
             message: approve
               ? `The buyer has approved the deal for product "${transaction.products?.title || ''}"`
               : `The buyer has rejected the deal for product "${transaction.products?.title || ''}"`,
-            buyer_id: user.id,
+            buyer_id: user?.id,
             buyer_name: buyerProfile.full_name || '',
             buyer_avatar_url: buyerProfile.avatar_url || '',
             product_title: transaction.products?.title,
