@@ -206,22 +206,23 @@ export default function ProductScreen() {
         return;
       }
       const url = `${SUPABASE_URL}/rest/v1/products?id=eq.${id}&select=*,product_images(id,image_url)`;
+      console.log('[fetchProduct] Fetching:', url);
       const res = await fetch(url, {
         headers: {
           apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
         },
       });
+      console.log('[fetchProduct] Status:', res.status);
       if (!res.ok) throw new Error('Failed to fetch product');
       const data = await res.json();
-      console.log('Fetched product:', data);
+      console.log('[fetchProduct] Data:', data);
       const product = data[0];
       if (!product) {
         setError('Product not found');
         setLoading(false);
         return;
       }
-      console.log('Product category:', product.category);
       setProduct(product);
       setTitle(product.title || '');
       setDescription(product.description || '');
@@ -229,6 +230,7 @@ export default function ProductScreen() {
       const imageUrls = product.product_images?.map((img: any) => img.image_url) || [];
       setImageUrls(imageUrls);
     } catch (error) {
+      console.error('[fetchProduct] Error:', error);
       setError('Failed to load product. Please check your connection and try again.');
     } finally {
       setLoading(false);
@@ -289,25 +291,35 @@ export default function ProductScreen() {
         aspect: [1, 1],
         quality: 0.8,
         base64: true,
+        allowsMultipleSelection: true,
+        selectionLimit: 5,
       });
 
-      if (!result.canceled && result.assets[0].base64) {
-        const base64Image = result.assets[0].base64;
-        const filePath = `products/${user?.id}/${Date.now()}.jpg`;
-
-        // TODO: Replace with fetch-based migration
-        // const { error: uploadError } = await supabase.storage
-        //   .from('products')
-        //   .upload(filePath, decode(base64Image), {
-        //     contentType: 'image/jpeg',
-        //     upsert: true,
-        //   });
-
-        if (false) throw new Error('Upload error');
-
-        const { data: { publicUrl } } = { data: { publicUrl: 'https://example.com/image.jpg' } };
-
-        setImageUrls([publicUrl]);
+      if (!result.canceled && result.assets) {
+        const newImageUrls: string[] = [];
+        for (const asset of result.assets) {
+          if (!asset.base64) continue;
+          const filePath = `products/${user?.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
+          // Upload image to Supabase Storage
+          const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${filePath}`, {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/octet-stream',
+            },
+            body: decode(asset.base64)
+          });
+          if (!uploadRes.ok) {
+            const err = await uploadRes.text();
+            console.error('Error uploading image:', err);
+            continue;
+          }
+          // Get public URL
+          const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/product-images/${filePath}`;
+          newImageUrls.push(publicUrl);
+        }
+        setImageUrls(prev => [...prev, ...newImageUrls]);
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -330,7 +342,14 @@ export default function ProductScreen() {
     setSaving(true);
     try {
       // Update the product details
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${product.id}&user_id=eq.${user.id}`, {
+      const patchUrl = `${SUPABASE_URL}/rest/v1/products?id=eq.${product.id}&user_id=eq.${user.id}`;
+      const patchBody = {
+        title: title.trim(),
+        description: description.trim(),
+        price: parseFloat(price),
+      };
+      console.log('[handleSave] PATCH', patchUrl, patchBody);
+      const res = await fetch(patchUrl, {
         method: 'PATCH',
         headers: {
           apikey: SUPABASE_ANON_KEY,
@@ -338,26 +357,42 @@ export default function ProductScreen() {
           'Content-Type': 'application/json',
           Prefer: 'return=representation'
         },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim(),
-          price: parseFloat(price),
-        })
+        body: JSON.stringify(patchBody)
       });
-      if (!res.ok) throw new Error('Product update error');
+      console.log('[handleSave] PATCH status:', res.status);
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error('[handleSave] PATCH error:', errText);
+        throw new Error('Product update error: ' + errText);
+      }
+      const patchData = await res.json();
+      console.log('[handleSave] PATCH response:', patchData);
 
       // Delete all existing images
-      await fetch(`${SUPABASE_URL}/rest/v1/product_images?product_id=eq.${product.id}`, {
+      const delUrl = `${SUPABASE_URL}/rest/v1/product_images?product_id=eq.${product.id}`;
+      console.log('[handleSave] DELETE images:', delUrl);
+      const delRes = await fetch(delUrl, {
         method: 'DELETE',
         headers: {
           apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
         },
       });
+      console.log('[handleSave] DELETE status:', delRes.status);
+      if (!delRes.ok) {
+        const delErr = await delRes.text();
+        console.error('[handleSave] DELETE error:', delErr);
+      }
 
       // Insert new images
       for (const url of imageUrls) {
-        const imgRes = await fetch(`${SUPABASE_URL}/rest/v1/product_images`, {
+        const imgUrl = `${SUPABASE_URL}/rest/v1/product_images`;
+        const imgBody = {
+          product_id: product.id,
+          image_url: url
+        };
+        console.log('[handleSave] POST image:', imgUrl, imgBody);
+        const imgRes = await fetch(imgUrl, {
           method: 'POST',
           headers: {
             apikey: SUPABASE_ANON_KEY,
@@ -365,18 +400,23 @@ export default function ProductScreen() {
             'Content-Type': 'application/json',
             Prefer: 'return=representation'
           },
-          body: JSON.stringify({
-            product_id: product.id,
-            image_url: url
-          })
+          body: JSON.stringify(imgBody)
         });
-        if (!imgRes.ok) throw new Error('Image insert error');
+        console.log('[handleSave] POST image status:', imgRes.status);
+        if (!imgRes.ok) {
+          const imgErr = await imgRes.text();
+          console.error('[handleSave] POST image error:', imgErr);
+        }
+        const imgData = await imgRes.json();
+        console.log('[handleSave] POST image response:', imgData);
       }
 
+      // Fetch the updated product and update state
+      await fetchProduct();
+      setEditMode(false);
       Alert.alert('Success', 'Product updated successfully');
-      router.back();
     } catch (error) {
-      console.error('Error updating product:', error);
+      console.error('[handleSave] Error updating product:', error);
       Alert.alert('Error', 'Failed to update product');
     } finally {
       setSaving(false);

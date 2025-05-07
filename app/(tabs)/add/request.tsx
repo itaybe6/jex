@@ -160,6 +160,13 @@ export default function AddRequestScreen() {
   return (
     <View style={styles.container}>
       <TopHeader />
+      <TouchableOpacity
+        onPress={() => router.back()}
+        style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16, marginTop: 8, marginBottom: 8, backgroundColor: '#fff', borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8 }}
+      >
+        <Ionicons name="arrow-back" size={24} color="#0E2657" style={{ marginRight: 6 }} />
+        <Text style={{ color: '#0E2657', fontSize: 16, fontWeight: 'bold' }}>Back</Text>
+      </TouchableOpacity>
       <ScrollView style={styles.form}>
         <Text style={styles.label}>Category</Text>
         <TouchableOpacity style={styles.selectButton} onPress={() => setShowCategoryModal(true)}>
