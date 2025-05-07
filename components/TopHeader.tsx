@@ -10,20 +10,31 @@ export function TopHeader() {
   const { user, accessToken } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Move fetchUnread outside useEffect so it can be called from event
+  const fetchUnread = async () => {
+    if (!user) return;
+    const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/notifications?user_id=eq.${user.id}&read=eq.false&select=id`;
+    const res = await fetch(url, {
+      headers: {
+        'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        'Authorization': `Bearer ${accessToken || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+      },
+    });
+    const data = await res.json();
+    setUnreadCount(Array.isArray(data) ? data.length : 0);
+  };
+
   useEffect(() => {
-    const fetchUnread = async () => {
-      if (!user) return;
-      const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/notifications?user_id=eq.${user.id}&read=eq.false&select=id`;
-      const res = await fetch(url, {
-        headers: {
-          'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
-          'Authorization': `Bearer ${accessToken || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
-        },
-      });
-      const data = await res.json();
-      setUnreadCount(Array.isArray(data) ? data.length : 0);
-    };
     fetchUnread();
+  }, [user, accessToken]);
+
+  // Listen for refresh-unread-badge event
+  useEffect(() => {
+    const handler = () => {
+      fetchUnread();
+    };
+    window.addEventListener('refresh-unread-badge', handler);
+    return () => window.removeEventListener('refresh-unread-badge', handler);
   }, [user, accessToken]);
 
   return (

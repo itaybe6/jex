@@ -7,7 +7,7 @@ import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function TransactionsScreen() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const params = useLocalSearchParams();
   const fromProfileType = params.fromProfileType;
   const userId = fromProfileType === 'other'
@@ -63,7 +63,6 @@ export default function TransactionsScreen() {
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
-      console.log('Fetched transactions for user:', user.id, data);
       setTransactions(Array.isArray(data) ? data : []);
     } catch (err: any) {
       setError(err.message || 'Failed to load transactions');
@@ -83,10 +82,84 @@ export default function TransactionsScreen() {
     return <Text style={[styles.status, { color: '#FFA500' }]}>Pending</Text>;
   };
 
+  const fetchProfile = async (userId: string, accessToken: string) => {
+    const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=full_name,avatar_url`;
+    const res = await fetch(url, {
+      headers: {
+        'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        'Authorization': `Bearer ${accessToken || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+      },
+    });
+    const data = await res.json();
+    return Array.isArray(data) && data.length > 0 ? data[0] : {};
+  };
+
+  const handleDealAction = async (transaction: any, approve: boolean) => {
+    try {
+      const newStatus = approve ? 'completed' : 'rejected';
+      // Update transaction status
+      const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/transactions?id=eq.${transaction.id}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+          'Authorization': `Bearer ${accessToken || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      // Fetch buyer profile
+      const buyerProfile = await fetchProfile(user.id, accessToken);
+      // Send notification to seller
+      await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/notifications`, {
+        method: 'POST',
+        headers: {
+          'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+          'Authorization': `Bearer ${accessToken || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: transaction.seller_id,
+          type: approve ? 'deal_completed' : 'deal_rejected',
+          product_id: transaction.product_id,
+          data: {
+            message: approve
+              ? `The buyer has approved the deal for product "${transaction.products?.title || ''}"`
+              : `The buyer has rejected the deal for product "${transaction.products?.title || ''}"`,
+            buyer_id: user.id,
+            buyer_name: buyerProfile.full_name || '',
+            buyer_avatar_url: buyerProfile.avatar_url || '',
+            product_title: transaction.products?.title,
+            product_image_url: transaction.products?.image_url,
+            transaction_id: transaction.id,
+          },
+          read: false,
+        }),
+      });
+      // Optionally update product status if approved
+      if (approve && transaction.product_id) {
+        await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/products?id=eq.${transaction.product_id}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+            'Authorization': `Bearer ${accessToken || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status: 'not_available' }),
+        });
+      }
+      fetchTransactions();
+    } catch (err: any) {
+      alert('Failed to update deal: ' + (err.message || err));
+    }
+  };
+
   const renderItem = ({ item }: { item: any }) => {
     const product = item.products;
     const seller = item.profiles; // profiles:seller_id
     const buyer = item.buyer;     // buyer:buyer_id
+    const isBuyer = user?.id === item.buyer_id;
+    const isPending = item.status === 'pending';
     return (
       <View style={styles.card}>
         <View style={styles.row}>
@@ -114,6 +187,23 @@ export default function TransactionsScreen() {
         </View>
         <View style={styles.statusRow}>
           {renderStatus(item.status)}
+          {/* Show approve/reject buttons if buyer and pending */}
+          {isBuyer && isPending && (
+            <View style={{ flexDirection: 'row', gap: 8, marginLeft: 12 }}>
+              <TouchableOpacity
+                style={{ backgroundColor: '#4CAF50', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8, marginRight: 6 }}
+                onPress={() => handleDealAction(item, true)}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Approve</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ backgroundColor: '#FF3B30', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 }}
+                onPress={() => handleDealAction(item, false)}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Reject</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
     );

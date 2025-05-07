@@ -107,7 +107,7 @@ const DealModal = ({ visible, onClose, notification, onApprove, onReject, isLoad
 };
 
 // Add this helper to fetch a profile by user id
-async function fetchProfile(userId, accessToken) {
+async function fetchProfile(userId: string, accessToken: string) {
   const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=full_name,avatar_url`;
   const res = await fetch(url, {
     headers: {
@@ -217,7 +217,7 @@ export default function NotificationsScreen() {
         method: 'PATCH',
         body: JSON.stringify({ status: newStatus }),
       });
-      const responseText = await response.text();
+      await response.text();
 
       if (approve) {
         // Ensure we have product_id
@@ -233,14 +233,13 @@ export default function NotificationsScreen() {
         }
         // Update product status to not_available
         if (product_id) {
-          const productRes = await supabaseFetch(`/rest/v1/products?id=eq.${product_id}`, {
+          await supabaseFetch(`/rest/v1/products?id=eq.${product_id}`, {
             method: 'PATCH',
             body: JSON.stringify({ status: 'not_available' }),
           });
-          const productResText = await productRes.text();
         }
         // Fetch buyer profile
-        const buyerProfile = await fetchProfile(user.id, accessToken);
+        const buyerProfile = await fetchProfile(user?.id, accessToken);
         // Send notification to seller
         await supabaseFetch(`/rest/v1/notifications`, {
           method: 'POST',
@@ -250,7 +249,7 @@ export default function NotificationsScreen() {
             product_id: product_id,
             data: {
               message: approve ? `The buyer has approved the deal for product "${notification.data?.product_title}"` : `The buyer has rejected the deal for product "${notification.data?.product_title}"`,
-              buyer_id: user.id,
+              buyer_id: user?.id,
               buyer_name: buyerProfile.full_name || '',
               buyer_avatar_url: buyerProfile.avatar_url || '',
               product_title: notification.data?.product_title,
@@ -261,10 +260,19 @@ export default function NotificationsScreen() {
           }),
         });
       }
-      // Update current notification
+      // Update current notification: set type and message so user can't act again
       await supabaseFetch(`/rest/v1/notifications?id=eq.${notification.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ is_action_done: true }),
+        body: JSON.stringify({
+          is_action_done: true,
+          type: approve ? 'transaction_offer_approved' : 'transaction_offer_rejected',
+          data: {
+            ...notification.data,
+            message: approve
+              ? `You approved the deal with ${notification.data?.seller_name || ''}`
+              : `You rejected the deal with ${notification.data?.seller_name || ''}`,
+          },
+        }),
       });
       // Close modal and refresh notifications
       setIsDealModalVisible(false);
@@ -291,6 +299,8 @@ export default function NotificationsScreen() {
         body: JSON.stringify({ read: true }),
       });
       fetchNotifications();
+      // Trigger badge refresh in TopHeader
+      window.dispatchEvent(new Event('refresh-unread-badge'));
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
@@ -304,6 +314,10 @@ export default function NotificationsScreen() {
 
   const renderNotification = ({ item: notification }: { item: Notification }) => {
     const isBuyerNotification = notification.type === 'deal_completed' || notification.type === 'deal_rejected';
+    const isHandled =
+      notification.type === 'transaction_offer_approved' ||
+      notification.type === 'transaction_offer_rejected' ||
+      notification.is_action_done;
     const formattedDate = new Date(notification.created_at).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -329,7 +343,10 @@ export default function NotificationsScreen() {
           ]}
           onPress={() => {
             markAsRead(notification.id);
-            if (notification.type === 'transaction_offer') {
+            if (
+              notification.type === 'transaction_offer' &&
+              !isHandled
+            ) {
               setSelectedDeal(notification);
               setIsDealModalVisible(true);
             } else if (notification.product_id) {
@@ -337,6 +354,7 @@ export default function NotificationsScreen() {
             }
           }}
           activeOpacity={0.7}
+          disabled={isHandled}
         >
           <View style={styles.row}>
             <View style={styles.textContainer}>
