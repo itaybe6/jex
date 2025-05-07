@@ -43,7 +43,7 @@ export default function TabLayout() {
           },
           headerShadowVisible: false,
           headerTitleStyle: {
-            fontFamily: 'Heebo-Bold',
+            fontFamily: 'Montserrat-Bold',
             color: '#0E2657',
           },
           headerTintColor: '#0E2657',
@@ -109,9 +109,7 @@ export default function TabLayout() {
           name="products/[id]"
           options={{
             href: null,
-            headerShown: false,
-            tabBarStyle: { display: 'none' },
-            header: () => null
+            
           }}
         />
         <Tabs.Screen

@@ -444,14 +444,11 @@ export default function ProfileScreen() {
         style={{ flex: 1 }} 
         contentContainerStyle={{ paddingBottom: 0 }}
       >
-        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 20, marginTop: 10 }}>
-          <TouchableOpacity onPress={handleSettingsPress} style={{ padding: 8 }}>
-            <Ionicons name="settings-outline" size={28} color="#0E2657" />
-          </TouchableOpacity>
-        </View>
-
         {/* User Card */}
         <View style={[styles.userCard, { marginTop: 100, paddingTop: 0 }]}>
+          <TouchableOpacity onPress={handleSettingsPress} style={styles.settingsIconButton}>
+            <Ionicons name="settings-outline" size={28} color="#0E2657" />
+          </TouchableOpacity>
           <View style={styles.profileImageWrapper}>
             <Image
               source={{
@@ -897,5 +894,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Medium',
     textDecorationLine: 'underline',
     maxWidth: 200,
+  },
+  settingsIconButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 10,
+    backgroundColor: 'transparent',
+    padding: 4,
   },
 });

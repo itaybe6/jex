@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
   },
   switcherTextActive: {
     color: '#fff',
-    fontFamily: 'Montserrat-SemiBold',
+    fontFamily: 'Montserrat-Medium',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
   },
   profileName: {
     fontSize: 16,
-    fontFamily: 'Montserrat-SemiBold',
+    fontFamily: 'Montserrat-Medium',
     marginBottom: 2,
     color: '#0E2657',
   },
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
   },
   productTitleText: {
     fontSize: 16,
-    fontFamily: 'Montserrat-SemiBold',
+    fontFamily: 'Montserrat-Medium',
     color: '#0E2657',
     marginBottom: 2,
   },
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 14,
     color: '#0E2657',
-    fontFamily: 'Montserrat-SemiBold',
+    fontFamily: 'Montserrat-Medium',
   },
   emptyContainer: {
     flex: 1,
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    fontFamily: 'Montserrat-SemiBold',
+    fontFamily: 'Montserrat-Medium',
     color: '#0E2657',
     marginTop: 8,
   },
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
   },
   initialText: {
     fontSize: 18,
-    fontFamily: 'Montserrat-SemiBold',
+    fontFamily: 'Montserrat-Medium',
     color: '#0E2657',
     marginTop: 8,
   },
