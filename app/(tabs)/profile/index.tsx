@@ -6,7 +6,6 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
 import { useAuth } from '@/hooks/useAuth';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlatList } from 'react-native';
-import React from 'react';
 
 const GRID_SPACING = 8; // Increased spacing between items
 const NUM_COLUMNS = 3;
@@ -45,6 +44,7 @@ type Product = {
     id: string;
     image_url: string;
   }[];
+  status?: string;
 };
 
 type ProductsByCategory = {
@@ -136,7 +136,7 @@ export default function ProfileScreen() {
       if (!user) return;
 
       const query = '*,product_images:product_images_product_id_fkey(id,image_url)';
-      const url = `${SUPABASE_URL}/rest/v1/products?user_id=eq.${user.id}&status=eq.available&select=${encodeURIComponent(query)}&order=created_at.desc`;
+      const url = `${SUPABASE_URL}/rest/v1/products?user_id=eq.${user.id}&select=${encodeURIComponent(query)}&order=created_at.desc`;
       const res = await fetch(url, {
         headers: {
           apikey: SUPABASE_ANON_KEY,
@@ -145,8 +145,10 @@ export default function ProfileScreen() {
       });
       if (!res.ok) throw new Error('Error fetching products');
       const data = await res.json();
+      // Only show products with status 'available' or 'hold'
+      const filtered = (data || []).filter((product: Product) => product.status === 'available' || product.status === 'hold');
       // Group products by category
-      const grouped = (data || []).reduce((acc: ProductsByCategory, product: Product) => {
+      const grouped = filtered.reduce((acc: ProductsByCategory, product: Product) => {
         if (!acc[product.category]) {
           acc[product.category] = [];
         }
@@ -282,6 +284,11 @@ export default function ProfileScreen() {
           style={styles.gridImage}
           resizeMode="cover"
         />
+        {product.status === 'hold' && (
+          <View style={styles.holdOverlay}>
+            <Text style={styles.holdText}>HOLD</Text>
+          </View>
+        )}
         <View style={styles.gridItemOverlay}>
           <Text style={styles.gridItemTitle} numberOfLines={1}>{product.title}</Text>
           <Text style={styles.gridItemPrice}>${product.price.toLocaleString()}</Text>
@@ -322,7 +329,7 @@ export default function ProfileScreen() {
         </View>
         <View style={styles.gridContainer}>
           {Array.from({ length: rows }).map((_, rowIndex) => (
-            <View key={rowIndex} style={styles.gridRow}>
+            <View style={styles.gridRow} key={rowIndex}>
               {productsToRender
                 .slice(rowIndex * NUM_COLUMNS, (rowIndex + 1) * NUM_COLUMNS)
                 .map((product, colIndex) => (
@@ -914,5 +921,30 @@ const styles = StyleSheet.create({
     zIndex: 10,
     backgroundColor: 'transparent',
     padding: 4,
+  },
+  holdOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+    zIndex: 5,
+  },
+  holdText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    fontFamily: 'Montserrat-Bold',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    overflow: 'hidden',
   },
 });

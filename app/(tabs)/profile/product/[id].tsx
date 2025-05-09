@@ -172,7 +172,6 @@ export default function ProductScreen() {
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [editMode, setEditMode] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
   const [specs, setSpecs] = useState<any>(null);
   const [specsLoading, setSpecsLoading] = useState(false);
@@ -413,7 +412,6 @@ export default function ProductScreen() {
 
       // Fetch the updated product and update state
       await fetchProduct();
-      setEditMode(false);
       Alert.alert('Success', 'Product updated successfully');
     } catch (error) {
       console.error('[handleSave] Error updating product:', error);
@@ -693,8 +691,8 @@ export default function ProductScreen() {
             </TouchableOpacity>
           ),
           headerRight: () => (
-            !editMode && user?.id === product?.user_id ? (
-              <TouchableOpacity onPress={() => setEditMode(true)} style={{ paddingHorizontal: 8 }}>
+            user?.id === product?.user_id ? (
+              <TouchableOpacity onPress={() => router.push(`/(tabs)/profile/product/edit?id=${product?.id}`)} style={{ paddingHorizontal: 8 }}>
                 <Ionicons name="create-outline" size={22} color="#0E2657" />
               </TouchableOpacity>
             ) : null
@@ -720,7 +718,7 @@ export default function ProductScreen() {
                     style={styles.image}
                     onError={(error) => console.log('Image loading error:', error)}
                   />
-                  {editMode && (
+                  {index === 0 && (
                     <TouchableOpacity
                       style={styles.removeImageButton}
                       onPress={() => handleRemoveImage(index)}
@@ -731,69 +729,30 @@ export default function ProductScreen() {
                 </View>
               ))
             ) : null}
-            {editMode && (
-              <TouchableOpacity
-                style={styles.addImageButton}
-                onPress={handleImagePick}
-              >
-                <Ionicons name="camera" size={32} color="#7B8CA6" />
-                <Text style={styles.addImageText}>Add Photo</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={styles.addImageButton}
+              onPress={handleImagePick}
+            >
+              <Ionicons name="camera" size={32} color="#7B8CA6" />
+              <Text style={styles.addImageText}>Add Photo</Text>
+            </TouchableOpacity>
           </ScrollView>
         </View>
 
         <View style={styles.formContainer}>
           <View style={styles.formSection}>
             <Text style={styles.label}>Product Name</Text>
-            {editMode ? (
-              <TextInput
-                style={styles.input}
-                value={title}
-                onChangeText={setTitle}
-                placeholder="Enter product name"
-                placeholderTextColor="#7B8CA6"
-              />
-            ) : (
-              <Text style={styles.input}>{product?.title}</Text>
-            )}
+            <Text style={styles.input}>{product?.title}</Text>
           </View>
 
           <View style={styles.formSection}>
             <Text style={styles.label}>Description</Text>
-            {editMode ? (
-              <TextInput
-                style={[styles.input, styles.descriptionInput]}
-                value={description}
-                onChangeText={setDescription}
-                placeholder="Enter product description"
-                placeholderTextColor="#7B8CA6"
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-              />
-            ) : (
-              <Text style={[styles.input, { minHeight: 60 }]}>{product?.description}</Text>
-            )}
+            <Text style={[styles.input, { minHeight: 60 }]}>{product?.description}</Text>
           </View>
 
           <View style={styles.formSection}>
             <Text style={styles.label}>Price</Text>
-            {editMode ? (
-              <View style={styles.priceInputContainer}>
-                <Ionicons name="pricetag" size={20} color="#7B8CA6" style={styles.priceIcon} />
-                <TextInput
-                  style={styles.priceInput}
-                  value={price}
-                  onChangeText={setPrice}
-                  placeholder="0.00"
-                  placeholderTextColor="#7B8CA6"
-                  keyboardType="decimal-pad"
-                />
-              </View>
-            ) : (
-              <Text style={styles.input}>{product?.price?.toLocaleString()} ₪</Text>
-            )}
+            <Text style={styles.input}>{product?.price?.toLocaleString()} ₪</Text>
           </View>
         </View>
         {/* Specs Section */}
@@ -837,7 +796,7 @@ export default function ProductScreen() {
           </View>
         )}
         {/* --- Start Sale Button --- */}
-        {user?.id === product?.user_id && !editMode && (
+        {user?.id === product?.user_id && (
           <View style={{ marginHorizontal: 16, marginTop: 16 }}>
             <TouchableOpacity
               style={{
@@ -856,21 +815,6 @@ export default function ProductScreen() {
           </View>
         )}
       </ScrollView>
-      {editMode && (
-        <View style={styles.bottomContainer}>
-          <TouchableOpacity
-            onPress={async () => {
-              await handleSave();
-              setEditMode(false);
-            }}
-            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-            disabled={saving}
-          >
-            <Ionicons name="checkmark" size={22} color="#fff" style={styles.saveIcon} strokeWidth={2.5} />
-            <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save'}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
       {/* --- Sale Modal --- */}
       <Modal
         visible={saleModalVisible}

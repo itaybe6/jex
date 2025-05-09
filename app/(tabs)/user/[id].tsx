@@ -31,6 +31,7 @@ type Product = {
   price: number;
   image_url: string;
   category: string;
+  status?: string;
 };
 
 type ProductsByCategory = {
@@ -213,7 +214,7 @@ export default function UserProfileScreen() {
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/products?select=id,title,price,category,product_images(image_url)&user_id=eq.${userId}&order=created_at.desc`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/products?select=id,title,price,category,status,product_images(image_url)&user_id=eq.${userId}&order=created_at.desc`, {
         headers: {
           apikey: SUPABASE_ANON_KEY!,
           Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
@@ -222,8 +223,10 @@ export default function UserProfileScreen() {
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
+      // Filter only products with status 'available' or 'hold'
+      const filtered = (data || []).filter((product: any) => product.status === 'available' || product.status === 'hold');
       // קיבוץ לפי קטגוריה, עם תמונה ראשית מהמוצר
-      const grouped = (data || []).reduce((acc: ProductsByCategory, product: any) => {
+      const grouped = filtered.reduce((acc: ProductsByCategory, product: any) => {
         const image_url = product.product_images?.[0]?.image_url || null;
         const productWithImage = { ...product, image_url };
         if (!acc[product.category]) acc[product.category] = [];
@@ -299,6 +302,11 @@ export default function UserProfileScreen() {
         style={styles.gridImage}
         resizeMode="cover"
       />
+      {product.status === 'hold' && (
+        <View style={styles.holdOverlay}>
+          <Text style={styles.holdText}>HOLD</Text>
+        </View>
+      )}
       <View style={styles.gridItemOverlay}>
         <Text style={styles.gridItemTitle} numberOfLines={1}>{product.title}</Text>
         <Text style={styles.gridItemPrice}>${product.price.toLocaleString()}</Text>
@@ -895,5 +903,30 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontFamily: 'Heebo-Medium',
+  },
+  holdOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+    zIndex: 5,
+  },
+  holdText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    fontFamily: 'Heebo-Bold',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    overflow: 'hidden',
   },
 });

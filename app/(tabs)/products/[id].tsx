@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import ImageViewer from 'react-native-image-zoom-viewer';
 import { Product } from '@/types/product';
 import { showAlert } from '@/utils/alert';
+import { format } from 'date-fns';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -67,10 +68,41 @@ export default function ProductScreen() {
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [productImages, setProductImages] = useState<string[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [holdInfo, setHoldInfo] = useState<{ end_time: string } | null>(null);
 
   useEffect(() => {
     fetchProduct();
   }, [id]);
+
+  useEffect(() => {
+    // Fetch hold info if product is loaded and status is 'hold'
+    const fetchHoldInfo = async () => {
+      if (!product || product.status !== 'hold') {
+        setHoldInfo(null);
+        return;
+      }
+      try {
+        const now = new Date().toISOString();
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/hold_requests?product_id=eq.${product.id}&status=eq.approved&end_time=gt.${now}&select=end_time&order=end_time.desc`, {
+          headers: {
+            apikey: SUPABASE_ANON_KEY!,
+            Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const arr = await res.json();
+        if (arr && arr[0] && arr[0].end_time) {
+          setHoldInfo({ end_time: arr[0].end_time });
+        } else {
+          setHoldInfo(null);
+        }
+      } catch (e) {
+        setHoldInfo(null);
+      }
+    };
+    fetchHoldInfo();
+  }, [product]);
 
   const fetchProduct = async () => {
     try {
@@ -464,7 +496,7 @@ export default function ProductScreen() {
         </View>
       </ScrollView>
 
-      {!isOwner && (
+      {!isOwner && product.status !== 'hold' && (
         <View style={styles.bottomButtonsContainer}>
           <View style={styles.bottomButtons}>
             <TouchableOpacity 
@@ -569,6 +601,15 @@ export default function ProductScreen() {
           />
         </View>
       </Modal>
+
+      {/* HOLD BADGE AT BOTTOM */}
+      {product.status === 'hold' && holdInfo && (
+        <View style={styles.holdBadgeBottom}>
+          <Text style={styles.holdBadgeText}>
+            HOLD until {format(new Date(holdInfo.end_time), 'HH:mm')}
+          </Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -902,5 +943,31 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 16,
     marginBottom: 8,
+  },
+  holdBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 16,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    zIndex: 20,
+    alignSelf: 'flex-start',
+  },
+  holdBadgeBottom: {
+    marginTop: 24,
+    marginBottom: 8,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+  },
+  holdBadgeText: {
+    color: '#fff',
+    fontSize: 15,
+    fontFamily: 'Montserrat-Bold',
+    letterSpacing: 1,
   },
 }); 
