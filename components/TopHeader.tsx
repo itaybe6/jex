@@ -33,8 +33,12 @@ export function TopHeader() {
     const handler = () => {
       fetchUnread();
     };
-    window.addEventListener('refresh-unread-badge', handler);
-    return () => window.removeEventListener('refresh-unread-badge', handler);
+    if (typeof window !== 'undefined' && window.addEventListener) {
+      window.addEventListener('refresh-unread-badge', handler);
+      return () => window.removeEventListener('refresh-unread-badge', handler);
+    }
+    // In React Native, do nothing
+    return undefined;
   }, [user, accessToken]);
 
   return (

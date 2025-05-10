@@ -77,4 +77,23 @@ export async function fetchProducts(from = 0, to = 19) {
   });
   if (!res.ok) throw new Error('Failed to fetch products');
   return res.json();
+}
+
+/**
+ * Fetch deals of the day for a given category that are still valid (expires_at > now()).
+ * @param {string} category - The product_type/category to filter by.
+ * @returns {Promise<any[]>} Array of deals with product info.
+ */
+export async function getDealsByCategory(category) {
+  const now = new Date().toISOString();
+  const url = `${SUPABASE_URL}/rest/v1/deal_of_the_day?product_type=eq.${category}&expires_at=gt.${now}&select=*,products(*,product_images(id,image_url))`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  if (!res.ok) throw new Error('Failed to fetch deals');
+  return res.json();
 } 

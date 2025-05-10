@@ -16,6 +16,7 @@ import { Profile } from '@/types/profile';
 import { FilterParams } from '@/types/filter';
 import { Product as ProductType } from '@/types/product';
 import { useAuth } from '@/hooks/useAuth';
+import DealOfTheDayIconsRow from '../../components/DealOfTheDayIconsRow';
 
 const GRID_SPACING = 2;
 const NUM_COLUMNS = 3;
@@ -805,6 +806,19 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       <View style={styles.header}>
+        {/* Notification icon can be added here if needed */}
+      </View>
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        style={styles.scrollView}
+      >
+        {/* Deal of the Day icons row */}
+        <DealOfTheDayIconsRow />
+        {/* Divider for separation */}
+        <View style={{ height: 8 }} />
+        {/* For You / Requests tab buttons */}
         <View style={styles.headerButtons}>
           <View style={styles.tabButtons}>
             <TouchableOpacity 
@@ -827,16 +841,10 @@ export default function HomeScreen() {
             <Ionicons name="filter" size={24} color="#0E2657" />
           </TouchableOpacity>
         </View>
-      </View>
-      <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        style={styles.scrollView}
-      >
+        {/* Divider for separation */}
+        <View style={{ height: 8 }} />
         {showRequests ? renderRequests() : renderProducts()}
       </ScrollView>
-
       <FilterModal
         visible={showFilterModal}
         onClose={() => setShowFilterModal(false)}

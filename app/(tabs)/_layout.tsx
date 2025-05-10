@@ -113,6 +113,24 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
+          name="SelectDealProductScreen"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="DealStoryScreen"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="CreateDealStoryScreen"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
           name="user/[id]/products"
           options={{
   
