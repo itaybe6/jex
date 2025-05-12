@@ -53,10 +53,10 @@ const DraggableScalableText: React.FC<DraggableScalableTextProps> = ({ element, 
     const scale = React.useRef(useSharedValue(safeNumber(element.scale, 1))).current;
     const rotation = React.useRef(useSharedValue(safeNumber(element.rotation, 0))).current;
 
-    // Gesture refs (חייב להיות null כברירת מחדל)
-    const panRef = React.useRef(null);
-    const pinchRef = React.useRef(null);
-    const rotationRef = React.useRef(null);
+    // Gesture refs (משודרג ל-React.createRef)
+    const panRef = React.useRef(React.createRef());
+    const pinchRef = React.useRef(React.createRef());
+    const rotationRef = React.useRef(React.createRef());
 
     // Pan gesture
     const panHandler = useAnimatedGestureHandler({
@@ -118,7 +118,7 @@ const DraggableScalableText: React.FC<DraggableScalableTextProps> = ({ element, 
         onActive: (event, ctx) => {
             try {
                 rotation.value = ctx.startRotation + event.rotation;
-                console.log('rotationHandler.onActive', { id: element.id, rotation: rotation.value });
+                console.log('rotationHandler.onActive', { id: element.id, rotation: rotation.value, event });
             } catch (e) { console.error('rotationHandler error', e); }
         },
         onEnd: () => {
@@ -153,20 +153,20 @@ const DraggableScalableText: React.FC<DraggableScalableTextProps> = ({ element, 
 
     return (
         <RotationGestureHandler
-            ref={rotationRef}
-            simultaneousHandlers={[pinchRef.current, panRef.current].filter(Boolean)}
+            ref={rotationRef.current}
+            simultaneousHandlers={[pinchRef.current, panRef.current]}
             onGestureEvent={rotationHandler}
         >
             <Animated.View style={{ flex: 1 }}>
                 <PinchGestureHandler
-                    ref={pinchRef}
-                    simultaneousHandlers={[rotationRef.current, panRef.current].filter(Boolean)}
+                    ref={pinchRef.current}
+                    simultaneousHandlers={[rotationRef.current, panRef.current]}
                     onGestureEvent={pinchHandler}
                 >
                     <Animated.View style={{ flex: 1 }}>
                         <PanGestureHandler
-                            ref={panRef}
-                            simultaneousHandlers={[rotationRef.current, pinchRef.current].filter(Boolean)}
+                            ref={panRef.current}
+                            simultaneousHandlers={[rotationRef.current, pinchRef.current]}
                             onGestureEvent={panHandler}
                         >
                             <Animated.View style={animatedStyle}>
@@ -204,6 +204,11 @@ const DraggableScalableText: React.FC<DraggableScalableTextProps> = ({ element, 
                                                 </TouchableOpacity>
                                             )}
                                         </View>
+                                        {selected && (
+                                            <Text style={{ color: '#0E2657', fontSize: 12, marginTop: 8, textAlign: 'center' }}>
+                                                סיבוב: השתמש בשתי אצבעות לסיבוב הטקסט
+                                            </Text>
+                                        )}
                                     </Animated.View>
                                 </TapGestureHandler>
                             </Animated.View>

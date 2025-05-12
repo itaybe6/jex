@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import type { JSX } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, I18nManager, Modal, Alert } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5, Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
+import { SUPABASE_URL, SUPABASE_ANON_KEY, getAllDeals, getUnseenDealsCountByCategory } from '@/lib/supabaseApi';
 import { useAuth } from '@/hooks/useAuth';
+import { useFocusEffect } from '@react-navigation/native';
 
 // Mock data for demonstration (keys match _specs categories)
 const dealCountsByCategory: Record<string, number> = {
@@ -15,7 +16,7 @@ const dealCountsByCategory: Record<string, number> = {
   necklace: 1,
   ring: 2,
   rough_diamond: 1,
-  special_piece: 1,
+  specialpieces: 1,
   watch: 2,
 };
 
@@ -28,7 +29,7 @@ const categoryToProductType: Record<string, string> = {
   necklace: 'necklace',
   ring: 'ring',
   rough_diamond: 'rough_diamond',
-  special_piece: 'special_piece',
+  specialpieces: 'specialpieces',
   watch: 'watches',
 };
 
@@ -40,7 +41,7 @@ type DealItem = DealCategoryItem | DealAddItem;
 export function getIconByCategory(category: string): JSX.Element | null {
   switch (category) {
     case 'bracelet':
-      return <MaterialCommunityIcons name="bracelet" size={32} color="#0E2657" />;
+      return <MaterialCommunityIcons name="link-variant" size={32} color="#0E2657" />;
     case 'earring':
       return <MaterialCommunityIcons name="ear-hearing" size={32} color="#0E2657" />;
     case 'gem':
@@ -53,7 +54,7 @@ export function getIconByCategory(category: string): JSX.Element | null {
       return <Feather name="circle" size={32} color="#0E2657" />;
     case 'rough_diamond':
       return <FontAwesome5 name="gem" size={32} color="#0E2657" />;
-    case 'special_piece':
+    case 'specialpieces':
       return <Feather name="star" size={32} color="#0E2657" />;
     case 'watch':
       return <FontAwesome5 name="watch" size={32} color="#0E2657" />;
@@ -65,22 +66,61 @@ export function getIconByCategory(category: string): JSX.Element | null {
 // Add button label based on language
 const addLabel = I18nManager.isRTL ? 'הוסף' : 'Add';
 
-// Compose the data for the FlatList
-const categories = Object.keys(dealCountsByCategory).filter(
-  (cat) => getIconByCategory(cat) !== null
-);
-const flatListData: DealItem[] = [
-  { type: 'add' },
-  ...categories.map((cat) => ({ type: 'category' as const, category: cat })),
-];
-
 const ITEM_WIDTH = 72;
 const ITEM_SEPARATOR = 8;
+
+// Context for unseen deals
+export const UnseenDealsContext = createContext<{
+  unseenCounts: Record<string, number>;
+  refreshUnseenCounts: () => void;
+  refreshKey: number;
+}>({ unseenCounts: {}, refreshUnseenCounts: () => {}, refreshKey: 0 });
+
+export const useUnseenDeals = () => useContext(UnseenDealsContext);
 
 const DealOfTheDayIconsRow: React.FC = () => {
   const { user, accessToken } = useAuth();
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [unseenCounts, setUnseenCounts] = useState<Record<string, number>>({});
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Refresh function
+  const refreshUnseenCounts = useCallback(() => {
+    if (!user || !accessToken) return;
+    getUnseenDealsCountByCategory(user.id, accessToken)
+      .then(setUnseenCounts)
+      .then(() => setRefreshKey(k => k + 1))
+      .catch(() => setUnseenCounts({}));
+  }, [user, accessToken]);
+
+  useEffect(() => {
+    refreshUnseenCounts();
+  }, [refreshUnseenCounts]);
+
+  // Refresh unseen deals when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshUnseenCounts();
+    }, [refreshUnseenCounts])
+  );
+
+  // Map category keys to display names if needed
+  const categories = Object.keys(categoryToProductType);
+  // Count unseen deals per category (using product_type field)
+  const categoriesWithCounts = categories.map(cat => {
+    const productType = categoryToProductType[cat];
+    const count = unseenCounts[productType] || 0;
+    return { name: cat, count, productType };
+  });
+  // Sort by count descending
+  categoriesWithCounts.sort((a, b) => b.count - a.count);
+
+  // Compose the data for the FlatList
+  const flatListData: DealItem[] = [
+    { type: 'add' },
+    ...categoriesWithCounts.map(({ name }) => ({ type: 'category' as const, category: name })),
+  ];
 
   const handleAddDealPress = async () => {
     if (!user) return;
@@ -111,68 +151,77 @@ const DealOfTheDayIconsRow: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={flatListData}
-        horizontal
-        keyExtractor={(item, idx) => item.type === 'add' ? 'add' : (item.type === 'category' ? item.category : String(idx))}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
-        ItemSeparatorComponent={() => <View style={{ width: ITEM_SEPARATOR }} />}
-        renderItem={({ item }) => {
-          if (item.type === 'add') {
-            return (
-              <>
+    <UnseenDealsContext.Provider value={{ unseenCounts, refreshUnseenCounts, refreshKey }}>
+      <View style={styles.container}>
+        <FlatList
+          key={refreshKey}
+          data={flatListData}
+          horizontal
+          keyExtractor={(item, idx) => item.type === 'add' ? 'add' : (item.type === 'category' ? item.category : String(idx))}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+          ItemSeparatorComponent={() => <View style={{ width: ITEM_SEPARATOR }} />}
+          renderItem={({ item }) => {
+            if (item.type === 'add') {
+              return (
+                <>
+                  <TouchableOpacity
+                    style={styles.iconWrapper}
+                    onPress={handleAddDealPress}
+                    activeOpacity={0.7}
+                    disabled={checking}
+                  >
+                    <View style={styles.iconCircle}>
+                      <Ionicons name="add" size={32} color="#0E2657" />
+                    </View>
+                    <Text style={styles.label} numberOfLines={1} ellipsizeMode="tail">{addLabel}</Text>
+                  </TouchableOpacity>
+                  <Modal
+                    visible={showLimitModal}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setShowLimitModal(false)}
+                  >
+                    <View style={styles.modalOverlay}>
+                      <View style={styles.limitModalContent}>
+                        <Text style={styles.limitModalText}>You have already posted a deal for today. You can post a new deal tomorrow.</Text>
+                        <TouchableOpacity style={styles.limitModalButton} onPress={() => setShowLimitModal(false)}>
+                          <Text style={styles.limitModalButtonText}>OK</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </Modal>
+                </>
+              );
+            }
+            if (item.type === 'category') {
+              // Find count for this category
+              const catObj = categoriesWithCounts.find(c => c.name === item.category);
+              const dealCount = catObj ? catObj.count : 0;
+              return (
                 <TouchableOpacity
                   style={styles.iconWrapper}
-                  onPress={handleAddDealPress}
+                  onPress={() => router.push(`/DealStoryScreen?category=${categoryToProductType[item.category]}`)}
                   activeOpacity={0.7}
-                  disabled={checking}
                 >
                   <View style={styles.iconCircle}>
-                    <Ionicons name="add" size={32} color="#0E2657" />
+                    {getIconByCategory(item.category)}
+                    {/* Show badge only if count > 0 */}
+                    {dealCount > 0 && (
+                      <View style={styles.badge}>
+                        <Text style={styles.badgeText}>{dealCount}</Text>
+                      </View>
+                    )}
                   </View>
-                  <Text style={styles.label} numberOfLines={1} ellipsizeMode="tail">{addLabel}</Text>
+                  <Text style={styles.label} numberOfLines={1} ellipsizeMode="tail">{item.category.charAt(0).toUpperCase() + item.category.slice(1).replace('_', ' ')}</Text>
                 </TouchableOpacity>
-                <Modal
-                  visible={showLimitModal}
-                  transparent
-                  animationType="fade"
-                  onRequestClose={() => setShowLimitModal(false)}
-                >
-                  <View style={styles.modalOverlay}>
-                    <View style={styles.limitModalContent}>
-                      <Text style={styles.limitModalText}>You have already posted a deal for today. You can post a new deal tomorrow.</Text>
-                      <TouchableOpacity style={styles.limitModalButton} onPress={() => setShowLimitModal(false)}>
-                        <Text style={styles.limitModalButtonText}>OK</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </Modal>
-              </>
-            );
-          }
-          if (item.type === 'category') {
-            return (
-              <TouchableOpacity
-                style={styles.iconWrapper}
-                onPress={() => router.push(`/DealStoryScreen?category=${categoryToProductType[item.category]}`)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.iconCircle}>
-                  {getIconByCategory(item.category)}
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{dealCountsByCategory[item.category]}</Text>
-                  </View>
-                </View>
-                <Text style={styles.label} numberOfLines={1} ellipsizeMode="tail">{item.category.charAt(0).toUpperCase() + item.category.slice(1).replace('_', ' ')}</Text>
-              </TouchableOpacity>
-            );
-          }
-          return null;
-        }}
-      />
-    </View>
+              );
+            }
+            return null;
+          }}
+        />
+      </View>
+    </UnseenDealsContext.Provider>
   );
 };
 

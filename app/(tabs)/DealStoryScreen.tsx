@@ -3,6 +3,9 @@ import { View, Text, Image, StyleSheet, Dimensions, TouchableOpacity, ActivityIn
 import { getDealsByCategory } from '@/lib/supabaseApi';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth } from '@/hooks/useAuth';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
+import { useUnseenDeals } from '@/components/DealOfTheDayIconsRow';
 
 const { width, height } = Dimensions.get('window');
 const STORY_DURATION = 5000;
@@ -18,6 +21,7 @@ type Deal = {
   message?: string;
   marketing_text?: string;
   products?: DealProduct;
+  story_data?: string;
   // add more fields if needed
 };
 
@@ -36,6 +40,8 @@ const DealStoryScreen = () => {
   const [current, setCurrent] = useState(0);
   const [progress, setProgress] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const { user, accessToken } = useAuth();
+  const { refreshUnseenCounts } = useUnseenDeals();
 
   useEffect(() => {
     if (!category) return;
@@ -65,6 +71,29 @@ const DealStoryScreen = () => {
     };
   }, [current, deals]);
 
+  // POST to deal_views when a deal is viewed
+  useEffect(() => {
+    const deal = deals[current];
+    if (!user || !accessToken || !deal || !deal.id) return;
+    fetch(`${SUPABASE_URL}/rest/v1/deal_views`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=ignore-duplicates',
+      },
+      body: JSON.stringify({
+        user_id: user.id,
+        deal_id: deal.id,
+      }),
+    }).then(() => {
+      if (typeof refreshUnseenCounts === 'function') {
+        refreshUnseenCounts();
+      }
+    });
+  }, [current, deals, user, accessToken, refreshUnseenCounts]);
+
   const handleNext = () => {
     if (current < deals.length - 1) {
       setCurrent(current + 1);
@@ -93,6 +122,14 @@ const DealStoryScreen = () => {
   }
 
   const deal: Deal = deals[current] || {} as Deal;
+  let storyElements: any[] = [];
+  try {
+    if (deal.story_data) {
+      storyElements = JSON.parse(deal.story_data);
+    }
+  } catch (e) {
+    storyElements = [];
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -119,6 +156,34 @@ const DealStoryScreen = () => {
         {deal.message ? <Text style={styles.storyMessage}>{deal.message}</Text> : null}
         {deal.marketing_text ? <Text style={styles.storyMessage}>{deal.marketing_text}</Text> : null}
       </View>
+      {Array.isArray(storyElements) && storyElements.map((el) => {
+        if (el.type === 'text') {
+          return (
+            <Text
+              key={el.id}
+              style={{
+                position: 'absolute',
+                left: el.x,
+                top: el.y,
+                color: el.color || '#fff',
+                fontSize: el.fontSize || 24,
+                transform: [
+                  { scale: el.scale || 1 },
+                  { rotateZ: `${el.rotation || 0}rad` }
+                ],
+                fontWeight: 'bold',
+                textShadowColor: 'rgba(0,0,0,0.7)',
+                textShadowOffset: { width: 0, height: 2 },
+                textShadowRadius: 4,
+                zIndex: 15,
+              }}
+            >
+              {el.text}
+            </Text>
+          );
+        }
+        return null;
+      })}
     </SafeAreaView>
   );
 };

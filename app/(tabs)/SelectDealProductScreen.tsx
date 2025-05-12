@@ -28,7 +28,7 @@ const categoryToProductType: Record<string, string> = {
   necklace: 'necklace',
   ring: 'ring',
   rough_diamond: 'rough_diamond',
-  special_piece: 'special_piece',
+  specialpieces: 'specialpieces',
   watch: 'watches',
 };
 

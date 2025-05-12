@@ -96,4 +96,52 @@ export async function getDealsByCategory(category) {
   });
   if (!res.ok) throw new Error('Failed to fetch deals');
   return res.json();
+}
+
+/**
+ * Fetch all deals of the day that are still valid (expires_at > now()).
+ * @returns {Promise<any[]>} Array of deals with product info.
+ */
+export async function getAllDeals() {
+  const now = new Date().toISOString();
+  const url = `${SUPABASE_URL}/rest/v1/deal_of_the_day?expires_at=gt.${now}&select=*,products(*)`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  if (!res.ok) throw new Error('Failed to fetch all deals');
+  return res.json();
+}
+
+/**
+ * Fetch unseen deals of the day for the current user, grouped by product_type.
+ * @param {string} userId - The user ID to filter deal_views.
+ * @param {string} accessToken - The user's access token.
+ * @returns {Promise<Record<string, number>>} Object mapping product_type to unseen count.
+ */
+export async function getUnseenDealsCountByCategory(userId, accessToken) {
+  const query = `id,product_type,deal_views!left(user_id,deal_id)`;
+  const now = new Date().toISOString();
+  const url = `${SUPABASE_URL}/rest/v1/deal_of_the_day?expires_at=gt.${now}&select=${encodeURIComponent(query)}&deal_views.user_id=eq.${userId}`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+    },
+  });
+  if (!res.ok) throw new Error('Failed to fetch unseen deals');
+  const data = await res.json();
+  const categoriesWithUnseen = {};
+  data.forEach(deal => {
+    if (!deal.deal_views || deal.deal_views.length === 0) {
+      if (!categoriesWithUnseen[deal.product_type]) {
+        categoriesWithUnseen[deal.product_type] = 0;
+      }
+      categoriesWithUnseen[deal.product_type]++;
+    }
+  });
+  return categoriesWithUnseen;
 } 
