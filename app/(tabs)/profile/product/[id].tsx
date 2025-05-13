@@ -162,6 +162,16 @@ const Field = ({ label, value }: { label: string; value: any }) => (
   ) : null
 );
 
+// Helper to normalize category for specs table lookup
+function normalizeSpecsCategory(category: string | undefined): string {
+  if (!category) return '';
+  const c = category.toLowerCase().replace(/[_-]/g, ' ').trim();
+  if (c === 'special pieces' || c === 'special piece' || c === 'מוצר מיוחד') {
+    return 'special_piece';
+  }
+  return c;
+}
+
 export default function ProductScreen() {
   const { id } = useLocalSearchParams();
   const { user, accessToken } = useAuth();
@@ -255,6 +265,11 @@ export default function ProductScreen() {
       'Rough Diamond': 'rough_diamond_specs',
       Gold: 'special_piece_specs',
       Other: 'special_piece_specs',
+      'Special piece': 'special_piece_specs',
+      'Special pieces': 'special_piece_specs',
+      'special_piece': 'special_piece_specs',
+      'special pieces': 'special_piece_specs',
+      'מוצר מיוחד': 'special_piece_specs',
       // Add more mappings as needed
     };
     const table = categoryToTable[category] || null;
@@ -265,11 +280,13 @@ export default function ProductScreen() {
     }
     try {
       const url = `${SUPABASE_URL}/rest/v1/${table}?product_id=eq.${id}`;
+      const headers = {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      };
       const res = await fetch(url, {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
-        },
+        headers,
       });
       if (!res.ok) throw new Error('Failed to fetch specs');
       const data = await res.json();
@@ -756,45 +773,61 @@ export default function ProductScreen() {
           </View>
         </View>
         {/* Specs Section */}
-        {specs && (
-          <View style={styles.formContainer}>
-            <Text style={[styles.label, { fontSize: 18, marginBottom: 8 }]}> 
-              {SPECS_SECTION_TITLE[product?.category?.toLowerCase() + '_specs'] || 'Product Details'}
-            </Text>
-            {/* Generic fields for all specs */}
-            {Object.entries(specs).map(([key, value]) => {
-              if (["id", "product_id", "created_at", "has_side_stones", "has_diamond", "material", "gold_karat", "gold_color"].includes(key)) return null;
-              if (value === null || value === '') return null;
-              const tableKey = product?.category?.toLowerCase() + '_specs';
-              const label = SPECS_LABELS[tableKey]?.[key] || key;
-              if (key.endsWith('_d') && typeof value === 'object' && value !== null) {
-                return (
-                  <Field key={key} label={label} value={JSON.stringify(value, null, 2)} />
-                );
+        {(() => {
+          return specs && (
+            <View style={styles.formContainer}>
+              <Text style={[styles.label, { fontSize: 18, marginBottom: 8 }]}> 
+                {SPECS_SECTION_TITLE[(normalizeSpecsCategory(product?.category) + '_specs')] || 'Product Details'}
+              </Text>
+              {/* Generic fields for all specs */}
+              {Object.entries(specs).map(([key, value]) => {
+                if (["id", "product_id", "created_at", "has_side_stones", "has_diamond", "material", "gold_karat", "gold_color"].includes(key)) return null;
+                if (value === null || value === '') return null;
+                const tableKey = product?.category?.toLowerCase() + '_specs';
+                const label = SPECS_LABELS[tableKey]?.[key] || key;
+                if (key.endsWith('_d') && typeof value === 'object' && value !== null) {
+                  return (
+                    <Field key={key} label={label} value={JSON.stringify(value, null, 2)} />
+                  );
+                }
+                return <Field key={key} label={label} value={value} />;
+              })}
+              {/* material === 'gold' */}
+              {specs.material && specs.material.toLowerCase() === 'gold' && (
+                <>
+                  {specs.gold_karat && <Field label="Gold Karat" value={specs.gold_karat} />}
+                  {specs.gold_color && <Field label="Gold Color" value={specs.gold_color} />}
+                </>
+              )}
+              {/* has_diamond */}
+              {specs.has_diamond && (
+                <>
+                  {specs.diamond_weight && <Field label="Diamond Weight" value={specs.diamond_weight} />}
+                  {specs.cut_grade && <Field label="Cut Grade" value={specs.cut_grade} />}
+                  {specs.certification && <Field label="Certification" value={specs.certification} />}
+                </>
+              )}
+              {/* has_side_stones */}
+              {specs.has_side_stones && specs.side_stones_details && (
+                <Field label="Side Stones Details" value={JSON.stringify(specs.side_stones_details, null, 2)} />
+              )}
+              {/* Diamond Details block for jewelry categories */}
+              {['ring', 'bracelet', 'necklace', 'earring', 'special_piece'].includes((product?.category?.toLowerCase() || '')) &&
+                (specs.shape || specs.polish || specs.symmetry || specs.fluorescence) && (
+                  <View style={[styles.formSection, { marginTop: 18, padding: 14, backgroundColor: '#F5F8FC', borderRadius: 12 }]}> 
+                    <Text style={{ fontSize: 16, fontWeight: '700', color: '#0E2657', marginBottom: 8 }}>
+                      <Text role="img" aria-label="diamond">💎</Text> Diamond Details
+                    </Text>
+                    <Text style={styles.label}>Shape: <Text style={styles.input}>{specs.shape || 'Not specified'}</Text></Text>
+                    <Text style={styles.label}>Polish: <Text style={styles.input}>{specs.polish || 'Not specified'}</Text></Text>
+                    <Text style={styles.label}>Symmetry: <Text style={styles.input}>{specs.symmetry || 'Not specified'}</Text></Text>
+                    <Text style={styles.label}>Fluorescence: <Text style={styles.input}>{specs.fluorescence || 'Not specified'}</Text></Text>
+                  </View>
+                )
               }
-              return <Field key={key} label={label} value={value} />;
-            })}
-            {/* material === 'gold' */}
-            {specs.material && specs.material.toLowerCase() === 'gold' && (
-              <>
-                {specs.gold_karat && <Field label="Gold Karat" value={specs.gold_karat} />}
-                {specs.gold_color && <Field label="Gold Color" value={specs.gold_color} />}
-              </>
-            )}
-            {/* has_diamond */}
-            {specs.has_diamond && (
-              <>
-                {specs.diamond_weight && <Field label="Diamond Weight" value={specs.diamond_weight} />}
-                {specs.cut_grade && <Field label="Cut Grade" value={specs.cut_grade} />}
-                {specs.certification && <Field label="Certification" value={specs.certification} />}
-              </>
-            )}
-            {/* has_side_stones */}
-            {specs.has_side_stones && specs.side_stones_details && (
-              <Field label="Side Stones Details" value={JSON.stringify(specs.side_stones_details, null, 2)} />
-            )}
-          </View>
-        )}
+            </View>
+          );
+        })()}
         {/* --- Start Sale Button --- */}
         {user?.id === product?.user_id && (
           <View style={{ marginHorizontal: 16, marginTop: 16 }}>

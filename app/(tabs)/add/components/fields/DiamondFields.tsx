@@ -14,6 +14,12 @@ const CUT_GRADES = [
 const CERTIFICATIONS = [
   'GIA','IGI','HRD','EGL','SGL','CGL','IGL','AIG'
 ];
+const SHAPE_OPTIONS = [
+  'Round', 'Princess', 'Oval', 'Cushion', 'Emerald', 'Asscher', 'Marquise', 'Radiant', 'Pear', 'Heart', 'Baguette', 'Trillion', 'Other'
+];
+const POLISH_OPTIONS = ['Excellent', 'Very Good', 'Good', 'Fair', 'Poor'];
+const SYMMETRY_OPTIONS = ['Excellent', 'Very Good', 'Good', 'Fair', 'Poor'];
+const FLUORESCENCE_OPTIONS = ['None', 'Faint', 'Medium', 'Strong'];
 
 interface DiamondFieldsProps {
   fields: Record<string, string>;
@@ -214,6 +220,190 @@ const DiamondFields: React.FC<DiamondFieldsProps> = ({ fields, errors, onChange,
                     }}
                   >
                     <Text style={[styles.modalOptionText, fields.certification === option && styles.modalOptionTextSelected]}>
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      </View>
+      {/* Shape */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Shape</Text>
+        <TouchableOpacity
+          style={styles.selectButton}
+          onPress={() => toggleModal('shape', true)}
+        >
+          <Text style={styles.selectButtonText}>
+            {fields.shape || 'Select Shape'}
+          </Text>
+          <Ionicons name="chevron-down" size={20} color="#666" />
+        </TouchableOpacity>
+        <Modal
+          visible={!!showModals.shape}
+          transparent
+          animationType="slide"
+          onRequestClose={() => toggleModal('shape', false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Shape</Text>
+                <TouchableOpacity onPress={() => toggleModal('shape', false)} style={styles.modalCloseButton}>
+                  <Ionicons name="close" size={24} color="#000" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalScrollView}>
+                {SHAPE_OPTIONS.map(option => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[styles.modalOption, fields.shape === option && styles.modalOptionSelected]}
+                    onPress={() => {
+                      onChange('shape', option);
+                      toggleModal('shape', false);
+                    }}
+                  >
+                    <Text style={[styles.modalOptionText, fields.shape === option && styles.modalOptionTextSelected]}>
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      </View>
+      {/* Polish */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Polish</Text>
+        <TouchableOpacity
+          style={styles.selectButton}
+          onPress={() => toggleModal('polish', true)}
+        >
+          <Text style={styles.selectButtonText}>
+            {fields.polish || 'Select Polish'}
+          </Text>
+          <Ionicons name="chevron-down" size={20} color="#666" />
+        </TouchableOpacity>
+        <Modal
+          visible={!!showModals.polish}
+          transparent
+          animationType="slide"
+          onRequestClose={() => toggleModal('polish', false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Polish</Text>
+                <TouchableOpacity onPress={() => toggleModal('polish', false)} style={styles.modalCloseButton}>
+                  <Ionicons name="close" size={24} color="#000" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalScrollView}>
+                {POLISH_OPTIONS.map(option => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[styles.modalOption, fields.polish === option && styles.modalOptionSelected]}
+                    onPress={() => {
+                      onChange('polish', option);
+                      toggleModal('polish', false);
+                    }}
+                  >
+                    <Text style={[styles.modalOptionText, fields.polish === option && styles.modalOptionTextSelected]}>
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      </View>
+      {/* Symmetry */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Symmetry</Text>
+        <TouchableOpacity
+          style={styles.selectButton}
+          onPress={() => toggleModal('symmetry', true)}
+        >
+          <Text style={styles.selectButtonText}>
+            {fields.symmetry || 'Select Symmetry'}
+          </Text>
+          <Ionicons name="chevron-down" size={20} color="#666" />
+        </TouchableOpacity>
+        <Modal
+          visible={!!showModals.symmetry}
+          transparent
+          animationType="slide"
+          onRequestClose={() => toggleModal('symmetry', false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Symmetry</Text>
+                <TouchableOpacity onPress={() => toggleModal('symmetry', false)} style={styles.modalCloseButton}>
+                  <Ionicons name="close" size={24} color="#000" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalScrollView}>
+                {SYMMETRY_OPTIONS.map(option => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[styles.modalOption, fields.symmetry === option && styles.modalOptionSelected]}
+                    onPress={() => {
+                      onChange('symmetry', option);
+                      toggleModal('symmetry', false);
+                    }}
+                  >
+                    <Text style={[styles.modalOptionText, fields.symmetry === option && styles.modalOptionTextSelected]}>
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      </View>
+      {/* Fluorescence */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Fluorescence</Text>
+        <TouchableOpacity
+          style={styles.selectButton}
+          onPress={() => toggleModal('fluorescence', true)}
+        >
+          <Text style={styles.selectButtonText}>
+            {fields.fluorescence || 'Select Fluorescence'}
+          </Text>
+          <Ionicons name="chevron-down" size={20} color="#666" />
+        </TouchableOpacity>
+        <Modal
+          visible={!!showModals.fluorescence}
+          transparent
+          animationType="slide"
+          onRequestClose={() => toggleModal('fluorescence', false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Fluorescence</Text>
+                <TouchableOpacity onPress={() => toggleModal('fluorescence', false)} style={styles.modalCloseButton}>
+                  <Ionicons name="close" size={24} color="#000" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalScrollView}>
+                {FLUORESCENCE_OPTIONS.map(option => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[styles.modalOption, fields.fluorescence === option && styles.modalOptionSelected]}
+                    onPress={() => {
+                      onChange('fluorescence', option);
+                      toggleModal('fluorescence', false);
+                    }}
+                  >
+                    <Text style={[styles.modalOptionText, fields.fluorescence === option && styles.modalOptionTextSelected]}>
                       {option}
                     </Text>
                   </TouchableOpacity>

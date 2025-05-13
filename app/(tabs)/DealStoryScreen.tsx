@@ -6,6 +6,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/hooks/useAuth';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
 import { useUnseenDeals } from '@/components/DealOfTheDayIconsRow';
+import { router } from 'expo-router';
+import { categoryToProductType } from '@/components/DealOfTheDayIconsRow';
 
 const { width, height } = Dimensions.get('window');
 const STORY_DURATION = 5000;
@@ -42,6 +44,26 @@ const DealStoryScreen = () => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const { user, accessToken } = useAuth();
   const { refreshUnseenCounts } = useUnseenDeals();
+  const [navigated, setNavigated] = useState(false);
+
+  // Get all categories in the same order as DealOfTheDayIconsRow
+  const allCategories = Object.keys(categoryToProductType);
+  // Helper to get the next category with UNSEEN deals
+  const getNextCategoryWithUnseenDeals = async (currentCategory: string) => {
+    const currentIdx = allCategories.indexOf(currentCategory);
+    for (let i = currentIdx + 1; i < allCategories.length; i++) {
+      const nextCat = allCategories[i];
+      const nextProductType = categoryToProductType[nextCat];
+      const nextDeals = await getDealsByCategory(nextProductType);
+      // Filter only unseen deals for the user
+      const unseenDeals = (nextDeals || []).filter((deal: any) => !deal.views || !deal.views.some((v: any) => v.user_id === user?.id));
+      if (unseenDeals.length > 0) {
+        return nextProductType;
+      }
+    }
+    // No more categories with unseen deals
+    return null;
+  };
 
   useEffect(() => {
     if (!category) return;
@@ -94,11 +116,18 @@ const DealStoryScreen = () => {
     });
   }, [current, deals, user, accessToken, refreshUnseenCounts]);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (current < deals.length - 1) {
       setCurrent(current + 1);
     } else {
-      navigation.goBack();
+      // Try to go to next category with UNSEEN deals
+      const nextCategory = await getNextCategoryWithUnseenDeals(category);
+      if (nextCategory) {
+        router.replace({ pathname: '/DealStoryScreen', params: { category: nextCategory } });
+      } else {
+        // No more unseen deals in any category, go home
+        router.push('/');
+      }
     }
   };
 
@@ -110,14 +139,24 @@ const DealStoryScreen = () => {
     }
   };
 
+  useEffect(() => {
+    if (!deals.length && !navigated) {
+      (async () => {
+        const nextCategory = await getNextCategoryWithUnseenDeals(category);
+        if (nextCategory) {
+          setNavigated(true);
+          router.replace({ pathname: '/DealStoryScreen', params: { category: nextCategory } });
+        } else {
+          setNavigated(true);
+          router.push('/');
+        }
+      })();
+    }
+  }, [deals, category, navigated]);
+
   if (loading) {
     return (
       <View style={styles.centered}><ActivityIndicator size="large" color="#0E2657" /></View>
-    );
-  }
-  if (!deals.length) {
-    return (
-      <View style={styles.centered}><Text>No deals found for this category.</Text></View>
     );
   }
 

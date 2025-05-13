@@ -229,6 +229,10 @@ export default function useProductForm() {
         if (!dynamicFields.clarity) newDynamicErrors.clarity = true;
         if (!dynamicFields.cut_grade) newDynamicErrors.cut_grade = true;
         if (!dynamicFields.certification) newDynamicErrors.certification = true;
+        if (!dynamicFields.shape) newDynamicErrors.shape = true;
+        if (!dynamicFields.polish) newDynamicErrors.polish = true;
+        if (!dynamicFields.symmetry) newDynamicErrors.symmetry = true;
+        if (!dynamicFields.fluorescence) newDynamicErrors.fluorescence = true;
       }
       if (hasSideStones) {
         if (!dynamicFields.side_stones_weight) newDynamicErrors.side_stones_weight = true;
@@ -267,6 +271,11 @@ export default function useProductForm() {
         category: productType,
         user_id: user?.id
       };
+
+      // Debug logs
+      console.log('user:', user);
+      console.log('accessToken:', accessToken);
+      console.log('productInsertObj:', productInsertObj);
 
       console.log('--- יצירת מוצר חדש ---');
       const productArr = await createProduct(productInsertObj, accessToken);
@@ -445,6 +454,10 @@ export default function useProductForm() {
           specsData.color = dynamicFields.diamond_color;
           specsData.cut_grade = dynamicFields.cut_grade;
           specsData.certification = dynamicFields.certification;
+          specsData.shape = dynamicFields.shape;
+          specsData.polish = dynamicFields.polish;
+          specsData.symmetry = dynamicFields.symmetry;
+          specsData.fluorescence = dynamicFields.fluorescence;
         }
         if (hasSideStones) {
           specsData.side_stones_details = {

@@ -345,4 +345,6 @@ export const CATEGORY_LABELS: Record<string, string> = {
   'Rough Diamonds': 'Rough Diamonds',
   'Gems': 'Gems',
   'Watches': 'Watches',
-}; 
+};
+
+export type { FilterField }; 

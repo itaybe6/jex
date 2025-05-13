@@ -21,7 +21,7 @@ const dealCountsByCategory: Record<string, number> = {
 };
 
 // Add this mapping at the top of the file
-const categoryToProductType: Record<string, string> = {
+export const categoryToProductType: Record<string, string> = {
   bracelet: 'bracelet',
   earring: 'earring',
   gem: 'gems',

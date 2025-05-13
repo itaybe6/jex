@@ -57,7 +57,6 @@ const renderSpecItem = (label: string, value: any, suffix?: string) => {
 };
 
 export default function ProductScreen() {
-  console.log('PRODUCT PAGE LOADED: app/(tabs)/products/[id].tsx');
   const { id } = useLocalSearchParams();
   const { user, accessToken } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
@@ -126,12 +125,9 @@ export default function ProductScreen() {
         return;
       }
       const productData = arr[0];
-      console.log('productData:', productData);
       const category = (productData.category || '').toLowerCase();
-      console.log('category:', productData.category, '->', category);
       const specsTable = CATEGORY_TO_SPECS_TABLE[category];
-      console.log('specsTable:', specsTable);
-      console.log('productData[specsTable]:', productData[specsTable]);
+
       // Always treat as array
       const specsArray = Array.isArray(productData[specsTable])
         ? productData[specsTable]
@@ -141,7 +137,6 @@ export default function ProductScreen() {
         setProduct({ ...productData, specs: null } as Product);
       } else {
         const specs = specsArray[0];
-        console.log('[ProductSpecs] Loaded specs:', { category, specsTable, found: !!specs, specs });
         setProduct({ ...productData, specs } as Product);
       }
       // שלב 3: קבע תמונות
@@ -241,7 +236,8 @@ export default function ProductScreen() {
       );
     };
     // Debug: print all specs
-    console.log('specs:', specs);
+    const isJewelryCategory = ['ring', 'bracelet', 'necklace', 'earring', 'special_piece'].includes((product.category || '').toLowerCase());
+    const hasDiamondDetails = specs.shape || specs.polish || specs.symmetry || specs.fluorescence;
     return (
       <View style={styles.specsContainer}>
         {render('Weight', specs.weight, 'ct')}
@@ -279,6 +275,18 @@ export default function ProductScreen() {
         {render('Polish', specs.polish)}
         {render('Symmetry', specs.symmetry)}
         {render('Origin Type', specs.origin_type)}
+        {/* Diamond Details block for jewelry categories */}
+        {isJewelryCategory && hasDiamondDetails && (
+          <View style={{ marginTop: 18, padding: 14, backgroundColor: '#F5F8FC', borderRadius: 12 }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: '#0E2657', marginBottom: 8 }}>
+              <Text role="img" aria-label="diamond">💎</Text> Diamond Details
+            </Text>
+            <Text style={styles.specLabel}>Shape: <Text style={styles.specValue}>{specs.shape || 'Not specified'}</Text></Text>
+            <Text style={styles.specLabel}>Polish: <Text style={styles.specValue}>{specs.polish || 'Not specified'}</Text></Text>
+            <Text style={styles.specLabel}>Symmetry: <Text style={styles.specValue}>{specs.symmetry || 'Not specified'}</Text></Text>
+            <Text style={styles.specLabel}>Fluorescence: <Text style={styles.specValue}>{specs.fluorescence || 'Not specified'}</Text></Text>
+          </View>
+        )}
       </View>
     );
   };

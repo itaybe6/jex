@@ -17,6 +17,7 @@ import { FilterParams } from '@/types/filter';
 import { Product as ProductType } from '@/types/product';
 import { useAuth } from '@/hooks/useAuth';
 import DealOfTheDayIconsRow from '../../components/DealOfTheDayIconsRow';
+import { FILTER_FIELDS_BY_CATEGORY, FilterField } from '../../constants/filters';
 
 const GRID_SPACING = 2;
 const NUM_COLUMNS = 3;
@@ -211,6 +212,114 @@ const ROUTES = {
   REQUEST: '/(tabs)/profile/requests' as const,
   PRODUCT: '/(tabs)/profile/products' as const,
 } as const;
+
+// Helper to normalize category names for mapping
+function normalizeCategory(rawCategory: string | undefined): string {
+  if (!rawCategory) return 'Loose Diamonds';
+  if (rawCategory === 'Loose Diamond') return 'Loose Diamonds';
+  if (rawCategory === 'Gem') return 'Gems';
+  if (rawCategory === 'Ring') return 'Ring';
+  if (rawCategory === 'Necklace') return 'Necklace';
+  if (rawCategory === 'Earring' || rawCategory === 'Earrings') return 'Earrings';
+  if (rawCategory === 'Bracelet') return 'Bracelet';
+  if (rawCategory === 'Special Piece' || rawCategory === 'Special Pieces') return 'Special Pieces';
+  if (rawCategory === 'Watch' || rawCategory === 'Watches') return 'Watches';
+  // Add more rules as needed
+  return rawCategory;
+}
+
+// Map request.details fields to the mapped keys for display
+const REQUEST_FIELD_MAP: Record<string, string> = {
+  weight_from: 'weight',
+  weight_to: 'weight',
+  cut: 'cut_grade',
+  certificate: 'certification',
+  gem_type: 'gem_type',
+  // Add more mappings as needed
+};
+
+function mapRequestDetails(details: any): any {
+  if (!details) return {};
+  const mapped: Record<string, any> = {};
+  for (const [key, value] of Object.entries(details)) {
+    const mappedKey = REQUEST_FIELD_MAP[key] || key;
+    // Special handling for weight range
+    if (mappedKey === 'weight') {
+      if (details.weight_from && details.weight_to) {
+        mapped['weight'] = `${details.weight_from}-${details.weight_to}`;
+      } else if (details.weight_from) {
+        mapped['weight'] = details.weight_from;
+      } else if (details.weight_to) {
+        mapped['weight'] = details.weight_to;
+      }
+    } else if (!mapped[mappedKey]) {
+      mapped[mappedKey] = value;
+    }
+  }
+  return mapped;
+}
+
+function CategorySpecsDisplay({ category, details }: { category: string; details: any }) {
+  const fields: FilterField[] | undefined = FILTER_FIELDS_BY_CATEGORY[category];
+  if (!fields) {
+    return (
+      <View style={{ paddingVertical: 8 }}>
+        <Text style={{ color: '#7B8CA6', fontFamily: 'Montserrat-Regular', fontSize: 16 }}>Unknown category</Text>
+      </View>
+    );
+  }
+  return (
+    <View>
+      {fields.map(({ key, label }) => {
+        // Hide price field if not present in details (for requests)
+        if ((key === 'price' || label === 'Price ($)') && (details?.[key] == null || details?.[key] === '')) {
+          return null;
+        }
+        return (
+          <View style={styles.detailRow} key={key}>
+            <Text style={styles.detailLabel}>{label}:</Text>
+            <Text style={styles.detailValue}>
+              {details?.[key] != null && details?.[key] !== '' ? String(details[key]) : 'Not specified'}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+// Helper to generate a dynamic request title based on category/type and details
+function getRequestTitle(request: any): string {
+  const details = request.details || {};
+  const category = normalizeCategory(request.category || details.category);
+  if (category === 'Loose Diamonds') {
+    let weight = '';
+    if (details.weight_from && details.weight_to) {
+      weight = `${details.weight_from}-${details.weight_to} ct`;
+    } else if (details.weight_from) {
+      weight = `${details.weight_from} ct`;
+    } else if (details.weight_to) {
+      weight = `${details.weight_to} ct`;
+    }
+    return `Looking for${weight ? ' ' + weight : ''} Diamond`;
+  }
+  if (category === 'Watches') {
+    const brand = details.brand || '';
+    const model = details.model || '';
+    let title = 'Looking for';
+    if (brand) title += ` ${brand}`;
+    if (model) title += ` ${model}`;
+    title += ' Watch';
+    return title;
+  }
+  if (category === 'Gems') {
+    const gemType = details.gem_type || details.type || '';
+    return `Looking for${gemType ? ' ' + gemType : ''} Gem`;
+  }
+  // Add more categories as needed
+  // Fallback
+  return 'Looking for Product';
+}
 
 export default function HomeScreen() {
   const navigation = useNavigation();
@@ -471,76 +580,71 @@ export default function HomeScreen() {
   const renderDetailsModal = () => {
     if (!selectedRequest) return null;
 
+    const category = normalizeCategory(selectedRequest.category || selectedRequest.details?.category);
+    const mappedDetails = mapRequestDetails(selectedRequest.details);
+
+    const handleClose = () => {
+      setShowDetailsModal(false);
+      if (navigation.canGoBack()) navigation.goBack();
+    };
+
+    // Navigate to user profile
+    const handleUserPress = () => {
+      if (selectedRequest.user_id) {
+        router.push({ pathname: '/user/[id]', params: { id: selectedRequest.user_id } });
+        setShowDetailsModal(false);
+      }
+    };
+
     return (
       <Modal
         visible={showDetailsModal}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowDetailsModal(false)}
+        onRequestClose={handleClose}
       >
-        <View style={styles.modalContainer}>
+        <TouchableOpacity
+          style={styles.modalContainer}
+          activeOpacity={1}
+          onPressOut={handleClose}
+        >
           <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
+            <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Request Details</Text>
-              <TouchableOpacity onPress={() => setShowDetailsModal(false)}>
-                <Ionicons name="close" size={24} color="#fff" />
+              <TouchableOpacity onPress={handleClose} hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}>
+                <Ionicons name="close" size={24} color="#0E2657" />
               </TouchableOpacity>
-                </View>
-
-            <ScrollView style={styles.modalBody}>
-              <View style={styles.userInfoModal}>
-                  <Image 
-                    source={{ 
-                    uri: selectedRequest.profiles.avatar_url || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'
-                    }} 
-                  style={styles.avatarModal} 
-                  />
+            </View>
+            <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 32 }}>
+              <TouchableOpacity style={styles.userInfoModal} onPress={handleUserPress} activeOpacity={0.7}>
+                <Image
+                  source={{
+                    uri: selectedRequest.profiles.avatar_url || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
+                  }}
+                  style={styles.avatarModal}
+                />
                 <View>
                   <Text style={styles.userNameModal}>{selectedRequest.profiles.full_name}</Text>
                   <Text style={styles.timeAgoModal}>{formatTimeAgo(selectedRequest.created_at)}</Text>
-                  </View>
-              </View>
-
+                </View>
+              </TouchableOpacity>
               <View style={styles.detailSection}>
-                <Text style={styles.detailTitle}>Diamond Specifications</Text>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Weight:</Text>
-                  <Text style={styles.detailValue}>
-                    {selectedRequest.details.weight_from}{selectedRequest.details.weight_to ? `-${selectedRequest.details.weight_to}` : ''} ct
-                  </Text>
-                        </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Cut:</Text>
-                  <Text style={styles.detailValue}>{selectedRequest.details.cut}</Text>
-                        </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Clarity:</Text>
-                  <Text style={styles.detailValue}>{selectedRequest.details.clarity}</Text>
-                        </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Color:</Text>
-                  <Text style={styles.detailValue}>{selectedRequest.details.color}</Text>
-                        </View>
-                {selectedRequest.details.budget && (
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Budget:</Text>
-                    <Text style={styles.detailValue}>${selectedRequest.details.budget.toLocaleString()}</Text>
-                  </View>
-                )}
+                <Text style={styles.detailTitle}>Specifications</Text>
+                <CategorySpecsDisplay category={category} details={mappedDetails} />
               </View>
             </ScrollView>
           </View>
-        </View>
+        </TouchableOpacity>
       </Modal>
     );
   };
 
   const renderRequests = () => {
     if (loading) {
-  return (
+      return (
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading...</Text>
-      </View>
+        </View>
       );
     }
 
@@ -569,30 +673,21 @@ export default function HomeScreen() {
                 <View>
                   <Text style={styles.sellerName}>{request.profiles.full_name}</Text>
                   <Text style={styles.timeAgo}>{formatTimeAgo(request.created_at)}</Text>
-        </View>
+                </View>
               </View>
-              {request.details.budget && (
-                <Text style={styles.price}>${request.details.budget.toLocaleString()}</Text>
-              )}
             </View>
             
             <Text style={styles.requestTitle}>
-              Looking for {request.details.weight_from}{request.details.weight_to ? `-${request.details.weight_to}` : ''} ct Diamond
+              {getRequestTitle(request)}
             </Text>
             
-            <View style={styles.specsList}>
-              <Text style={styles.specsItem}>{request.details.weight_from} carat</Text>
-              <Text style={styles.specsItem}>{request.details.clarity}</Text>
-              <Text style={styles.specsItem}>Color {request.details.color}</Text>
-            </View>
-
-        <TouchableOpacity 
+            <TouchableOpacity 
               style={styles.respondButton}
               onPress={() => handleRequestPress(request.id)}
-        >
+            >
               <Text style={styles.respondButtonText}>Details</Text>
-        </TouchableOpacity>
-      </View>
+            </TouchableOpacity>
+          </View>
         ))}
       </View>
     );
@@ -1081,21 +1176,6 @@ const styles = StyleSheet.create({
     color: '#0E2657',
     fontFamily: 'Montserrat-Bold',
     marginBottom: 12,
-  },
-  specsList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
-  },
-  specsItem: {
-    fontSize: 14,
-    color: '#0E2657',
-    fontFamily: 'Montserrat-Regular',
-    backgroundColor: '#E3EAF3',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
   },
   respondButton: {
     backgroundColor: '#6C5CE7',
