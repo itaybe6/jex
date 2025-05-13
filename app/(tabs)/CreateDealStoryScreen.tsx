@@ -1,13 +1,13 @@
 // @ts-nocheck
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, StyleSheet, Dimensions, TouchableOpacity, ActivityIndicator, TextInput, SafeAreaView, Alert, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, Pressable } from 'react-native';
+import { View, Text, Image, StyleSheet, Dimensions, TouchableOpacity, ActivityIndicator, TextInput, SafeAreaView, Alert, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, Pressable, Modal } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
 import { useAuth } from '@/hooks/useAuth';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useAnimatedGestureHandler, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { PanGestureHandler, PinchGestureHandler, GestureHandlerRootView, GestureEvent, PanGestureHandlerEventPayload, PinchGestureHandlerEventPayload, RotationGestureHandler, Gesture, GestureDetector, TapGestureHandler, State } from 'react-native-gesture-handler';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { RotationGestureHandlerEventPayload } from 'react-native-gesture-handler';
 import { PanGestureHandlerGestureEvent, PinchGestureHandlerGestureEvent, RotationGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 
@@ -36,6 +36,9 @@ type StoryElement = {
 type DraggableScalableTextProps = {
     element: StoryElement;
     selected: boolean;
+    text: string;
+    color: string;
+    fontSize?: number;
     onSelect: () => void;
     onEdit: () => void;
     onUpdate: (el: StoryElement) => void;
@@ -44,7 +47,7 @@ type DraggableScalableTextProps = {
     finishEditing: (id: string) => void;
 };
 
-const DraggableScalableText: React.FC<DraggableScalableTextProps> = ({ element, selected, onSelect, onEdit, onUpdate, onDelete }) => {
+const DraggableScalableText: React.FC<DraggableScalableTextProps> = ({ element, selected, text, color, fontSize, onSelect, onEdit, onUpdate, onDelete }) => {
     // הגנות על ערכים לא תקינים:
     const safeNumber = (val, fallback) => (typeof val === 'number' && !isNaN(val) ? val : fallback);
     // useSharedValue מאותחל פעם אחת בלבד לכל אלמנט
@@ -171,43 +174,28 @@ const DraggableScalableText: React.FC<DraggableScalableTextProps> = ({ element, 
                         >
                             <Animated.View style={animatedStyle}>
                                 <TapGestureHandler
-                                    numberOfTaps={2}
+                                    numberOfTaps={1}
                                     onActivated={onEdit}
                                 >
-                                    <Animated.View>
-                                        <View style={{ alignItems: 'center', justifyContent: 'center', minWidth: 40, minHeight: 40 }}>
-                                            <Text style={{
-                                                color: element.color,
-                                                fontSize: element.fontSize,
-                                                fontWeight: 'bold',
-                                                textShadowColor: 'rgba(0,0,0,0.7)',
-                                                textShadowOffset: { width: 0, height: 2 },
-                                                textShadowRadius: 4,
-                                                textAlign: 'center',
-                                            }}>
-                                                {element.text}
-                                            </Text>
-                                            {selected && (
-                                                <TouchableOpacity
-                                                    onPress={onDelete}
-                                                    style={{ position: 'absolute', top: -18, right: -18, backgroundColor: '#fff', borderRadius: 12, padding: 2, elevation: 2 }}
-                                                >
-                                                    <MaterialIcons name="delete" size={20} color="#FF7675" />
-                                                </TouchableOpacity>
-                                            )}
-                                            {selected && (
-                                                <TouchableOpacity
-                                                    onPress={onEdit}
-                                                    style={{ position: 'absolute', top: -18, left: -18, backgroundColor: '#fff', borderRadius: 12, padding: 2, elevation: 2 }}
-                                                >
-                                                    <MaterialIcons name="edit" size={20} color="#0E2657" />
-                                                </TouchableOpacity>
-                                            )}
-                                        </View>
+                                    <Animated.View style={{ zIndex: 100 }}>
+                                        <Text style={{
+                                            color: color,
+                                            fontSize: fontSize,
+                                            fontWeight: 'bold',
+                                            textShadowColor: 'rgba(0,0,0,0.7)',
+                                            textShadowOffset: { width: 0, height: 2 },
+                                            textShadowRadius: 4,
+                                            textAlign: 'center',
+                                        }}>
+                                            {text}
+                                        </Text>
                                         {selected && (
-                                            <Text style={{ color: '#0E2657', fontSize: 12, marginTop: 8, textAlign: 'center' }}>
-                                                סיבוב: השתמש בשתי אצבעות לסיבוב הטקסט
-                                            </Text>
+                                            <TouchableOpacity
+                                                onPress={onDelete}
+                                                style={{ position: 'absolute', top: -18, right: -18, backgroundColor: '#fff', borderRadius: 12, padding: 2, elevation: 2 }}
+                                            >
+                                                <MaterialIcons name="delete" size={20} color="#FF7675" />
+                                            </TouchableOpacity>
                                         )}
                                     </Animated.View>
                                 </TapGestureHandler>
@@ -231,6 +219,7 @@ const CreateDealStoryScreen = () => {
     const [success, setSuccess] = useState(false);
     const [editingText, setEditingText] = useState('');
     const [isEditing, setIsEditing] = useState(false);
+    const [textColor, setTextColor] = useState('#FFFFFF');
 
     // Image gesture state
     const imageScale = useSharedValue(1);
@@ -254,6 +243,11 @@ const CreateDealStoryScreen = () => {
     const [previewX, setPreviewX] = useState(0);
     const [previewY, setPreviewY] = useState(0);
 
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+    const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
+    const [showImagePicker, setShowImagePicker] = useState(false);
+
     useEffect(() => {
         if (!productId) return;
         setLoading(true);
@@ -271,6 +265,12 @@ const CreateDealStoryScreen = () => {
             .catch(() => setImages([]))
             .finally(() => setLoading(false));
     }, [productId]);
+
+    useEffect(() => {
+        if (images.length > 1 && selectedImageIndex === null) {
+            setShowImagePicker(true);
+        }
+    }, [images, selectedImageIndex]);
 
     // Image gestures
     const imagePanHandler = useAnimatedGestureHandler({
@@ -301,8 +301,9 @@ const CreateDealStoryScreen = () => {
 
     // On image tap, show centered TextInput
     const handleCanvasPress = () => {
-        if (isEditing || editingElementId) return;
+        if (editingElementId || isEditing) return;
         setEditingText('');
+        setTextColor('#FFFFFF');
         setIsEditing(true);
     };
 
@@ -317,7 +318,7 @@ const CreateDealStoryScreen = () => {
                     id: generateId(),
                     type: 'text',
                     text: editingText,
-                    color: '#fff',
+                    color: textColor,
                     fontSize: 28,
                     x: width * 0.5,
                     y: height * 0.3,
@@ -333,7 +334,7 @@ const CreateDealStoryScreen = () => {
     // NEW: Finish editing existing element
     const handleFinishEditElement = () => {
         if (editingElementId) {
-            setStoryElements((prev) => prev.map(e => e.id === editingElementId ? { ...e, text: editingText } : e));
+            setStoryElements((prev) => prev.map(e => e.id === editingElementId ? { ...e, text: editingText, color: textColor } : e));
         }
         setEditingText('');
         setEditingElementId(null);
@@ -399,6 +400,16 @@ const CreateDealStoryScreen = () => {
         }
     };
 
+    // 1. פונקציה startEditElement
+    const startEditElement = (el) => {
+        setTimeout(() => {
+            setEditingText(el.text || '');
+            setTextColor(el.color || '#FFFFFF');
+            setEditingElementId(el.id);
+            setIsEditing(false);
+        }, 0);
+    };
+
     if (loading) {
         return <View style={styles.centered}><ActivityIndicator size="large" color="#0E2657" /></View>;
     }
@@ -409,145 +420,225 @@ const CreateDealStoryScreen = () => {
         return <View style={styles.centered}><Text style={{ color: '#0E2657', fontSize: 20 }}>Deal uploaded successfully!</Text></View>;
     }
 
-    // If only one image, skip carousel
-    const showCarousel = images.length > 1;
+    if (showImagePicker) {
+        return (
+            <View style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ color: '#fff', fontSize: 20, marginBottom: 16 }}>Choose an image</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>
+                    {images.map((img, idx) => (
+                        <TouchableOpacity key={img.id} onPress={() => { setSelectedImageIndex(idx); setShowImagePicker(false); }}>
+                            <Image source={{ uri: img.image_url }} style={{ width: 90, height: 90, margin: 8, borderRadius: 10, borderWidth: selectedImageIndex === idx ? 3 : 0, borderColor: '#6C5CE7' }} />
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            </View>
+        );
+    }
+
+    const imageToShow = images[selectedImageIndex ?? 0]?.image_url;
 
     return (
-        <GestureHandlerRootView style={{ flex: 1 }}>
-            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <SafeAreaView style={styles.container}>
-                        <View style={styles.header}><Text style={styles.headerText}>Create Deal Story</Text></View>
-                        <View style={styles.imageArea}>
-                            {showCarousel && (
-                                <View style={styles.carouselRow}>
-                                    {images.map((img, idx) => (
-                                        <TouchableOpacity key={img.id} onPress={() => setSelectedIdx(idx)}>
-                                            <Image source={{ uri: img.image_url }} style={[styles.carouselImg, idx === selectedIdx && styles.selectedImg]} />
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            )}
-                            <Pressable
-                                style={styles.storyPreviewWrapper}
-                                onPress={handleCanvasPress}
-                            >
-                                <PinchGestureHandler onGestureEvent={imagePinchHandler}>
-                                    <Animated.View style={[StyleSheet.absoluteFill, animatedImageStyle]}>
-                                        <PanGestureHandler onGestureEvent={imagePanHandler}>
-                                            <Animated.Image source={{ uri: images[selectedIdx]?.image_url }} style={styles.storyPreviewImg} resizeMode="cover" />
-                                        </PanGestureHandler>
-                                    </Animated.View>
-                                </PinchGestureHandler>
-                                <LinearGradient colors={["transparent", "rgba(0,0,0,0.7)"]} style={styles.gradientOverlay} />
-                                {storyElements.map((el) => (
-                                    <DraggableScalableText
-                                        key={el.id}
-                                        element={el}
-                                        selected={selectedElementId === el.id}
-                                        onSelect={() => setSelectedElementId(el.id)}
-                                        onEdit={() => {
-                                            setEditingElementId(el.id);
-                                            setEditingText(el.text || '');
+        <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#000' }}>
+            <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
+                {/* סרגל עליון */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', height: 56, paddingHorizontal: 16, backgroundColor: 'rgba(0,0,0,0.3)', zIndex: 100 }}>
+                    <TouchableOpacity onPress={() => setShowConfirmModal(true)}>
+                        <Ionicons name="checkmark" size={32} color="#fff" />
+                    </TouchableOpacity>
+                </View>
+                {/* תמונה בגודל מלא */}
+                <Pressable
+                    style={{ flex: 1, width: '100%', height: '100%' }}
+                    onPress={handleCanvasPress}
+                >
+                    <PinchGestureHandler onGestureEvent={imagePinchHandler}>
+                        <Animated.View style={[StyleSheet.absoluteFill, animatedImageStyle]}>
+                            <PanGestureHandler onGestureEvent={imagePanHandler}>
+                                <Animated.Image source={{ uri: imageToShow }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                            </PanGestureHandler>
+                        </Animated.View>
+                    </PinchGestureHandler>
+                    <LinearGradient colors={["transparent", "rgba(0,0,0,0.7)"]} style={styles.gradientOverlay} />
+                    {storyElements.map((el) => {
+                        const isEditing = el.id === editingElementId;
+                        return (
+                            <DraggableScalableText
+                                key={el.id}
+                                element={el}
+                                selected={selectedElementId === el.id}
+                                text={isEditing ? editingText : el.text}
+                                color={isEditing ? textColor : el.color}
+                                fontSize={el.fontSize}
+                                onSelect={() => setSelectedElementId(el.id)}
+                                onEdit={() => startEditElement(el)}
+                                onUpdate={(updated: StoryElement) => {
+                                    if (
+                                        typeof updated.x !== 'number' || isNaN(updated.x) ||
+                                        typeof updated.y !== 'number' || isNaN(updated.y) ||
+                                        typeof updated.scale !== 'number' || isNaN(updated.scale) ||
+                                        typeof updated.rotation !== 'number' || isNaN(updated.rotation)
+                                    ) {
+                                        console.error('Invalid update values', updated);
+                                        return;
+                                    }
+                                    setStoryElements((prev) => prev.map(e => {
+                                        if (e.id !== el.id) return e;
+                                        if (
+                                            e.x === updated.x &&
+                                            e.y === updated.y &&
+                                            e.scale === updated.scale &&
+                                            e.rotation === updated.rotation
+                                        ) {
+                                            return e;
+                                        }
+                                        return updated;
+                                    }));
+                                }}
+                                onDelete={() => setStoryElements((prev) => prev.filter(e => e.id !== el.id))}
+                                updateText={updateText}
+                                finishEditing={handleFinishEditElement}
+                            />
+                        );
+                    })}
+                    {editingElementId ? (
+                        <>
+                            <View style={{
+                                position: 'absolute',
+                                top: 100,
+                                left: 0,
+                                right: 0,
+                                flexDirection: 'row',
+                                justifyContent: 'center',
+                                zIndex: 999,
+                            }}>
+                                {['#FFFFFF', '#000000', '#FF0000', '#00FF00', '#0000FF'].map((color) => (
+                                    <TouchableOpacity
+                                        key={color}
+                                        onPress={() => setTextColor(color)}
+                                        style={{
+                                            width: 28,
+                                            height: 28,
+                                            borderRadius: 14,
+                                            backgroundColor: color,
+                                            marginHorizontal: 6,
+                                            borderWidth: textColor === color ? 2 : 0,
+                                            borderColor: '#666',
                                         }}
-                                        onUpdate={(updated: StoryElement) => {
-                                            // הגנה: אל תעדכן אם יש ערך לא תקין
-                                            if (
-                                                typeof updated.x !== 'number' || isNaN(updated.x) ||
-                                                typeof updated.y !== 'number' || isNaN(updated.y) ||
-                                                typeof updated.scale !== 'number' || isNaN(updated.scale) ||
-                                                typeof updated.rotation !== 'number' || isNaN(updated.rotation)
-                                            ) {
-                                                console.error('Invalid update values', updated);
-                                                return;
-                                            }
-                                            // עדכן רק אם יש שינוי אמיתי
-                                            setStoryElements((prev) => prev.map(e => {
-                                                if (e.id !== el.id) return e;
-                                                if (
-                                                    e.x === updated.x &&
-                                                    e.y === updated.y &&
-                                                    e.scale === updated.scale &&
-                                                    e.rotation === updated.rotation
-                                                ) {
-                                                    return e;
-                                                }
-                                                return updated;
-                                            }));
-                                        }}
-                                        onDelete={() => setStoryElements((prev) => prev.filter(e => e.id !== el.id))}
-                                        updateText={() => {}}
-                                        finishEditing={() => {}}
                                     />
                                 ))}
-                                {isEditing && (
-                                    <TextInput
-                                        value={editingText}
-                                        onChangeText={setEditingText}
-                                        autoFocus
+                            </View>
+                            <TextInput
+                                value={editingText}
+                                onChangeText={setEditingText}
+                                autoFocus
+                                style={{
+                                    position: 'absolute',
+                                    top: '40%',
+                                    left: 0,
+                                    right: 0,
+                                    textAlign: 'center',
+                                    fontSize: 28,
+                                    color: textColor,
+                                    backgroundColor: 'transparent',
+                                    borderBottomWidth: 1,
+                                    borderColor: '#0E2657',
+                                    minWidth: 80,
+                                    zIndex: 99,
+                                }}
+                                onSubmitEditing={handleFinishEditElement}
+                                onBlur={handleFinishEditElement}
+                                placeholder="Edit text..."
+                                placeholderTextColor="#aaa"
+                                returnKeyType="done"
+                            />
+                        </>
+                    ) : isEditing ? (
+                        <>
+                            <View style={{
+                                position: 'absolute',
+                                top: 100,
+                                left: 0,
+                                right: 0,
+                                flexDirection: 'row',
+                                justifyContent: 'center',
+                                zIndex: 999,
+                            }}>
+                                {['#FFFFFF', '#000000', '#FF0000', '#00FF00', '#0000FF'].map((color) => (
+                                    <TouchableOpacity
+                                        key={color}
+                                        onPress={() => setTextColor(color)}
                                         style={{
-                                            position: 'absolute',
-                                            top: '40%',
-                                            left: 0,
-                                            right: 0,
-                                            textAlign: 'center',
-                                            fontSize: 28,
-                                            color: '#fff',
-                                            backgroundColor: 'transparent',
-                                            borderBottomWidth: 1,
-                                            borderColor: '#0E2657',
-                                            minWidth: 80,
-                                            zIndex: 99,
+                                            width: 28,
+                                            height: 28,
+                                            borderRadius: 14,
+                                            backgroundColor: color,
+                                            marginHorizontal: 6,
+                                            borderWidth: textColor === color ? 2 : 0,
+                                            borderColor: '#666',
                                         }}
-                                        onSubmitEditing={handleFinishTextInput}
-                                        onBlur={handleFinishTextInput}
-                                        placeholder="Type here..."
-                                        placeholderTextColor="#aaa"
-                                        returnKeyType="done"
                                     />
-                                )}
-                                {editingElementId && (
-                                    <TextInput
-                                        value={editingText}
-                                        onChangeText={setEditingText}
-                                        autoFocus
-                                        style={{
-                                            position: 'absolute',
-                                            top: '40%',
-                                            left: 0,
-                                            right: 0,
-                                            textAlign: 'center',
-                                            fontSize: 28,
-                                            color: '#fff',
-                                            backgroundColor: 'transparent',
-                                            borderBottomWidth: 1,
-                                            borderColor: '#0E2657',
-                                            minWidth: 80,
-                                            zIndex: 99,
-                                        }}
-                                        onSubmitEditing={handleFinishEditElement}
-                                        onBlur={handleFinishEditElement}
-                                        placeholder="Edit text..."
-                                        placeholderTextColor="#aaa"
-                                        returnKeyType="done"
-                                    />
-                                )}
-                            </Pressable>
+                                ))}
+                            </View>
+                            <TextInput
+                                value={editingText}
+                                onChangeText={setEditingText}
+                                autoFocus
+                                style={{
+                                    position: 'absolute',
+                                    top: '40%',
+                                    left: 0,
+                                    right: 0,
+                                    textAlign: 'center',
+                                    fontSize: 28,
+                                    color: textColor,
+                                    backgroundColor: 'transparent',
+                                    borderBottomWidth: 1,
+                                    borderColor: '#0E2657',
+                                    minWidth: 80,
+                                    zIndex: 99,
+                                }}
+                                onSubmitEditing={handleFinishTextInput}
+                                onBlur={handleFinishTextInput}
+                                placeholder="Type here..."
+                                placeholderTextColor="#aaa"
+                                returnKeyType="done"
+                            />
+                        </>
+                    ) : null}
+                </Pressable>
+                {/* מודאל אישור */}
+                <Modal
+                    visible={showConfirmModal}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setShowConfirmModal(false)}
+                >
+                    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' }}>
+                        <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 32, width: 320, alignItems: 'center' }}>
+                            <Text style={{ fontSize: 18, color: '#0E2657', fontWeight: 'bold', marginBottom: 18, textAlign: 'center' }}>
+                                האם להעלות את הסטורי?
+                            </Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 8 }}>
+                                <TouchableOpacity
+                                    style={{ backgroundColor: '#6C5CE7', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 32, alignItems: 'center', marginHorizontal: 8 }}
+                                    onPress={async () => {
+                                        setShowConfirmModal(false);
+                                        await handleConfirm();
+                                    }}
+                                >
+                                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>אישור</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={{ backgroundColor: '#eee', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 32, alignItems: 'center', marginHorizontal: 8 }}
+                                    onPress={() => setShowConfirmModal(false)}
+                                >
+                                    <Text style={{ color: '#0E2657', fontWeight: 'bold', fontSize: 16 }}>ביטול</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
-                        <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 8 }}>
-                            <TouchableOpacity onPress={() => setShowColorPicker(true)} style={{ marginHorizontal: 8, backgroundColor: '#0E2657', borderRadius: 8, padding: 10 }}>
-                                <Text style={{ color: '#fff' }}>Pick Color</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={handleAddProductDetails} style={{ marginHorizontal: 8, backgroundColor: '#0E2657', borderRadius: 8, padding: 10 }}>
-                                <Text style={{ color: '#fff' }}>Add Product Details</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm} disabled={uploading}>
-                            <Text style={styles.confirmButtonText}>{uploading ? 'Uploading...' : 'Confirm & Upload'}</Text>
-                        </TouchableOpacity>
-                    </SafeAreaView>
-                </TouchableWithoutFeedback>
-            </KeyboardAvoidingView>
+                    </View>
+                </Modal>
+            </SafeAreaView>
         </GestureHandlerRootView>
     );
 };
