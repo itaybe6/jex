@@ -25,7 +25,7 @@ export const categoryToProductType: Record<string, string> = {
   bracelet: 'bracelet',
   earring: 'earring',
   gem: 'gems',
-  loose_diamonds: 'loose_diamonds',
+  loosediamond: 'loosediamond',
   necklace: 'necklace',
   ring: 'ring',
   rough_diamond: 'rough_diamond',
@@ -46,7 +46,7 @@ export function getIconByCategory(category: string): JSX.Element | null {
       return <MaterialCommunityIcons name="ear-hearing" size={32} color="#0E2657" />;
     case 'gem':
       return <MaterialCommunityIcons name="diamond-stone" size={32} color="#0E2657" />;
-    case 'loose_diamonds':
+    case 'loosediamond':
       return <MaterialCommunityIcons name="diamond-stone" size={32} color="#0E2657" />;
     case 'necklace':
       return <MaterialCommunityIcons name="necklace" size={32} color="#0E2657" />;
@@ -84,6 +84,8 @@ const DealOfTheDayIconsRow: React.FC = () => {
   const [checking, setChecking] = useState(false);
   const [unseenCounts, setUnseenCounts] = useState<Record<string, number>>({});
   const [refreshKey, setRefreshKey] = useState(0);
+  const [loadingDeal, setLoadingDeal] = useState(false);
+  const [userDeal, setUserDeal] = useState(false);
 
   // Refresh function
   const refreshUnseenCounts = useCallback(() => {
@@ -113,40 +115,34 @@ const DealOfTheDayIconsRow: React.FC = () => {
     const count = unseenCounts[productType] || 0;
     return { name: cat, count, productType };
   });
-  // Sort by count descending
-  categoriesWithCounts.sort((a, b) => b.count - a.count);
 
-  // Compose the data for the FlatList
+  // פיצול ומיון
+  const withProducts = categoriesWithCounts.filter(c => c.count > 0).sort((a, b) => b.count - a.count);
+  const withoutProducts = categoriesWithCounts.filter(c => c.count === 0);
+
+  // סדר סופי: קודם עם מוצרים (מהרבה למעט), אחר כך בלי מוצרים
+  const sortedCategories = [...withProducts, ...withoutProducts];
+
+  // סדר את הקטגוריות בלבד (בלי הפלוס)
+  const categoriesData: DealItem[] = sortedCategories.map(({ name }) => ({ type: 'category' as const, category: name }));
+
+  // הפלוס תמיד ראשון (בצד ימין)
   const flatListData: DealItem[] = [
-    { type: 'add' },
-    ...categoriesWithCounts.map(({ name }) => ({ type: 'category' as const, category: name })),
+    { type: 'add' as const },
+    ...categoriesData,
   ];
 
   const handleAddDealPress = async () => {
     if (!user) return;
-    setChecking(true);
-    try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const url = `${SUPABASE_URL}/rest/v1/deal_of_the_day?user_id=eq.${user.id}&created_at=gte.${today.toISOString()}&select=id`;
-      const res = await fetch(url, {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
-        },
-      });
-      if (!res.ok) throw new Error('Error checking deal limit');
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        setShowLimitModal(true);
-        setChecking(false);
-        return;
-      }
-      setChecking(false);
+    router.push('/SelectDealProductScreen');
+  };
+
+  const handleYourDealPress = () => {
+    if (loadingDeal) return;
+    if (!userDeal) {
       router.push('/SelectDealProductScreen');
-    } catch (e) {
-      setChecking(false);
-      Alert.alert('Error', 'Could not check deal status. Please try again.');
+    } else {
+      router.push('/UserDealStoryScreen');
     }
   };
 

@@ -118,14 +118,13 @@ export async function getAllDeals() {
 
 /**
  * Fetch unseen deals of the day for the current user, grouped by product_type.
- * @param {string} userId - The user ID to filter deal_views.
+ * @param {string} userId - The user ID to filter viewers.
  * @param {string} accessToken - The user's access token.
  * @returns {Promise<Record<string, number>>} Object mapping product_type to unseen count.
  */
 export async function getUnseenDealsCountByCategory(userId, accessToken) {
-  const query = `id,product_type,deal_views!left(user_id,deal_id)`;
   const now = new Date().toISOString();
-  const url = `${SUPABASE_URL}/rest/v1/deal_of_the_day?expires_at=gt.${now}&select=${encodeURIComponent(query)}&deal_views.user_id=eq.${userId}`;
+  const url = `${SUPABASE_URL}/rest/v1/deal_of_the_day?expires_at=gt.${now}&select=id,product_type,viewers`;
   const res = await fetch(url, {
     headers: {
       apikey: SUPABASE_ANON_KEY,
@@ -136,7 +135,7 @@ export async function getUnseenDealsCountByCategory(userId, accessToken) {
   const data = await res.json();
   const categoriesWithUnseen = {};
   data.forEach(deal => {
-    if (!deal.deal_views || deal.deal_views.length === 0) {
+    if (!deal.viewers || !deal.viewers.includes(userId)) {
       if (!categoriesWithUnseen[deal.product_type]) {
         categoriesWithUnseen[deal.product_type] = 0;
       }

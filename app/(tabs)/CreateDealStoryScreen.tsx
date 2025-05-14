@@ -616,7 +616,7 @@ const CreateDealStoryScreen = () => {
                     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' }}>
                         <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 32, width: 320, alignItems: 'center' }}>
                             <Text style={{ fontSize: 18, color: '#0E2657', fontWeight: 'bold', marginBottom: 18, textAlign: 'center' }}>
-                                האם להעלות את הסטורי?
+                                Do you want to upload this story?
                             </Text>
                             <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 8 }}>
                                 <TouchableOpacity
@@ -626,13 +626,13 @@ const CreateDealStoryScreen = () => {
                                         await handleConfirm();
                                     }}
                                 >
-                                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>אישור</Text>
+                                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Confirm</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={{ backgroundColor: '#eee', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 32, alignItems: 'center', marginHorizontal: 8 }}
                                     onPress={() => setShowConfirmModal(false)}
                                 >
-                                    <Text style={{ color: '#0E2657', fontWeight: 'bold', fontSize: 16 }}>ביטול</Text>
+                                    <Text style={{ color: '#0E2657', fontWeight: 'bold', fontSize: 16 }}>Cancel</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
