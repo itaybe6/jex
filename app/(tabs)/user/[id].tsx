@@ -316,7 +316,10 @@ export default function UserProfileScreen() {
 
   const renderCategorySection = (category: string, products: Product[]) => (
     <View key={category} style={styles.categorySection}>
-      <Text style={styles.categoryTitle}>{category}</Text>
+      <View style={styles.categoryTitleRow}>
+        <Text style={styles.categoryTitle}>{category}</Text>
+        <Text style={styles.itemsCount}>{products.length}</Text>
+      </View>
       <View style={styles.gridContainer}>
         {products.slice(0, 3).map(product => renderProductItem(product))}
       </View>
@@ -376,67 +379,68 @@ export default function UserProfileScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        {profile?.avatar_url ? (
-          <Image
-            source={{ uri: profile.avatar_url }}
-            style={styles.avatar}
-          />
-        ) : (
-          <View style={[styles.avatar, styles.defaultAvatar]}>
-            <Ionicons name="person" size={50} color="#666" />
-          </View>
-        )}
-        <Text style={styles.name}>{profile?.full_name}</Text>
-        {profile?.title && <Text style={styles.title}>{profile.title}</Text>}
-        <View style={styles.statsContainer}>
-          <TouchableOpacity
-            style={styles.statItem}
-            onPress={() => setShowTrustMarks(true)}
-          >
-            <Text style={[styles.statValue, { textDecorationLine: 'underline', color: '#6C5CE7' }]}>{trustMarks.length}</Text>
-            <Text style={[styles.statLabel, { color: '#6C5CE7' }]}>Trust</Text>
-          </TouchableOpacity>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{totalProducts}</Text>
-            <Text style={styles.statLabel}>Products</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{soldCount}</Text>
-            <Text style={styles.statLabel}>Transactions</Text>
-          </View>
-        </View>
-        <View style={styles.actionsContainer}>
+        <View style={styles.profileCard}>
+          {/* Avatar */}
+          {profile?.avatar_url ? (
+            <Image
+              source={{ uri: profile.avatar_url }}
+              style={styles.avatar}
+            />
+          ) : (
+            <View style={[styles.avatar, styles.defaultAvatar]}>
+              <Ionicons name="person" size={50} color="#666" />
+            </View>
+          )}
+          <Text style={styles.name}>{profile?.full_name}</Text>
+          {profile?.title && <Text style={styles.title}>{profile.title}</Text>}
           {user?.id !== userId && (
-            <TouchableOpacity 
-              style={[styles.actionButton, hasTrusted && styles.actionButtonActive]}
+            <TouchableOpacity
+              style={styles.trustedBadgeBelow}
               onPress={handleTrustMark}
               disabled={trustLoading}
+              activeOpacity={0.8}
             >
-              <Ionicons name="shield-checkmark-outline" size={20} color={hasTrusted ? '#fff' : '#007AFF'} />
-              <Text style={[styles.actionButtonText, hasTrusted && styles.actionButtonTextActive]}>
-                {hasTrusted ? 'Trusted' : 'Mark as Trusted'}
-              </Text>
+              <Ionicons name="shield-checkmark-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
+              <Text style={styles.trustedBadgeText}>{hasTrusted ? 'Trusted' : 'Mark as Trusted'}</Text>
             </TouchableOpacity>
           )}
-          {profile?.phone && (
-            <TouchableOpacity 
-              style={[styles.actionButton, styles.whatsappButton]}
-              onPress={handleWhatsAppPress}
+          <View style={styles.websiteRow}>
+            {profile?.website && (
+              <Text style={styles.websiteText}>{profile.website}</Text>
+            )}
+          </View>
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{totalProducts}</Text>
+              <Text style={styles.statLabel}>Products</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.statItem}
+              onPress={() => setShowTrustMarks(true)}
             >
-              <Ionicons name="chatbubble-outline" size={20} color="#fff" />
-              <Text style={[styles.actionButtonText, styles.whatsappButtonText]}>
-                WhatsApp
-              </Text>
+              <Text style={[styles.statValue, { textDecorationLine: 'underline' }]}>{trustMarks.length}</Text>
+              <Text style={styles.statLabel}>TrustMark</Text>
             </TouchableOpacity>
-          )}
-          {profile?.website && (
-            <TouchableOpacity style={styles.actionButton} onPress={handleWebsitePress}>
-              <Ionicons name="link-outline" size={20} color="#007AFF" />
-              <Text style={styles.actionButtonText}>Website</Text>
-            </TouchableOpacity>
-          )}
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{soldCount}</Text>
+              <Text style={styles.statLabel}>Transactions</Text>
+            </View>
+          </View>
+          <View style={styles.actionsContainer}>
+            {profile?.phone && (
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.whatsappButton]}
+                onPress={handleWhatsAppPress}
+              >
+                <Ionicons name="chatbubble-outline" size={20} color="#fff" />
+                <Text style={[styles.actionButtonText, styles.whatsappButtonText]}>
+                  WhatsApp
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {profile?.bio && <Text style={styles.bio}>{profile.bio}</Text>}
         </View>
-        {profile?.bio && <Text style={styles.bio}>{profile.bio}</Text>}
       </View>
       <View style={styles.catalogSection}>
         <View style={styles.tabButtonsRow}>
@@ -555,12 +559,12 @@ export default function UserProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#F5F8FC',
   },
   loadingContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#121212',
+    backgroundColor: '#F5F8FC',
   },
   loadingText: {
     fontSize: 16,
@@ -569,117 +573,154 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingHorizontal: 0,
+    paddingTop: 0,
     paddingBottom: 0,
-    backgroundColor: '#121212',
+    backgroundColor: 'transparent',
+    marginTop: 32,
+  },
+  profileCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    marginHorizontal: 24,
+    marginTop: 32,
+    paddingHorizontal: 0,
+    paddingVertical: 24,
+    alignItems: 'center',
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
+    position: 'relative',
   },
   avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    marginBottom: 12,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 4,
+    borderColor: '#fff',
+    backgroundColor: '#F5F8FC',
+    marginTop: -60,
+    marginBottom: 8,
   },
   name: {
-    fontSize: 24,
-    fontFamily: 'Heebo-Bold',
+    fontSize: 22,
+    fontFamily: 'Montserrat-Bold',
+    color: '#0E2657',
+    marginTop: 4,
     marginBottom: 2,
     textAlign: 'center',
-    color: '#fff',
   },
   title: {
-    fontSize: 16,
-    color: '#aaa',
-    fontFamily: 'Heebo-Regular',
-    marginBottom: 6,
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 15,
+    color: '#6C5CE7',
+    marginBottom: 10,
     textAlign: 'center',
+  },
+  websiteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    justifyContent: 'center',
+  },
+  websiteText: {
+    color: '#0E2657',
+    fontFamily: 'Montserrat-Medium',
+    fontSize: 15,
+    textDecorationLine: 'underline',
+    marginRight: 4,
   },
   statsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     width: '100%',
+    marginTop: 10,
     marginBottom: 0,
-    paddingVertical: 2,
+    paddingHorizontal: 24,
   },
   statItem: {
     alignItems: 'center',
-    paddingHorizontal: 12,
+    flex: 1,
   },
   statValue: {
-    fontSize: 20,
-    fontFamily: 'Heebo-Bold',
-    color: '#6C5CE7',
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 16,
+    color: '#0E2657',
   },
   statLabel: {
     fontSize: 14,
-    color: '#aaa',
-    fontFamily: 'Heebo-Regular',
+    color: '#7B8CA6',
+    fontFamily: 'Montserrat-Regular',
   },
   actionsContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     justifyContent: 'center',
+    alignItems: 'center',
     width: '100%',
     marginTop: 12,
+    gap: 8,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     paddingVertical: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#E3EAF3',
+    marginHorizontal: 4,
   },
   actionButtonActive: {
-    backgroundColor: '#6C5CE7',
+    backgroundColor: '#0E2657',
   },
   actionButtonText: {
     fontSize: 14,
-    fontFamily: 'Heebo-Medium',
-    color: '#6C5CE7',
+    fontFamily: 'Montserrat-Medium',
+    color: '#0E2657',
   },
   actionButtonTextActive: {
     color: '#fff',
   },
   catalogSection: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 0,
-    marginTop: 20,  // הוספה!
-
-    borderTopWidth: 0.5,
-    borderTopColor: '#2a2a2a',
-    backgroundColor: '#121212',
+    marginTop: 20,
+    borderTopWidth: 0,
+    borderTopColor: 'transparent',
+    backgroundColor: 'transparent',
   },
   tabButtonsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 8,
+    marginTop: 24,
+    marginBottom: 12,
     gap: 8,
+    paddingHorizontal: 20,
+    width: '100%',
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 10,
-    backgroundColor: '#23232b',
+    paddingVertical: 12,
+    backgroundColor: '#E3EAF3',
     borderRadius: 16,
-    marginHorizontal: 6,
+    marginHorizontal: 4,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#444',
   },
   tabButtonActive: {
-    backgroundColor: '#6C5CE7',
-    borderColor: '#6C5CE7',
+    backgroundColor: '#0E2657',
   },
   tabButtonText: {
-    color: '#fff',
+    color: '#0E2657',
+    fontFamily: 'Montserrat-Medium',
     fontSize: 16,
-    fontFamily: 'Heebo-Medium',
   },
   tabButtonTextActive: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontFamily: 'Montserrat-Bold',
   },
   requestsSection: {
     paddingHorizontal: 20,
@@ -756,51 +797,93 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   categorySection: {
-    gap: 12,
+    marginBottom: 28,
+    marginTop: 0,
+  },
+  categoryTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    marginTop: 0,
+    paddingHorizontal: 2,
   },
   categoryTitle: {
     fontSize: 18,
-    fontFamily: 'Heebo-Bold',
-    color: '#fff',
+    fontFamily: 'Montserrat-Bold',
+    color: '#0E2657',
+    marginBottom: 0,
+  },
+  itemsCount: {
+    fontSize: 13,
+    color: '#7B8CA6',
+    fontFamily: 'Montserrat-Medium',
+    marginLeft: 8,
   },
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: GRID_SPACING,
+    gap: 8,
   },
   gridItem: {
     width: ITEM_WIDTH,
     height: ITEM_WIDTH,
-    marginBottom: GRID_SPACING,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginBottom: 8,
+    overflow: 'hidden',
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    position: 'relative',
   },
   gridImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 8,
+    borderRadius: 12,
   },
   gridItemOverlay: {
     position: 'absolute',
-    bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    padding: 8,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
+    bottom: 0,
+    backgroundColor: 'rgba(14,38,87,0.85)',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
   },
   gridItemTitle: {
     color: '#fff',
-    fontSize: 12,
-    fontFamily: 'Heebo-Medium',
+    fontSize: 14,
+    fontFamily: 'Montserrat-Bold',
+    marginBottom: 2,
   },
   gridItemPrice: {
     color: '#fff',
-    fontSize: 12,
-    fontFamily: 'Heebo-Bold',
+    fontSize: 13,
+    fontFamily: 'Montserrat-Medium',
+  },
+  showMoreButton: {
+    padding: 8,
+    backgroundColor: '#0E2657',
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+    width: 120,
+    alignSelf: 'center',
+  },
+  showMoreText: {
+    color: '#fff',
+    fontSize: 15,
+    fontFamily: 'Montserrat-Medium',
   },
   whatsappButton: {
     backgroundColor: '#25D366',
-    marginHorizontal: 5,
+    marginHorizontal: 0,
+    marginTop: 16,
   },
   whatsappButtonText: {
     color: '#fff',
@@ -892,18 +975,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     textAlign: 'center',
   },
-  showMoreButton: {
-    padding: 10,
-    backgroundColor: '#6C5CE7',
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  showMoreText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'Heebo-Medium',
-  },
   holdOverlay: {
     position: 'absolute',
     top: 0,
@@ -928,5 +999,22 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
     overflow: 'hidden',
+  },
+  trustedBadgeBelow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0E2657',
+    borderRadius: 18,
+    paddingVertical: 4,
+    paddingHorizontal: 14,
+    marginTop: 8,
+    marginBottom: 14,
+    alignSelf: 'center',
+  },
+  trustedBadgeText: {
+    color: '#fff',
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 12,
+    marginLeft: 2,
   },
 });

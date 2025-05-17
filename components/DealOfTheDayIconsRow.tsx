@@ -1,11 +1,21 @@
 import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import type { JSX } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, I18nManager, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, I18nManager, Modal, Alert, Image } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5, Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { SUPABASE_URL, SUPABASE_ANON_KEY, getAllDeals, getUnseenDealsCountByCategory } from '@/lib/supabaseApi';
 import { useAuth } from '@/hooks/useAuth';
 import { useFocusEffect } from '@react-navigation/native';
+import RingImage from '@/assets/images/ring.png';
+import BraceletImage from '@/assets/images/bracelet.png';
+import Bracelet2Image from '@/assets/images/bracelet2.png';
+import EarringImage from '@/assets/images/earring.png';
+import GemImage from '@/assets/images/gem.png';
+import LoosediamondImage from '@/assets/images/loosediamond.png';
+import NecklaceImage from '@/assets/images/necklace.png';
+import EoughdiamondImage from '@/assets/images/eoughdiamond.png';
+import SpecialpiecesImage from '@/assets/images/specialpieces.png';
+import WatchImage from '@/assets/images/watch.png';
 
 // Mock data for demonstration (keys match _specs categories)
 const dealCountsByCategory: Record<string, number> = {
@@ -41,23 +51,68 @@ type DealItem = DealCategoryItem | DealAddItem;
 export function getIconByCategory(category: string): JSX.Element | null {
   switch (category) {
     case 'bracelet':
-      return <MaterialCommunityIcons name="link-variant" size={32} color="#0E2657" />;
+      return (
+        <Image
+          source={Bracelet2Image}
+          style={{ width: 44, height: 44, resizeMode: 'contain' }}
+        />
+      );
     case 'earring':
-      return <MaterialCommunityIcons name="ear-hearing" size={32} color="#0E2657" />;
+      return (
+        <Image
+          source={EarringImage}
+          style={{ width: 44, height: 44, resizeMode: 'contain' }}
+        />
+      );
     case 'gem':
-      return <MaterialCommunityIcons name="diamond-stone" size={32} color="#0E2657" />;
+      return (
+        <Image
+          source={GemImage}
+          style={{ width: 44, height: 44, resizeMode: 'contain' }}
+        />
+      );
     case 'loosediamond':
-      return <MaterialCommunityIcons name="diamond-stone" size={32} color="#0E2657" />;
+      return (
+        <Image
+          source={LoosediamondImage}
+          style={{ width: 44, height: 44, resizeMode: 'contain' }}
+        />
+      );
     case 'necklace':
-      return <MaterialCommunityIcons name="necklace" size={32} color="#0E2657" />;
+      return (
+        <Image
+          source={NecklaceImage}
+          style={{ width: 44, height: 44, resizeMode: 'contain' }}
+        />
+      );
     case 'ring':
-      return <Feather name="circle" size={32} color="#0E2657" />;
+      return (
+        <Image
+          source={RingImage}
+          style={{ width: 44, height: 44, resizeMode: 'contain' }}
+        />
+      );
     case 'rough_diamond':
-      return <FontAwesome5 name="gem" size={32} color="#0E2657" />;
+      return (
+        <Image
+          source={EoughdiamondImage}
+          style={{ width: 44, height: 44, resizeMode: 'contain' }}
+        />
+      );
     case 'specialpieces':
-      return <Feather name="star" size={32} color="#0E2657" />;
+      return (
+        <Image
+          source={SpecialpiecesImage}
+          style={{ width: 44, height: 44, resizeMode: 'contain' }}
+        />
+      );
     case 'watch':
-      return <FontAwesome5 name="watch" size={32} color="#0E2657" />;
+      return (
+        <Image
+          source={WatchImage}
+          style={{ width: 44, height: 44, resizeMode: 'contain' }}
+        />
+      );
     default:
       return null;
   }
@@ -66,7 +121,7 @@ export function getIconByCategory(category: string): JSX.Element | null {
 // Add button label based on language
 const addLabel = I18nManager.isRTL ? 'הוסף' : 'Add';
 
-const ITEM_WIDTH = 72;
+const ITEM_WIDTH = 92;
 const ITEM_SEPARATOR = 8;
 
 // Context for unseen deals
@@ -238,15 +293,21 @@ const styles = StyleSheet.create({
     // marginHorizontal is handled by ItemSeparatorComponent
   },
   iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 3,
-    borderColor: '#0E2657',
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 1.5,
+    borderColor: 'rgba(14,38,87,0.7)',
     backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    padding: 2,
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   badge: {
     position: 'absolute',
