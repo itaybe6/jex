@@ -63,6 +63,9 @@ const DealStoryScreen = () => {
 
   const { allDeals, loading: contextLoading } = useDeals();
 
+  // Add cubeAnim for 3D cube effect
+  const cubeAnim = useRef(new Animated.Value(0)).current;
+
   const fetchUnseenDeals = async (cat: string) => {
     const all = await getDealsByCategory(cat);
     return (all || []).filter((deal: Deal) => user?.id && (!deal.viewers || !deal.viewers.includes(user.id)));
@@ -305,6 +308,8 @@ const DealStoryScreen = () => {
       Math.abs(gestureState.dx) > 10 || Math.abs(gestureState.dy) > 10,
     onPanResponderMove: (_, gestureState) => {
       dragAnim.setValue({ x: gestureState.dx, y: gestureState.dy });
+      // Update cubeAnim for 3D effect (only for horizontal swipe)
+      cubeAnim.setValue(gestureState.dx / width);
     },
     onPanResponderRelease: (_, gestureState) => {
       const { dx, dy } = gestureState;
@@ -318,15 +323,14 @@ const DealStoryScreen = () => {
         });
         return;
       }
-      if (dx < -40) {
-        Animated.timing(dragAnim.x, {
-          toValue: -width,
-          duration: 150,
+      if (dx < -20) {
+        // גרירה שמאלה → קטגוריה הבאה
+        Animated.timing(cubeAnim, {
+          toValue: -1,
+          duration: 200,
           useNativeDriver: true,
         }).start(() => {
-          if (currentStoryIndex < deals.length - 1) {
-            setCurrentStoryIndex(currentStoryIndex + 1);
-          } else if (currentCategoryIndex < allCategories.length - 1) {
+          if (currentCategoryIndex < categoryKeys.length - 1) {
             const nextDeals = allDeals[categoryKeys[currentCategoryIndex + 1]] || [];
             if (nextDeals.length > 0) {
               setCurrentCategoryIndex(currentCategoryIndex + 1);
@@ -336,28 +340,37 @@ const DealStoryScreen = () => {
             }
           }
           dragAnim.setValue({ x: 0, y: 0 });
+          cubeAnim.setValue(0);
         });
-      } else if (dx > 40) {
-        Animated.timing(dragAnim.x, {
-          toValue: width,
-          duration: 150,
+      } else if (dx > 20) {
+        // גרירה ימינה → קטגוריה קודמת
+        Animated.timing(cubeAnim, {
+          toValue: 1,
+          duration: 200,
           useNativeDriver: true,
         }).start(() => {
-          if (currentStoryIndex > 0) {
-            setCurrentStoryIndex(currentStoryIndex - 1);
-          } else if (currentCategoryIndex > 0) {
-            const prevCategory = allCategories[currentCategoryIndex - 1];
+          if (currentCategoryIndex > 0) {
+            const prevCategory = categoryKeys[currentCategoryIndex - 1];
             const prevDeals = allDeals[prevCategory] || [];
-            setCurrentCategoryIndex(currentCategoryIndex - 1);
-            setCurrentStoryIndex(prevDeals.length - 1);
+            if (prevDeals.length > 0) {
+              setCurrentCategoryIndex(currentCategoryIndex - 1);
+              setCurrentStoryIndex(0);
+            }
           }
           dragAnim.setValue({ x: 0, y: 0 });
+          cubeAnim.setValue(0);
         });
       } else {
-        Animated.spring(dragAnim, {
-          toValue: { x: 0, y: 0 },
-          useNativeDriver: true,
-        }).start();
+        Animated.parallel([
+          Animated.spring(dragAnim, {
+            toValue: { x: 0, y: 0 },
+            useNativeDriver: true,
+          }),
+          Animated.spring(cubeAnim, {
+            toValue: 0,
+            useNativeDriver: true,
+          })
+        ]).start();
       }
     },
   });
@@ -527,13 +540,25 @@ const DealStoryScreen = () => {
     storyElements = [];
   }
 
+  // In the render, update the Animated.View style for 3D cube effect:
+  const rotateY = cubeAnim.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: ['-60deg', '0deg', '60deg'],
+  });
+  const translateX = cubeAnim.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: [-width, 0, width],
+  });
+
   return (
     <Animated.View
       style={[
         styles.fullScreenWrapper,
         {
           transform: [
-            { translateX: dragAnim.x },
+            { perspective: 1000 },
+            { rotateY },
+            { translateX },
             { translateY: dragAnim.y },
             { scale: dragScale },
           ],
