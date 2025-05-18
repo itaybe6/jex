@@ -122,10 +122,18 @@ export default function TabLayout() {
           name="DealStoryScreen"
           options={{
             href: null,
+            headerShown: false,
+            tabBarStyle: { display: 'none' },
           }}
         />
         <Tabs.Screen
           name="CreateDealStoryScreen"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="UserDealStoryScreen"
           options={{
             href: null,
           }}

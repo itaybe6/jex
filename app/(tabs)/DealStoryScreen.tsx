@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Image, StyleSheet, Dimensions, TouchableOpacity, ActivityIndicator, SafeAreaView, Animated, PanResponder } from 'react-native';
+import { View, Text, Image, StyleSheet, Dimensions, TouchableOpacity, ActivityIndicator, SafeAreaView, Animated, PanResponder, TouchableWithoutFeedback } from 'react-native';
 import { getDealsByCategory } from '@/lib/supabaseApi';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,6 +10,7 @@ import { router } from 'expo-router';
 import { categoryToProductType } from '@/components/DealOfTheDayIconsRow';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { useDeals } from '../context/DealsContext';
 
 const { width, height } = Dimensions.get('window');
 const STORY_DURATION = 5000;
@@ -53,8 +54,14 @@ const DealStoryScreen = () => {
   const [preloading, setPreloading] = useState(false);
   const [pendingCategory, setPendingCategory] = useState<string | null>(null);
   const dragAnim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const [nextDealsCache, setNextDealsCache] = useState<Deal[] | null>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
+  const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
 
   const allCategories = Object.keys(categoryToProductType);
+
+  const { allDeals, loading: contextLoading } = useDeals();
 
   const fetchUnseenDeals = async (cat: string) => {
     const all = await getDealsByCategory(cat);
@@ -180,6 +187,10 @@ const DealStoryScreen = () => {
     }
   }, [current, deals, user, accessToken, refreshUnseenCounts]);
 
+  useEffect(() => {
+    setImageLoaded(false);
+  }, [current]);
+
   const handleNext = async () => {
     if (current < deals.length - 1) {
       setCurrent(current + 1);
@@ -251,9 +262,16 @@ const DealStoryScreen = () => {
   const handleNextCategory = async () => {
     const nextCat = getNextCategory(category);
     if (nextCat) {
-      setPreloading(true);
-      await fetchUnseenDeals(nextCat);
-      setPreloading(false);
+      await new Promise((resolve) =>
+        Animated.timing(dragAnim.x, {
+          toValue: -width,
+          duration: 250,
+          useNativeDriver: true,
+        }).start(() => {
+          dragAnim.setValue({ x: 0, y: 0 });
+          resolve(null);
+        })
+      );
       router.replace({ pathname: '/DealStoryScreen', params: { category: nextCat } });
     }
   };
@@ -261,56 +279,79 @@ const DealStoryScreen = () => {
   const handlePrevCategory = async () => {
     const prevCat = getPrevCategory(category);
     if (prevCat) {
-      setPreloading(true);
-      await fetchUnseenDeals(prevCat);
-      setPreloading(false);
+      await new Promise((resolve) =>
+        Animated.timing(dragAnim.x, {
+          toValue: width,
+          duration: 250,
+          useNativeDriver: true,
+        }).start(() => {
+          dragAnim.setValue({ x: 0, y: 0 });
+          resolve(null);
+        })
+      );
       router.replace({ pathname: '/DealStoryScreen', params: { category: prevCat } });
     }
+  };
+
+  const resetPosition = () => {
+    Animated.spring(dragAnim, {
+      toValue: { x: 0, y: 0 },
+      useNativeDriver: true,
+    }).start();
   };
 
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: (_, gestureState) =>
       Math.abs(gestureState.dx) > 10 || Math.abs(gestureState.dy) > 10,
-    onPanResponderMove: Animated.event(
-      [null, { dx: dragAnim.x, dy: dragAnim.y }],
-      { useNativeDriver: false }
-    ),
+    onPanResponderMove: (_, gestureState) => {
+      dragAnim.setValue({ x: gestureState.dx, y: gestureState.dy });
+    },
     onPanResponderRelease: (_, gestureState) => {
-      if (gestureState.dy > 60) {
+      const { dx, dy } = gestureState;
+      if (dy > 60 || dy < -60) {
         Animated.timing(dragAnim, {
-          toValue: { x: 0, y: height },
+          toValue: { x: 0, y: dy > 0 ? height : -height },
           duration: 200,
           useNativeDriver: true,
         }).start(() => {
-          Animated.spring(dragAnim, {
-            toValue: { x: 0, y: 0 },
-            useNativeDriver: true,
-          }).start();
           navigation.goBack();
         });
-      } else if (gestureState.dx < -60) {
-        Animated.timing(dragAnim, {
-          toValue: { x: -width, y: 0 },
-          duration: 200,
+        return;
+      }
+      if (dx < -40) {
+        Animated.timing(dragAnim.x, {
+          toValue: -width,
+          duration: 150,
           useNativeDriver: true,
         }).start(() => {
-          Animated.spring(dragAnim, {
-            toValue: { x: 0, y: 0 },
-            useNativeDriver: true,
-          }).start();
-          handleNextCategory();
+          if (currentStoryIndex < deals.length - 1) {
+            setCurrentStoryIndex(currentStoryIndex + 1);
+          } else if (currentCategoryIndex < allCategories.length - 1) {
+            const nextDeals = allDeals[categoryKeys[currentCategoryIndex + 1]] || [];
+            if (nextDeals.length > 0) {
+              setCurrentCategoryIndex(currentCategoryIndex + 1);
+              setCurrentStoryIndex(0);
+            } else {
+              navigation.goBack();
+            }
+          }
+          dragAnim.setValue({ x: 0, y: 0 });
         });
-      } else if (gestureState.dx > 60) {
-        Animated.timing(dragAnim, {
-          toValue: { x: width, y: 0 },
-          duration: 200,
+      } else if (dx > 40) {
+        Animated.timing(dragAnim.x, {
+          toValue: width,
+          duration: 150,
           useNativeDriver: true,
         }).start(() => {
-          Animated.spring(dragAnim, {
-            toValue: { x: 0, y: 0 },
-            useNativeDriver: true,
-          }).start();
-          handlePrevCategory();
+          if (currentStoryIndex > 0) {
+            setCurrentStoryIndex(currentStoryIndex - 1);
+          } else if (currentCategoryIndex > 0) {
+            const prevCategory = allCategories[currentCategoryIndex - 1];
+            const prevDeals = allDeals[prevCategory] || [];
+            setCurrentCategoryIndex(currentCategoryIndex - 1);
+            setCurrentStoryIndex(prevDeals.length - 1);
+          }
+          dragAnim.setValue({ x: 0, y: 0 });
         });
       } else {
         Animated.spring(dragAnim, {
@@ -321,37 +362,191 @@ const DealStoryScreen = () => {
     },
   });
 
-  if (loading) {
+  const restartStoryTimer = () => {
+    clearStoryTimer();
+    setProgress(0);
+    timerRef.current = setInterval(() => {
+      setProgress((p) => {
+        if (p >= 1) {
+          clearStoryTimer();
+          handleNext();
+          return 0;
+        }
+        return p + 0.02;
+      });
+    }, STORY_DURATION / 50) as unknown as NodeJS.Timeout;
+  };
+
+  // Add drag effect for both x and y
+  const dragDistance = Animated.add(
+    dragAnim.x.interpolate({ inputRange: [-width, width], outputRange: [-1, 1], extrapolate: 'clamp' }),
+    dragAnim.y.interpolate({ inputRange: [-height, height], outputRange: [-1, 1], extrapolate: 'clamp' })
+  );
+  const dragOpacity = dragDistance.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: [0.7, 1, 0.7],
+    extrapolate: 'clamp',
+  });
+  const dragScale = dragDistance.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: [0.96, 1, 0.96],
+    extrapolate: 'clamp',
+  });
+
+  // Get current category and deal
+  const categoryKeys = Object.keys(allDeals);
+  const currentCategory = categoryKeys[currentCategoryIndex];
+  const currentDeals = allDeals[currentCategory] || [];
+  const currentDeal = currentDeals[currentStoryIndex];
+
+  // Update timer to use currentCategoryIndex and currentStoryIndex
+  useEffect(() => {
+    if (!currentDeals.length) return;
+    setProgress(0);
+    clearStoryTimer();
+    timerRef.current = setInterval(() => {
+      setProgress((p) => {
+        if (p >= 1) {
+          clearStoryTimer();
+          // Move to next story or category
+          if (currentStoryIndex < currentDeals.length - 1) {
+            setCurrentStoryIndex(currentStoryIndex + 1);
+          } else if (currentCategoryIndex < categoryKeys.length - 1) {
+            setCurrentCategoryIndex(currentCategoryIndex + 1);
+            setCurrentStoryIndex(0);
+          } else {
+            // End of all stories
+            navigation.goBack();
+          }
+          return 0;
+        }
+        return p + 0.02;
+      });
+    }, STORY_DURATION / 50) as unknown as NodeJS.Timeout;
+    return () => {
+      clearStoryTimer();
+    };
+  }, [currentCategoryIndex, currentStoryIndex, currentDeals.length]);
+
+  // After allDeals and category are available, set currentCategoryIndex to match the route param
+  useEffect(() => {
+    if (!category) return;
+    const idx = Object.keys(categoryToProductType).findIndex(
+      key => categoryToProductType[key] === category
+    );
+    if (idx >= 0) setCurrentCategoryIndex(idx);
+  }, [category, Object.keys(allDeals).length]);
+
+  // Defensive: clamp currentStoryIndex if out of bounds
+  useEffect(() => {
+    if (!currentDeals.length) return;
+    if (currentStoryIndex >= currentDeals.length) {
+      setCurrentStoryIndex(0);
+    }
+  }, [currentCategoryIndex, currentDeals.length]);
+
+  // Helper: find next category with unseen stories
+  const getNextCategoryWithUnseenIndex = () => {
+    const userId = user?.id || '';
+    for (let i = currentCategoryIndex + 1; i < categoryKeys.length; i++) {
+      const deals = allDeals[categoryKeys[i]] || [];
+      // Unseen = לא נצפה ע"י המשתמש
+      if (deals.some(deal => !deal.viewers || !deal.viewers.includes(userId))) {
+        return i;
+      }
+    }
+    return null;
+  };
+
+  const handleRightTap = () => {
+    clearStoryTimer();
+    if (currentStoryIndex < currentDeals.length - 1) {
+      setCurrentStoryIndex(currentStoryIndex + 1);
+      setProgress(0);
+      restartStoryTimer();
+    } else {
+      // סיים את כל הסטוריז בקטגוריה הנוכחית – עבור לקטגוריה הבאה עם unseen
+      const nextUnseenIdx = getNextCategoryWithUnseenIndex();
+      if (nextUnseenIdx !== null) {
+        const nextDeals = allDeals[categoryKeys[nextUnseenIdx]] || [];
+        if (nextDeals.length > 0) {
+          setCurrentCategoryIndex(nextUnseenIdx);
+          setCurrentStoryIndex(0);
+          setProgress(0);
+          restartStoryTimer();
+        } else {
+          navigation.goBack();
+        }
+      } else {
+        // אין יותר unseen – פשוט תישאר
+        setCurrentStoryIndex(currentDeals.length - 1);
+        setProgress(0);
+        restartStoryTimer();
+      }
+    }
+  };
+
+  const handleLeftTap = () => {
+    clearStoryTimer();
+    if (currentStoryIndex > 0) {
+      setCurrentStoryIndex(currentStoryIndex - 1);
+      setProgress(0);
+      restartStoryTimer();
+    } else {
+      // סטורי ראשון – לא זז אחורה
+      setCurrentStoryIndex(0);
+      setProgress(0);
+      restartStoryTimer();
+    }
+  };
+
+  // Loading state
+  if (!Object.keys(allDeals).length) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#0E2657" /></View>;
   }
-
-  if (!deals.length) {
+  if (!currentDeals.length) {
     return (
       <View style={styles.centered}>
         <Text>אין דילים להצגה בקטגוריה זו</Text>
-        <TouchableOpacity onPress={() => router.push('/')}> 
-          <Text style={{ color: '#0E2657', marginTop: 20 }}>חזור לדף הבית</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}> 
+          <Text style={{ color: '#0E2657', marginTop: 20 }}>חזור</Text>
         </TouchableOpacity>
       </View>
     );
   }
+  if (!currentDeal) {
+    return null;
+  }
 
-  const deal: Deal = deals[current] || {} as Deal;
   let storyElements: any[] = [];
   try {
-    if (deal.story_data) {
-      storyElements = JSON.parse(deal.story_data);
+    if (currentDeal.story_data) {
+      storyElements = JSON.parse(currentDeal.story_data);
     }
   } catch (e) {
     storyElements = [];
   }
 
   return (
+    <Animated.View
+      style={[
+        styles.fullScreenWrapper,
+        {
+          transform: [
+            { translateX: dragAnim.x },
+            { translateY: dragAnim.y },
+            { scale: dragScale },
+          ],
+          opacity: dragOpacity,
+        }
+      ]}
+      {...panResponder.panHandlers}
+    >
     <SafeAreaView style={styles.container}>
-      {deal.products?.id && (
+        {currentDeal && currentDeal.products && currentDeal.products.id && (
         <TouchableOpacity
           style={styles.productButton}
-          onPress={() => router.push(`/products/${deal.products?.id}`)}
+            onPress={() => router.push(`/products/${currentDeal.products?.id}`)}
           activeOpacity={0.8}
         >
           <View style={styles.productButtonCircle}>
@@ -361,37 +556,38 @@ const DealStoryScreen = () => {
         </TouchableOpacity>
       )}
       <View style={styles.progressRow}>
-        {deals.map((_, idx) => (
-          <ProgressBar key={idx} progress={idx < current ? 1 : idx === current ? progress : 0} />
+          {currentDeals.map((_, idx) => (
+            <ProgressBar key={idx} progress={idx < currentStoryIndex ? 1 : idx === currentStoryIndex ? progress : 0} />
         ))}
       </View>
-      <TouchableOpacity style={[styles.leftZone, { pointerEvents: 'box-none' }]} onPress={() => { if (current > 0) setCurrent(current - 1); }} />
-      <TouchableOpacity style={[styles.rightZone, { pointerEvents: 'box-none' }]} onPress={handleStoryPress} />
-      <Animated.View
-        style={[
-          styles.storyWrapper,
-          { transform: [
-            { translateX: dragAnim.x },
-            { translateY: dragAnim.y }
-          ] }
-        ]}
-        {...panResponder.panHandlers}
-      >
-        {deal.image_url ? (
-          <Image source={{ uri: deal.image_url }} style={styles.fullImage} resizeMode="cover" />
+        <TouchableOpacity
+          style={styles.leftZone}
+          onPress={handleLeftTap}
+        />
+        <TouchableOpacity
+          style={styles.rightZone}
+          onPress={handleRightTap}
+        />
+        <TouchableWithoutFeedback onLongPress={clearStoryTimer} onPressOut={restartStoryTimer} delayLongPress={200}>
+          <View style={styles.storyWrapper}>
+            {currentDeal?.image_url ? (
+              <Animated.Image
+                source={{ uri: currentDeal.image_url }}
+                style={[styles.fullImage, { opacity: imageLoaded ? 1 : 0 }]}
+                resizeMode="cover"
+                onLoadEnd={() => setImageLoaded(true)}
+              />
         ) : (
-          <View style={[styles.fullImage, { backgroundColor: '#eee', justifyContent: 'center', alignItems: 'center' }]}> 
-            <Text>No Image</Text>
-          </View>
+              <View style={[styles.fullImage, { backgroundColor: '#eee' }]} />
         )}
         <LinearGradient
           colors={["transparent", "rgba(0,0,0,0.7)"]}
           style={styles.gradientOverlay}
         />
         <View style={styles.overlayContent}>
-          <Text style={styles.price}>{deal.products?.price ? `₪${deal.products.price}` : ''}</Text>
-          {deal.message && <Text style={styles.storyMessage}>{deal.message}</Text>}
-          {deal.marketing_text && <Text style={styles.storyMessage}>{deal.marketing_text}</Text>}
+              <Text style={styles.price}>{currentDeal?.products?.price ? `₪${currentDeal.products.price}` : ''}</Text>
+              {currentDeal?.message && <Text style={styles.storyMessage}>{currentDeal.message}</Text>}
+              {currentDeal?.marketing_text && <Text style={styles.storyMessage}>{currentDeal.marketing_text}</Text>}
         </View>
         {Array.isArray(storyElements) && storyElements.map((el) => {
           if (el.type === 'text') {
@@ -421,8 +617,10 @@ const DealStoryScreen = () => {
           }
           return null;
         })}
+          </View>
+        </TouchableWithoutFeedback>
+      </SafeAreaView>
       </Animated.View>
-    </SafeAreaView>
   );
 };
 
@@ -463,15 +661,15 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    width: width / 2,
-    zIndex: 20,
+    width: width / 3,
+    zIndex: 10,
   },
   rightZone: {
     position: 'absolute',
-    right: 0,
+    left: width / 3,
     top: 0,
     bottom: 0,
-    width: width / 2,
+    width: (width * 2) / 3,
     zIndex: 20,
   },
   fullImage: {
@@ -542,6 +740,14 @@ const styles = StyleSheet.create({
     color: '#0E2657',
     marginTop: 2,
     fontWeight: '500',
+  },
+  fullScreenWrapper: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 50,
   },
 });
 
