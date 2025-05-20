@@ -16,7 +16,6 @@ import NecklaceImage from '@/assets/images/necklace.png';
 import EoughdiamondImage from '@/assets/images/eoughdiamond.png';
 import SpecialpiecesImage from '@/assets/images/specialpieces.png';
 import WatchImage from '@/assets/images/watch.png';
-import { supabase } from '@/lib/supabase';
 
 // Mock data for demonstration (keys match _specs categories)
 const dealCountsByCategory: Record<string, number> = {
@@ -201,25 +200,6 @@ const DealOfTheDayIconsRow: React.FC = () => {
       router.push('/UserDealStoryScreen');
     }
   };
-
-  useEffect(() => {
-    // מאזין לכל שינוי בטבלת deal_of_the_day
-    const channel = supabase
-      .channel('public:deal_of_the_day')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'deal_of_the_day' },
-        (payload) => {
-          // כל שינוי: רענון הספירה
-          refreshUnseenCounts();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [refreshUnseenCounts]);
 
   return (
     <UnseenDealsContext.Provider value={{ unseenCounts, refreshUnseenCounts, refreshKey }}>
