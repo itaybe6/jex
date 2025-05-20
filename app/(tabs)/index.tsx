@@ -18,6 +18,7 @@ import { Product as ProductType } from '@/types/product';
 import { useAuth } from '@/hooks/useAuth';
 import DealOfTheDayIconsRow from '../../components/DealOfTheDayIconsRow';
 import { FILTER_FIELDS_BY_CATEGORY, FilterField } from '../../constants/filters';
+import { registerForPushNotificationsAsync } from '@/lib/notificationService';
 
 const GRID_SPACING = 2;
 const NUM_COLUMNS = 3;
@@ -366,6 +367,38 @@ export default function HomeScreen() {
       fetchTopSellers();
     }
   }, [accessToken, isFocused]);
+
+  useEffect(() => {
+    const initPush = async () => {
+      if (!authUser?.id) return;
+
+      // Fetch the user's profile to check for push_token
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${authUser.id}&select=push_token`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+        },
+      });
+      const [profile] = await res.json();
+
+      if (!profile?.push_token) {
+        const token = await registerForPushNotificationsAsync();
+        if (token) {
+          await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${authUser.id}`, {
+            method: 'PATCH',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ push_token: token }),
+          });
+        }
+      }
+    };
+
+    initPush();
+  }, [authUser?.id, accessToken]);
 
   const fetchProducts = async () => {
     try {

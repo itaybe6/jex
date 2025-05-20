@@ -1,11 +1,22 @@
 module.exports = {
   expo: {
-    name: 'JEX Mobile',
-    slug: 'jex-mobile-new',
+    name: 'Brilliant',
+    slug: 'brilliant',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
+    ios: {
+      bundleIdentifier: 'com.itaybenyair.brilliant' ,
+      supportsTablet: true
+
+    },
+    extra: {
+      eas: {
+        projectId: '186c0305-2545-4725-8b37-10f794488e44' // 👈 זה החדש
+
+      }
+    },
     splash: {
       image: './assets/splash.png',
       resizeMode: 'contain',
@@ -14,9 +25,7 @@ module.exports = {
     assetBundlePatterns: [
       '**/*'
     ],
-    ios: {
-      supportsTablet: true
-    },
+    
     android: {
       package: 'com.anonymous.jexmobilenew',
       adaptiveIcon: {
