@@ -252,7 +252,7 @@ const DealOfTheDayIconsRow: React.FC = () => {
               return (
                 <TouchableOpacity
                   style={styles.iconWrapper}
-                  onPress={() => router.push(`/DealStoryScreen?category=${item.category}`)}
+                  onPress={() => router.push(`/DealStoryScreen?category=${categoryToProductType[item.category]}`)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.iconCircle}>
