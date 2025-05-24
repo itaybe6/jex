@@ -1,11 +1,76 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { TopHeader } from '@/components/TopHeader';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import HomeIcon from '@/assets/images/home.png';
+import LoupeIcon from '@/assets/images/loupe.png';
+import ListIcon from '@/assets/images/list-01.png';
+import AddIcon from '@/assets/images/add.png';
+import UserIcon from '@/assets/images/user.png';
 
 function TabBarIcon({ name, focused }: { name: any, focused: boolean }) {
+  if (name === 'home') {
+    return (
+      <View style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+      }}>
+        <Image source={HomeIcon} style={{ width: 22, height: 22, tintColor: focused ? '#B0B6C1' : '#0E2657' }} />
+      </View>
+    );
+  }
+  if (name === 'search') {
+    return (
+      <View style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+      }}>
+        <Image source={LoupeIcon} style={{ width: 22, height: 22, tintColor: focused ? '#B0B6C1' : '#0E2657' }} />
+      </View>
+    );
+  }
+  if (name === 'construct-outline') {
+    return (
+      <View style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+      }}>
+        <Image source={ListIcon} style={{ width: 22, height: 22, tintColor: focused ? '#B0B6C1' : '#0E2657' }} />
+      </View>
+    );
+  }
+  if (name === 'add') {
+    return (
+      <View style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+      }}>
+        <Image source={AddIcon} style={{ width: 26, height: 26, tintColor: focused ? '#B0B6C1' : '#0E2657' }} />
+      </View>
+    );
+  }
+  if (name === 'person') {
+    return (
+      <View style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+      }}>
+        <Image source={UserIcon} style={{ width: 22, height: 22, tintColor: focused ? '#B0B6C1' : '#0E2657' }} />
+      </View>
+    );
+  }
   return (
     <View style={{
       flex: 1,

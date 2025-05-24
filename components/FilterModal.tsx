@@ -4,17 +4,26 @@ import { Ionicons, Feather, MaterialCommunityIcons, FontAwesome5 } from '@expo/v
 import { useState } from 'react';
 import { FilterField, FilterParams, FilterState } from '@/types/filter';
 import { FILTER_FIELDS_BY_CATEGORY, PRICE_FILTER_FIELDS, CATEGORY_LABELS, WATCH_BRANDS_MODELS, GEM_TYPES } from '@/constants/filters';
+import BraceletIcon from '@/assets/images/bracelet.png';
+import RingIcon from '@/assets/images/ring.png';
+import DiamondIcon from '@/assets/images/diamond.png';
+import JewelryIcon from '@/assets/images/jewelry.png';
+import NecklaceIcon from '@/assets/images/necklace-02.png';
+import CrownIcon from '@/assets/images/crown.png';
+import ShoppingCartIcon from '@/assets/images/shopping-cart.png';
+import GemIcon from '@/assets/images/gem.png';
+import WatchIcon from '@/assets/images/watch (1).png';
 
 const CATEGORY_ICONS = {
-  'Rings': <MaterialCommunityIcons name="ring" size={32} color="#0E2657" />,
-  'Necklaces': <MaterialCommunityIcons name="necklace" size={32} color="#0E2657" />,
-  'Earrings': <MaterialCommunityIcons name="dots-horizontal" size={32} color="#0E2657" />,
-  'Bracelets': <MaterialCommunityIcons name="link" size={32} color="#0E2657" />,
-  'Special Pieces': <MaterialCommunityIcons name="star-four-points-outline" size={32} color="#0E2657" />,
-  'Loose Diamonds': <MaterialCommunityIcons name="diamond-stone" size={32} color="#0E2657" />,
-  'Rough Diamonds': <MaterialCommunityIcons name="diamond-outline" size={32} color="#0E2657" />,
-  'Gems': <FontAwesome5 name="gem" size={32} color="#0E2657" />,
-  'Watches': <Feather name="watch" size={32} color="#0E2657" />,
+  'Rings': () => <Image source={RingIcon} style={{ width: 40, height: 40, resizeMode: 'contain' }} />,
+  'Necklaces': () => <Image source={NecklaceIcon} style={{ width: 40, height: 40, resizeMode: 'contain' }} />,
+  'Earrings': () => <Image source={JewelryIcon} style={{ width: 40, height: 40, resizeMode: 'contain' }} />,
+  'Bracelets': () => <Image source={BraceletIcon} style={{ width: 40, height: 40, resizeMode: 'contain' }} />,
+  'Special Pieces': () => <Image source={CrownIcon} style={{ width: 40, height: 40, resizeMode: 'contain' }} />,
+  'Loose Diamonds': () => <Image source={DiamondIcon} style={{ width: 40, height: 40, resizeMode: 'contain' }} />,
+  'Rough Diamonds': () => <Image source={ShoppingCartIcon} style={{ width: 40, height: 40, resizeMode: 'contain' }} />,
+  'Gems': () => <Image source={GemIcon} style={{ width: 40, height: 40, resizeMode: 'contain' }} />,
+  'Watches': () => <Image source={WatchIcon} style={{ width: 40, height: 40, resizeMode: 'contain' }} />,
 };
 
 type FilterModalProps = {
@@ -505,7 +514,9 @@ export default function FilterModal({
                   activeOpacity={0.85}
                 >
                   <View style={styles.categoryImageWrapper}>
-                    {CATEGORY_ICONS[(CATEGORY_LABELS[category] || category) as keyof typeof CATEGORY_ICONS] || <Feather name="circle" size={32} color="#0E2657" />}
+                    {CATEGORY_ICONS[(CATEGORY_LABELS[category] || category) as keyof typeof CATEGORY_ICONS]
+                      ? CATEGORY_ICONS[(CATEGORY_LABELS[category] || category) as keyof typeof CATEGORY_ICONS]()
+                      : <Feather name="circle" size={32} color="#0E2657" />}
                   </View>
                   <Text style={[
                     styles.categoryGridText,
