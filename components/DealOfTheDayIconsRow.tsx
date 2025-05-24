@@ -6,16 +6,16 @@ import { router } from 'expo-router';
 import { SUPABASE_URL, SUPABASE_ANON_KEY, getAllDeals, getUnseenDealsCountByCategory } from '@/lib/supabaseApi';
 import { useAuth } from '@/hooks/useAuth';
 import { useFocusEffect } from '@react-navigation/native';
-import RingImage from '@/assets/images/ring.png';
-import BraceletImage from '@/assets/images/bracelet.png';
-import Bracelet2Image from '@/assets/images/bracelet2.png';
-import EarringImage from '@/assets/images/earring.png';
+import TempImage from '@/assets/images/temp.png';
+import NecklaceImage from '@/assets/images/necklace-02.png';
+import Bracelet2Image from '@/assets/images/bracelet.png';
 import GemImage from '@/assets/images/gem.png';
-import LoosediamondImage from '@/assets/images/loosediamond.png';
-import NecklaceImage from '@/assets/images/necklace.png';
-import EoughdiamondImage from '@/assets/images/eoughdiamond.png';
-import SpecialpiecesImage from '@/assets/images/specialpieces.png';
-import WatchImage from '@/assets/images/watch.png';
+import EarringImage from '@/assets/images/jewelry.png';
+import DiamondImage from '@/assets/images/diamond.png';
+import RingImage from '@/assets/images/ring.png';
+import ShoppingCartImage from '@/assets/images/shopping-cart.png';
+import CrownImage from '@/assets/images/crown.png';
+import WatchImage from '@/assets/images/watch (1).png';
 
 // Mock data for demonstration (keys match _specs categories)
 const dealCountsByCategory: Record<string, number> = {
@@ -74,7 +74,7 @@ export function getIconByCategory(category: string): JSX.Element | null {
     case 'loosediamond':
       return (
         <Image
-          source={LoosediamondImage}
+          source={DiamondImage}
           style={{ width: 44, height: 44, resizeMode: 'contain' }}
         />
       );
@@ -95,14 +95,14 @@ export function getIconByCategory(category: string): JSX.Element | null {
     case 'rough_diamond':
       return (
         <Image
-          source={EoughdiamondImage}
+          source={ShoppingCartImage}
           style={{ width: 44, height: 44, resizeMode: 'contain' }}
         />
       );
     case 'specialpieces':
       return (
         <Image
-          source={SpecialpiecesImage}
+          source={CrownImage}
           style={{ width: 44, height: 44, resizeMode: 'contain' }}
         />
       );
@@ -114,7 +114,12 @@ export function getIconByCategory(category: string): JSX.Element | null {
         />
       );
     default:
-      return null;
+      return (
+        <Image
+          source={TempImage}
+          style={{ width: 44, height: 44, resizeMode: 'contain' }}
+        />
+      );
   }
 }
 

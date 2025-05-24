@@ -336,6 +336,17 @@ export default function SignInOld() {
                 onChangeText={setFullName}
               />
             )}
+            {mode === 'signup' && (
+              <TextInput
+                style={styles.input}
+                placeholder="Phone Number"
+                placeholderTextColor="#888"
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+                autoCapitalize="none"
+              />
+            )}
             <View style={styles.passwordRow}>
               <TextInput
                 style={[styles.input, { flex: 1, marginBottom: 0, textAlign: 'left', textAlignVertical: 'center' }]}
