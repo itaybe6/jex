@@ -304,8 +304,10 @@ export default function NotificationsScreen() {
         body: JSON.stringify({ read: true }),
       });
       fetchNotifications();
-      // Trigger badge refresh in TopHeader
-      window.dispatchEvent(new Event('refresh-unread-badge'));
+      // Trigger badge refresh in TopHeader (only on web)
+      if (typeof window !== 'undefined' && typeof Event !== 'undefined') {
+        window.dispatchEvent(new Event('refresh-unread-badge'));
+      }
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }

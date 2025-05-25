@@ -41,6 +41,14 @@ export function TopHeader() {
     return undefined;
   }, [user, accessToken]);
 
+  // Polling: בדוק התראות כל 10 שניות
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchUnread();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [user, accessToken]);
+
   return (
     <>
       <StatusBar style="dark" backgroundColor="#F5F8FC" />
