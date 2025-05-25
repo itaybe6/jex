@@ -139,7 +139,7 @@ export const UnseenDealsContext = createContext<{
 export const useUnseenDeals = () => useContext(UnseenDealsContext);
 
 const DealOfTheDayIconsRow: React.FC = () => {
-  const { user, accessToken } = useAuth();
+  const { user, accessToken, loading } = useAuth();
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [checking, setChecking] = useState(false);
   const [unseenCounts, setUnseenCounts] = useState<Record<string, number>>({});
@@ -156,9 +156,12 @@ const DealOfTheDayIconsRow: React.FC = () => {
       .catch(() => setUnseenCounts({}));
   }, [user, accessToken]);
 
+  // Prevent fetch until user and accessToken are ready
   useEffect(() => {
-    refreshUnseenCounts();
-  }, [refreshUnseenCounts]);
+    if (!loading && user && accessToken) {
+      refreshUnseenCounts();
+    }
+  }, [loading, user, accessToken, refreshUnseenCounts]);
 
   // Refresh unseen deals when screen comes into focus
   useFocusEffect(
@@ -205,6 +208,11 @@ const DealOfTheDayIconsRow: React.FC = () => {
       router.push('/UserDealStoryScreen');
     }
   };
+
+  // Prevent rendering until user is ready
+  if (loading || !user || !accessToken) {
+    return null; // או Spinner אם תרצה
+  }
 
   return (
     <UnseenDealsContext.Provider value={{ unseenCounts, refreshUnseenCounts, refreshKey }}>

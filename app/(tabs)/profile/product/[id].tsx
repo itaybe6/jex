@@ -728,31 +728,16 @@ export default function ProductScreen() {
             contentContainerStyle={styles.imagesScrollContainer}
           >
             {imageUrls && imageUrls.length > 0 ? (
-              imageUrls.map((url, index) => (
+              imageUrls.map((url) => (
                 <View key={url} style={styles.imageWrapper}>
                   <Image
                     source={{ uri: url }}
                     style={styles.image}
                     onError={(error) => console.log('Image loading error:', error)}
                   />
-                  {index === 0 && (
-                    <TouchableOpacity
-                      style={styles.removeImageButton}
-                      onPress={() => handleRemoveImage(index)}
-                    >
-                      <Ionicons name="close" size={16} color="#fff" />
-                    </TouchableOpacity>
-                  )}
                 </View>
               ))
             ) : null}
-            <TouchableOpacity
-              style={styles.addImageButton}
-              onPress={handleImagePick}
-            >
-              <Ionicons name="camera" size={32} color="#7B8CA6" />
-              <Text style={styles.addImageText}>Add Photo</Text>
-            </TouchableOpacity>
           </ScrollView>
         </View>
 
@@ -769,7 +754,7 @@ export default function ProductScreen() {
 
           <View style={styles.formSection}>
             <Text style={styles.label}>Price</Text>
-            <Text style={styles.input}>{product?.price?.toLocaleString()} ₪</Text>
+            <Text style={styles.input}>${product?.price?.toLocaleString()}</Text>
           </View>
         </View>
         {/* Specs Section */}

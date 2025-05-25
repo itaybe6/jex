@@ -9,6 +9,7 @@ import LoupeIcon from '@/assets/images/loupe.png';
 import ListIcon from '@/assets/images/list-01.png';
 import AddIcon from '@/assets/images/add.png';
 import UserIcon from '@/assets/images/user.png';
+import { ProfileProvider } from '../context/ProfileContext';
 
 function TabBarIcon({ name, focused }: { name: any, focused: boolean }) {
   if (name === 'home') {
@@ -87,137 +88,135 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['left', 'right']}>
-      <Tabs
-        screenOptions={{
-          header: () => <TopHeader />,
-          tabBarStyle: {
-            backgroundColor: '#fff',
-            paddingBottom: insets.bottom > 0 ? insets.bottom : 12,
-            paddingTop: 8,
-            height: 85, // או minHeight: 64
-            borderTopWidth: 0.5,
-            borderTopColor: '#fff',
-            zIndex: 100,
-          },
-          tabBarActiveTintColor: '#B0B6C1',
-          tabBarInactiveTintColor: '#0E2657',
-          tabBarShowLabel: false,
-          headerStyle: {
-            backgroundColor: '#F5F8FC',
-          },
-          headerShadowVisible: false,
-          headerTitleStyle: {
-            fontFamily: 'Montserrat-Bold',
-            color: '#0E2657',
-          },
-          headerTintColor: '#0E2657',
-        }}
-      >
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: 'Home',
-            tabBarIcon: ({ focused }) => <TabBarIcon name="home" focused={focused} />,
+    <ProfileProvider>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['left', 'right']}>
+        <Tabs
+          screenOptions={{
+            header: () => <TopHeader />,
+            tabBarStyle: {
+              backgroundColor: '#fff',
+              paddingBottom: insets.bottom > 0 ? insets.bottom : 12,
+              paddingTop: 8,
+              height: 85, // או minHeight: 64
+              borderTopWidth: 0.5,
+              borderTopColor: '#fff',
+              zIndex: 100,
+            },
+            tabBarActiveTintColor: '#B0B6C1',
+            tabBarInactiveTintColor: '#0E2657',
+            tabBarShowLabel: false,
+            headerStyle: {
+              backgroundColor: '#F5F8FC',
+            },
+            headerShadowVisible: false,
+            headerTitleStyle: {
+              fontFamily: 'Montserrat-Bold',
+              color: '#0E2657',
+            },
+            headerTintColor: '#0E2657',
           }}
-        />
-        <Tabs.Screen
-          name="search"
-          options={{
-            
-            title: 'Search',
-            tabBarIcon: ({ focused }) => <TabBarIcon name="search" focused={focused} />,
-          }}
-          
-        />
-        <Tabs.Screen
-          name="add"
-          options={{
-            title: 'Add',
-            headerShown: false,
-            tabBarIcon: ({ focused }) => <TabBarIcon name="add" focused={focused} />,
-          }}
-        />
-        <Tabs.Screen
-          name="tools"
-          options={{
-            title: 'Tools',
-            tabBarIcon: ({ focused }) => <TabBarIcon name="construct-outline" focused={focused} />,
-          }}
-        />
-        <Tabs.Screen
-          name="profile"
-          options={{
-            title: 'Profile',
-            tabBarIcon: ({ focused }) => <TabBarIcon name="person" focused={focused} />,
-          }}
-        />
-        <Tabs.Screen
-          name="notifications"
-          options={{
-            href: null
-          }}
-        />
-         <Tabs.Screen
-          name="settings"
-          options={{
-            href: null
-          }}
-        />
-        <Tabs.Screen
-          name="user/[id]"
-          options={{
-            href: null
-          }}
-        />
-        <Tabs.Screen
-          name="products/[id]"
-          options={{
-            href: null,
-            
-          }}
-        />
-        <Tabs.Screen
-          name="SelectDealProductScreen"
-          options={{
-            href: null,
-          }}
-        />
-        <Tabs.Screen
-          name="DealStoryScreen"
-          options={{
-            href: null,
-            headerShown: false,
-            tabBarStyle: { display: 'none' },
-          }}
-        />
-        <Tabs.Screen
-          name="CreateDealStoryScreen"
-          options={{
-            href: null,
-          }}
-        />
-        <Tabs.Screen
-          name="UserDealStoryScreen"
-          options={{
-            href: null,
-          }}
-        />
-        <Tabs.Screen
-          name="user/[id]/products"
-          options={{
-  
+        >
+          <Tabs.Screen
+            name="index"
+            options={{
+              title: 'Home',
+              tabBarIcon: ({ focused }) => <TabBarIcon name="home" focused={focused} />,
+            }}
+          />
+          <Tabs.Screen
+            name="search"
+            options={{
+              title: 'Search',
+              tabBarIcon: ({ focused }) => <TabBarIcon name="search" focused={focused} />,
+            }}
+          />
+          <Tabs.Screen
+            name="add"
+            options={{
+              title: 'Add',
+              headerShown: false,
+              tabBarIcon: ({ focused }) => <TabBarIcon name="add" focused={focused} />,
+            }}
+          />
+          <Tabs.Screen
+            name="tools"
+            options={{
+              title: 'Tools',
+              tabBarIcon: ({ focused }) => <TabBarIcon name="construct-outline" focused={focused} />,
+            }}
+          />
+          <Tabs.Screen
+            name="profile"
+            options={{
+              title: 'Profile',
+              tabBarIcon: ({ focused }) => <TabBarIcon name="person" focused={focused} />,
+            }}
+          />
+          <Tabs.Screen
+            name="notifications"
+            options={{
               href: null
-          }}
-        />
-        <Tabs.Screen
-          name="category-products"
-          options={{
-            href: null
-          }}
-        />
-      </Tabs>
-    </SafeAreaView>
+            }}
+          />
+          <Tabs.Screen
+            name="settings"
+            options={{
+              href: null
+            }}
+          />
+          <Tabs.Screen
+            name="user/[id]"
+            options={{
+              href: null
+            }}
+          />
+          <Tabs.Screen
+            name="products/[id]"
+            options={{
+              href: null,
+            }}
+          />
+          <Tabs.Screen
+            name="SelectDealProductScreen"
+            options={{
+              href: null,
+            }}
+          />
+          <Tabs.Screen
+            name="DealStoryScreen"
+            options={{
+              href: null,
+              headerShown: false,
+              tabBarStyle: { display: 'none' },
+            }}
+          />
+          <Tabs.Screen
+            name="CreateDealStoryScreen"
+            options={{
+              href: null,
+            }}
+          />
+          <Tabs.Screen
+            name="UserDealStoryScreen"
+            options={{
+              href: null,
+            }}
+          />
+          <Tabs.Screen
+            name="user/[id]/products"
+            options={{
+              href: null
+            }}
+          />
+          <Tabs.Screen
+            name="category-products"
+            options={{
+              href: null
+            }}
+          />
+        </Tabs>
+      </SafeAreaView>
+    </ProfileProvider>
   );
 }
 
@@ -251,5 +250,4 @@ const styles = StyleSheet.create({
   addButtonFocused: {
     transform: [{ scale: 1.1 }],
   },
-  
 }); 

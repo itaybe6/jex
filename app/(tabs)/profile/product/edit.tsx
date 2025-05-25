@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput, Alert, ActivityIndicator, Image } from 'react-native';
 import { FILTER_FIELDS_BY_CATEGORY, CATEGORY_LABELS } from '@/constants/filters';
 import { FilterField, FilterState } from '@/types/filter';
 import { Select } from '@/components/Select';
 import { useLocalSearchParams } from 'expo-router';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from 'lib/supabaseApi';
+import * as ImagePicker from 'expo-image-picker';
+import { decode } from 'base64-arraybuffer';
+import { useAuth } from '@/hooks/useAuth';
+import { router } from 'expo-router';
 
 const CATEGORY_OPTIONS = Object.keys(FILTER_FIELDS_BY_CATEGORY);
 
@@ -21,6 +25,31 @@ function getInitialState(fields: FilterField[]): FilterState {
   return state;
 }
 
+function getSpecsTableByCategory(category: string): string | null {
+  switch (category) {
+    case 'Watches': return 'watch_specs';
+    case 'Ring':
+    case 'Rings':
+    case 'Jewelry': return 'ring_specs';
+    case 'Necklace':
+    case 'Necklaces': return 'necklace_specs';
+    case 'Bracelet':
+    case 'Bracelets': return 'bracelet_specs';
+    case 'Earrings': return 'earring_specs';
+    case 'Diamonds':
+    case 'Gems': return 'gem_specs';
+    case 'Loose Diamond': return 'loose_diamonds_specs';
+    case 'Rough Diamond': return 'rough_diamond_specs';
+    case 'Gold':
+    case 'Special piece':
+    case 'Special pieces':
+    case 'special_piece':
+    case 'special pieces':
+    case 'מוצר מיוחד': return 'special_piece_specs';
+    default: return null;
+  }
+}
+
 export default function EditProductScreen() {
   const { id } = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
@@ -31,6 +60,9 @@ export default function EditProductScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
+  const [images, setImages] = useState<{ id?: string; url: string; isNew?: boolean }[]>([]);
+  const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
+  const { user, accessToken } = useAuth();
 
   useEffect(() => {
     if (id) {
@@ -42,11 +74,11 @@ export default function EditProductScreen() {
   const fetchProduct = async (productId: string) => {
     setLoading(true);
     try {
-      const url = `${SUPABASE_URL}/rest/v1/products?id=eq.${productId}&select=*`;
+      const url = `${SUPABASE_URL}/rest/v1/products?id=eq.${productId}&select=*,product_images(id,image_url)`;
       const res = await fetch(url, {
         headers: {
           apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
         },
       });
       const data = await res.json();
@@ -55,13 +87,31 @@ export default function EditProductScreen() {
       setTitle(prod?.title || '');
       setDescription(prod?.description || '');
       setPrice(prod?.price ? prod.price.toString() : '');
+      setImages(
+        prod?.product_images?.map((img: any) => ({ id: img.id, url: img.image_url })) || []
+      );
       if (prod?.category) {
         setCategory(prod.category);
         const catFields = FILTER_FIELDS_BY_CATEGORY[prod.category] || [];
-        setFields(catFields);
+        const specsTable = getSpecsTableByCategory(prod.category);
+        let specs = {};
+        if (specsTable) {
+          const specsUrl = `${SUPABASE_URL}/rest/v1/${specsTable}?product_id=eq.${prod.id}`;
+          const specsRes = await fetch(specsUrl, {
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            },
+          });
+          const specsData = await specsRes.json();
+          if (Array.isArray(specsData) && specsData.length > 0) {
+            specs = specsData[0];
+          }
+        }
+        const merged = { ...prod, ...specs };
         const initial: FilterState = {};
         catFields.forEach(field => {
-          let value = prod[field.key];
+          let value = merged[field.key];
           if (field.type === 'multi-select') {
             if (Array.isArray(value)) {
               initial[field.key] = value;
@@ -77,7 +127,7 @@ export default function EditProductScreen() {
           }
           if (field.subFields) {
             field.subFields.forEach(sub => {
-              let subValue = prod[sub.key];
+              let subValue = merged[sub.key];
               if (sub.type === 'multi-select') {
                 if (Array.isArray(subValue)) {
                   initial[sub.key] = subValue;
@@ -215,12 +265,130 @@ export default function EditProductScreen() {
     }
   };
 
+  const handleAddPhoto = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+        allowsMultipleSelection: true,
+        selectionLimit: 5,
+      });
+      if (!result.canceled && result.assets) {
+        const newImages: { url: string; isNew: boolean; base64: string }[] = [];
+        for (const asset of result.assets) {
+          if (!asset.base64) continue;
+          newImages.push({ url: asset.uri, isNew: true, base64: asset.base64 });
+        }
+        setImages(prev => [...prev, ...newImages]);
+      }
+    } catch (error) {
+      Alert.alert('שגיאה', 'העלאת תמונה נכשלה');
+    }
+  };
+
+  const handleRemoveImage = async (index: number) => {
+    const img = images[index];
+    if (img.id) {
+      setDeletedImageIds(prev => [...prev, img.id!]);
+    }
+    setImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateProduct = async () => {
+    if (!product) return;
+    if (!title.trim() || !price.trim() || images.length === 0) {
+      Alert.alert('Error', 'Please fill in all required fields and add at least one image');
+      return;
+    }
+    try {
+      // 1. עדכון products
+      const patchUrl = `${SUPABASE_URL}/rest/v1/products?id=eq.${product.id}`;
+      const patchBody: any = {
+        title: title.trim(),
+        description: description.trim(),
+        price: parseFloat(price),
+        category,
+      };
+      const res = await fetch(patchUrl, {
+        method: 'PATCH',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation'
+        },
+        body: JSON.stringify(patchBody)
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error('Product update error: ' + errText);
+      }
+      for (const imgId of deletedImageIds) {
+        await fetch(`${SUPABASE_URL}/rest/v1/product_images?id=eq.${imgId}`, {
+          method: 'DELETE',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+          },
+        });
+      }
+      for (const img of images) {
+        if (img.isNew && (img as any).base64) {
+          const filePath = `products/${product.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
+          const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${filePath}`, {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/octet-stream',
+            },
+            body: decode((img as any).base64)
+          });
+          if (!uploadRes.ok) {
+            const err = await uploadRes.text();
+            console.error('Error uploading image:', err);
+            continue;
+          }
+          const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/product-images/${filePath}`;
+          await fetch(`${SUPABASE_URL}/rest/v1/product_images`, {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              Prefer: 'return=representation'
+            },
+            body: JSON.stringify({ product_id: product.id, image_url: publicUrl })
+          });
+        } else if (!img.id) {
+          await fetch(`${SUPABASE_URL}/rest/v1/product_images`, {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              Prefer: 'return=representation'
+            },
+            body: JSON.stringify({ product_id: product.id, image_url: img.url })
+          });
+        }
+      }
+      Alert.alert('Success', 'Product updated successfully');
+      setDeletedImageIds([]);
+      router.replace(`/(tabs)/profile/product/${product.id}`);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update product');
+    }
+  };
+
   if (loading) return <ActivityIndicator style={{ marginTop: 40 }} />;
   if (!product) return <Text>לא נמצא מוצר</Text>;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 20 }}>
-      <Text style={styles.title}>עריכת מוצר</Text>
       <View style={styles.fieldSection}>
         <Text style={styles.label}>Product Name</Text>
         <TextInput
@@ -250,21 +418,33 @@ export default function EditProductScreen() {
           keyboardType="decimal-pad"
         />
       </View>
-      <View style={styles.fieldSection}>
-        <Text style={styles.label}>קטגוריה</Text>
-        <Select
-          data={CATEGORY_OPTIONS}
-          value={category as any}
-          onSelect={handleCategoryChange}
-          placeholder="בחר קטגוריה"
-        />
+      <View style={{ marginBottom: 20 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+          {images.map((img, idx) => (
+            <View key={img.url + idx} style={{ position: 'relative', width: 120, height: 120, borderRadius: 12, overflow: 'hidden' }}>
+              <Image source={{ uri: img.url }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+              <TouchableOpacity
+                style={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12, padding: 4 }}
+                onPress={() => handleRemoveImage(idx)}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+          <TouchableOpacity
+            style={{ width: 120, height: 120, backgroundColor: '#F5F8FC', borderRadius: 12, justifyContent: 'center', alignItems: 'center' }}
+            onPress={handleAddPhoto}
+          >
+            <Text style={{ fontSize: 32, color: '#7B8CA6' }}>+</Text>
+            <Text style={{ color: '#7B8CA6', fontSize: 14, marginTop: 8 }}>Add Photo</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
-      {fields.map(renderField)}
       <TouchableOpacity
         style={styles.saveButton}
-        onPress={() => Alert.alert('ערכים', JSON.stringify({ title, description, price, ...form }, null, 2))}
+        onPress={updateProduct}
       >
-        <Text style={styles.saveButtonText}>שמור</Text>
+        <Text style={styles.saveButtonText}>Save</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -274,13 +454,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#0E2657',
-    textAlign: 'center',
   },
   fieldSection: {
     marginBottom: 18,

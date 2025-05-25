@@ -1,12 +1,12 @@
 import React from 'react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Modal, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
+import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlatList } from 'react-native';
+import { useProfile } from '../../context/ProfileContext';
 
 const GRID_SPACING = 8; // Increased spacing between items
 const NUM_COLUMNS = 3;
@@ -60,9 +60,7 @@ type Category = {
 
 export default function ProfileScreen() {
   const { user, accessToken } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [productsByCategory, setProductsByCategory] = useState<ProductsByCategory>({});
-  const [loading, setLoading] = useState(true);
+  const { profile, productsByCategory, loading } = useProfile();
   const [showTrustMarks, setShowTrustMarks] = useState(false);
   const [trustMarks, setTrustMarks] = useState<TrustMark[]>([]);
   const [loadingTrustMarks, setLoadingTrustMarks] = useState(false);
@@ -72,97 +70,6 @@ export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<'catalog' | 'requests'>('catalog');
   const [requests, setRequests] = useState<any[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      fetchProfile();
-      fetchProducts();
-      fetchUserRequests();
-    }
-  }, [user]);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      if (user) {
-        fetchProfile();
-        fetchProducts();
-      }
-    }, [user])
-  );
-
-  const fetchProfile = async () => {
-    try {
-      if (!user) return;
-
-      // Get profile data
-      const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&select=*`, {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
-        },
-      });
-      if (!profileRes.ok) {
-        const err = await profileRes.text();
-        console.error('Profile fetch error:', err);
-        throw new Error('Error fetching profile');
-      }
-      const profileArr = await profileRes.json();
-      const profileData = profileArr[0];
-
-      // Get completed transactions count
-      const txRes = await fetch(`${SUPABASE_URL}/rest/v1/transactions?or=(seller_id.eq.${user.id},buyer_id.eq.${user.id})&status=eq.completed&select=id`, {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
-        },
-      });
-      if (!txRes.ok) {
-        const err = await txRes.text();
-        console.error('Transactions fetch error:', err);
-        throw new Error('Error fetching transactions');
-      }
-      const transactionsCount = await txRes.json();
-
-      setProfile({
-        ...profileData,
-        sold_count: transactionsCount.length
-      });
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    }
-  };
-
-  const fetchProducts = async () => {
-    try {
-      if (!user) return;
-
-      const query = '*,product_images:product_images_product_id_fkey(id,image_url)';
-      const url = `${SUPABASE_URL}/rest/v1/products?user_id=eq.${user.id}&select=${encodeURIComponent(query)}&order=created_at.desc`;
-      const res = await fetch(url, {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
-        },
-      });
-      if (!res.ok) throw new Error('Error fetching products');
-      const data = await res.json();
-      // Only show products with status 'available' or 'hold'
-      const filtered = (data || []).filter((product: Product) => product.status === 'available' || product.status === 'hold');
-      // Group products by category
-      const grouped = filtered.reduce((acc: ProductsByCategory, product: Product) => {
-        if (!acc[product.category]) {
-          acc[product.category] = [];
-        }
-        acc[product.category].push(product);
-        return acc;
-      }, {});
-      setProductsByCategory(grouped);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchTrustMarks = async () => {
     try {
