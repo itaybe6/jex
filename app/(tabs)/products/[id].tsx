@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Linking, Modal, Alert } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Linking, Modal, Alert, Dimensions, Animated } from 'react-native';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 // import { supabase } from '@/lib/supabase'; // Removed, migrate to fetch-based API
 import { Ionicons } from '@expo/vector-icons';
@@ -68,6 +68,10 @@ export default function ProductScreen() {
   const [productImages, setProductImages] = useState<string[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [holdInfo, setHoldInfo] = useState<{ end_time: string } | null>(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 });
+  const menuButtonRef = useRef<View>(null);
+  const animation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     fetchProduct();
@@ -391,6 +395,33 @@ export default function ProductScreen() {
     }
   };
 
+  const openMenu = () => {
+    setShowMenu(true);
+    Animated.timing(animation, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  };
+
+  const closeMenu = () => {
+    Animated.timing(animation, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start(() => setShowMenu(false));
+  };
+
+  const overlayOpacity = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.05, 0.18],
+  });
+
+  const sheetTranslateY = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [400, 0],
+  });
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -429,17 +460,15 @@ export default function ProductScreen() {
         <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#0E2657" />
         </TouchableOpacity>
-        <Text style={styles.productTitle}>{product.title}</Text>
+        <Text style={styles.productTitle} numberOfLines={1}>{product.title}</Text>
         {isOwner && (
           <View style={styles.ownerActions}>
-            <TouchableOpacity onPress={handleMarkAsSold} style={[styles.actionButton, styles.soldButton]}>
-              <Ionicons name="checkmark-circle-outline" size={24} color="#4CAF50" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleEditPress} style={styles.actionButton}>
-              <Ionicons name="create-outline" size={24} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleDeletePress} style={[styles.actionButton, styles.deleteButton]}>
-              <Ionicons name="trash-outline" size={24} color="#fff" />
+            <TouchableOpacity
+              ref={menuButtonRef}
+              onPress={openMenu}
+              style={styles.menuButton}
+            >
+              <Ionicons name="ellipsis-horizontal" size={26} color="#0E2657" />
             </TouchableOpacity>
           </View>
         )}
@@ -469,38 +498,45 @@ export default function ProductScreen() {
           </TouchableOpacity>
         )}
 
-        <View style={styles.detailsContainer}>
-          <View style={styles.priceSection}>
-            <View style={styles.priceRow}>
-              <Text style={styles.category}>{product.category}</Text>
+        {/* שורת שם המוכר ותמונה + מחיר וקטגוריה */}
+        <View style={styles.priceSection}>
+          <View style={styles.priceRow}>
+            {/* שם המוכר עם תמונה */}
+            {product.profiles?.full_name && (
+              <View style={styles.sellerColumn}>
+                <TouchableOpacity
+                  style={styles.sellerRow}
+                  onPress={() => product.profiles?.id && router.push(`/user/${product.profiles.id}`)}
+                >
+                  <Image
+                    source={{ uri: product.profiles?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }}
+                    style={styles.sellerAvatar}
+                  />
+                  <Text style={styles.sellerInline}>{product.profiles.full_name}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {/* מחיר וקטגוריה */}
+            <View style={{ alignItems: 'flex-end' }}>
               <Text style={styles.price}>${product.price?.toLocaleString()}</Text>
             </View>
           </View>
+        </View>
 
-          {renderSpecs()}
-
-          <View style={styles.sellerContainer}>
-            <TouchableOpacity 
-              style={styles.sellerContent}
-              onPress={() => product.profiles?.id && router.push(`/user/${product.profiles.id}`)}
-            >
-              <Image
-                source={{ uri: product.profiles?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }}
-                style={styles.sellerAvatar}
-              />
-              <View style={styles.sellerInfo}>
-                <Text style={styles.sellerLabel}>Seller</Text>
-                <Text style={styles.sellerName}>{product.profiles?.full_name || ''}</Text>
-              </View>
-            </TouchableOpacity>
+        {/* קוביית הפרטים + description */}
+        <View style={styles.detailsCard}>
+          <View style={styles.detailsHeaderRow}>
+            <Text style={styles.detailsTitle}>Product Details</Text>
+            <Text style={styles.categoryInDetails}>{product.category}</Text>
           </View>
-
-          {product.description && (
-            <View style={styles.descriptionContainer}>
+          {renderSpecs()}
+          {product.description ? (
+            <>
+              <View style={styles.divider} />
               <Text style={styles.sectionTitle}>Description</Text>
               <Text style={styles.description}>{product.description}</Text>
-            </View>
-          )}
+            </>
+          ) : null}
         </View>
       </ScrollView>
 
@@ -618,6 +654,35 @@ export default function ProductScreen() {
           </Text>
         </View>
       )}
+
+      {/* תפריט שלוש נקודות */}
+      <Modal
+        visible={showMenu}
+        transparent
+        animationType="none"
+        onRequestClose={closeMenu}
+      >
+        <Animated.View style={[styles.bottomSheetOverlay, { opacity: overlayOpacity }]}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPressOut={closeMenu} />
+        </Animated.View>
+        <Animated.View style={[styles.bottomSheetContent, { transform: [{ translateY: sheetTranslateY }] }]}>
+          <TouchableOpacity style={styles.closeSheetButton} onPress={closeMenu}>
+            <Ionicons name="close" size={24} color="#0E2657" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.menuItem} onPress={() => { closeMenu(); handleMarkAsSold(); }}>
+            <Ionicons name="checkmark-circle-outline" size={22} color="#4CAF50" style={styles.menuIcon} />
+            <Text style={styles.menuText}>Mark as Sold</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.menuItem} onPress={() => { closeMenu(); handleEditPress(); }}>
+            <Ionicons name="create-outline" size={22} color="#0E2657" style={styles.menuIcon} />
+            <Text style={styles.menuText}>Edit Product</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.menuItem} onPress={() => { closeMenu(); handleDeletePress(); }}>
+            <Ionicons name="trash-outline" size={22} color="#DC2626" style={styles.menuIcon} />
+            <Text style={styles.menuText}>Delete Product</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -672,26 +737,32 @@ const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'contain',
   },
-  detailsContainer: {
+  detailsCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
     padding: 16,
-  },
-  priceSection: {
     marginBottom: 24,
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
-  priceRow: {
+  detailsHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 10,
   },
-  price: {
-    color: '#0E2657',
-    fontSize: 24,
-    fontFamily: 'Montserrat-Bold',
-  },
-  category: {
-    color: '#7B8CA6',
+  detailsTitle: {
     fontSize: 16,
-    fontFamily: 'Montserrat-Regular',
+    fontFamily: 'Montserrat-Bold',
+    color: '#0E2657',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E3EAF3',
+    marginVertical: 12,
   },
   sectionTitle: {
     color: '#0E2657',
@@ -742,10 +813,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sellerAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    marginRight: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    marginRight: 4,
     backgroundColor: '#E3EAF3',
   },
   sellerInfo: {
@@ -762,17 +833,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Montserrat-Regular',
     color: '#0E2657',
-  },
-  descriptionContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
-    shadowColor: '#0E2657',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 2,
   },
   description: {
     color: '#0E2657',
@@ -948,9 +1008,11 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontFamily: 'Montserrat-Bold',
     color: '#0E2657',
-    textAlign: 'center',
-    marginTop: 16,
-    marginBottom: 8,
+    textAlign: 'left',
+    flex: 1,
+    marginLeft: 8,
+    marginTop: 0,
+    marginBottom: 0,
   },
   holdBadge: {
     position: 'absolute',
@@ -977,5 +1039,101 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Montserrat-Bold',
     letterSpacing: 1,
+  },
+  menuButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
+  bottomSheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    justifyContent: 'flex-end',
+  },
+  bottomSheetContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    width: '100%',
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 8,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+  },
+  menuIcon: {
+    marginRight: 10,
+  },
+  menuText: {
+    fontSize: 16,
+    color: '#0E2657',
+    fontFamily: 'Montserrat-Medium',
+  },
+  closeSheetButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    zIndex: 10,
+    padding: 6,
+  },
+  categoryInDetails: {
+    color: '#7B8CA6',
+    fontSize: 14,
+    fontFamily: 'Montserrat-Medium',
+    marginBottom: 8,
+  },
+  sellerInline: {
+    fontSize: 15,
+    color: '#7B8CA6',
+    fontFamily: 'Montserrat-Medium',
+  },
+  sellerInlineLabel: {
+    fontSize: 13,
+    color: '#7B8CA6',
+    fontFamily: 'Montserrat-Bold',
+  },
+  sellerColumn: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  sellerAboveLabel: {
+    color: '#7B8CA6',
+    fontSize: 12,
+    fontFamily: 'Montserrat-Bold',
+    marginBottom: 1,
+    marginLeft: 32,
+  },
+  sellerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 0,
+  },
+  priceSection: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  price: {
+    fontSize: 16,
+    fontFamily: 'Montserrat-Bold',
+    color: '#0E2657',
   },
 }); 
