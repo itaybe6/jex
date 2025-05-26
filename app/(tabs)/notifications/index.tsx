@@ -502,12 +502,11 @@ export default function NotificationsScreen() {
       <View style={styles.notificationWrapper} pointerEvents="box-none">
         <TouchableOpacity
           onPress={() => {
-            console.log('PROFILE IMAGE PRESSED', senderId);
             if (senderId) {
               router.push(`/user/${senderId}`);
             }
           }}
-          style={{ position: 'absolute', top: 0, left: 0, zIndex: 10 }}
+          style={{ marginRight: 14 }}
           disabled={!senderId}
         >
           <Image
@@ -748,7 +747,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
     marginRight: 16,
-    marginLeft: 40,
     position: 'relative',
   },
   notificationCard: {
@@ -821,17 +819,8 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     backgroundColor: '#E5E7EB',
-    position: 'absolute',
-    top: -18,
-    left: 18,
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-    zIndex: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
+    marginRight: 0,
+    marginLeft: 0,
   },
   modalOverlay: {
     flex: 1,

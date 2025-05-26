@@ -1,6 +1,6 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Alert, Modal, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Alert, Modal, SafeAreaView, FlatList } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
 import { Ionicons } from '@expo/vector-icons';
@@ -557,48 +557,36 @@ export default function HomeScreen() {
     return filtered;
   };
 
-  const renderProducts = () => {
-    const filteredProducts = getFilteredProducts();
-
+  const renderProductItem = ({ item: product }) => {
+    const imageUrl = product.product_images?.[0]?.image_url || product.image_url || 'https://via.placeholder.com/150';
     return (
-      <View style={styles.productsGrid}>
-        {Object.values(filteredProducts).flat().map((product: Product) => {
-          // Get the first image from product_images, fallback to legacy image_url, or use placeholder
-          const imageUrl = product.product_images?.[0]?.image_url || 
-                          product.image_url || 
-                          'https://via.placeholder.com/150';
-
-          return (
-            <TouchableOpacity
-              key={product.id}
-              style={styles.productItem}
-              onPress={() => router.push(`/products/${product.id}`)}
-            >
-              <Image
-                source={{ uri: imageUrl }}
-                style={styles.productImage}
-                resizeMode="cover"
-              />
-              <View style={styles.productInfo}>
-                <View style={styles.productTitleRow}>
-                  <Text style={styles.productTitle} numberOfLines={2}>{product.title}</Text>
-                  <Text style={styles.productPrice}>₪{product.price.toLocaleString()}</Text>
-                </View>
-                <View style={styles.productMetaRow}>
-                  <View style={styles.sellerInfo}>
-                    <Image 
-                      source={{ uri: product.profiles?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }} 
-                      style={styles.avatar} 
-                    />
-                    <Text style={styles.sellerName}>{product.profiles?.full_name}</Text>
-                  </View>
-                  <Text style={styles.timeAgo}>{formatTimeAgo(product.created_at)}</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <TouchableOpacity
+        key={product.id}
+        style={styles.gridProductItem}
+        onPress={() => router.push(`/products/${product.id}`)}
+        activeOpacity={0.85}
+      >
+        <View style={{ width: '100%', position: 'relative' }}>
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.gridProductImage}
+            resizeMode="contain"
+          />
+          <View style={styles.priceBanner}>
+            <Text style={styles.priceBannerText}>${product.price}</Text>
+          </View>
+        </View>
+        <Text style={styles.gridProductTitle} numberOfLines={1}>{product.title}</Text>
+        <View style={styles.gridSellerInfoRow}>
+          <Image
+            source={{ uri: product.profiles?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }}
+            style={styles.gridSellerAvatar}
+          />
+          {product.profiles?.full_name && (
+            <Text style={styles.gridSellerName}>{product.profiles.full_name}</Text>
+          )}
+        </View>
+      </TouchableOpacity>
     );
   };
 
@@ -971,7 +959,16 @@ export default function HomeScreen() {
         </View>
         {/* Divider for separation */}
         <View style={{ height: 8 }} />
-        {showRequests ? renderRequests() : renderProducts()}
+        {showRequests ? renderRequests() : (
+          <FlatList
+            data={getFilteredProducts()}
+            renderItem={renderProductItem}
+            keyExtractor={item => item.id}
+            numColumns={2}
+            columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 12 }}
+            contentContainerStyle={{ paddingVertical: 12 }}
+          />
+        )}
       </ScrollView>
       <FilterModal
         visible={showFilterModal}
@@ -1416,5 +1413,93 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
+  },
+  gridProductItem: {
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    marginBottom: 18,
+    width: '48%',
+    alignItems: 'center',
+    padding: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  gridProductImage: {
+    width: '100%',
+    height: 110,
+    borderRadius: 14,
+    backgroundColor: '#F5F8FC',
+    marginBottom: 12,
+  },
+  gridProductTitle: {
+    fontSize: 15,
+    fontFamily: 'Montserrat-Regular',
+    color: '#222',
+    marginBottom: 8,
+    textAlign: 'center',
+    fontWeight: '400',
+  },
+  gridBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    gap: 10,
+  },
+  gridProductPrice: {
+    fontSize: 15,
+    fontFamily: 'Montserrat-Regular',
+    color: '#0E2657',
+    textAlign: 'center',
+    fontWeight: '400',
+  },
+  gridSellerInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  gridSellerAvatar: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E3EAF3',
+  },
+  gridSellerName: {
+    fontSize: 12,
+    color: '#888',
+    fontFamily: 'Montserrat-Regular',
+    textAlign: 'center',
+    fontWeight: '400',
+  },
+  priceBanner: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 2,
+    paddingHorizontal: 10,
+    zIndex: 2,
+    minWidth: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FFD700',
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  priceBannerText: {
+    color: '#222',
+    fontSize: 15,
+    fontFamily: 'Montserrat-Regular',
+    fontWeight: '400',
+    textAlign: 'center',
+    letterSpacing: 0.2,
   },
 });
