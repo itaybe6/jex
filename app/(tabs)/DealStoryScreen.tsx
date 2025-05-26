@@ -8,9 +8,9 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
 import { useUnseenDeals } from '@/components/DealOfTheDayIconsRow';
 import { router } from 'expo-router';
 import { categoryToProductType } from '@/components/DealOfTheDayIconsRow';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useDeals } from '../context/DealsContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
 const STORY_DURATION = 5000;
@@ -51,10 +51,8 @@ const DealStoryScreen = () => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [slideAnim] = useState(new Animated.Value(0));
   const [mode, setMode] = useState<'unseen' | 'all'>('unseen');
-  const [preloading, setPreloading] = useState(false);
-  const [pendingCategory, setPendingCategory] = useState<string | null>(null);
+
   const dragAnim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-  const [nextDealsCache, setNextDealsCache] = useState<Deal[] | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
@@ -65,6 +63,8 @@ const DealStoryScreen = () => {
 
   // Add cubeAnim for 3D cube effect
   const cubeAnim = useRef(new Animated.Value(0)).current;
+
+  const insets = useSafeAreaInsets();
 
   const fetchUnseenDeals = async (cat: string) => {
     const all = await getDealsByCategory(cat);
@@ -82,21 +82,7 @@ const DealStoryScreen = () => {
     }
     return null;
   };
-  const hasAnyUnseenDeals = async () => {
-    for (let cat of allCategories) {
-      const unseen = await fetchUnseenDeals(categoryToProductType[cat]);
-      if (unseen.length > 0) return true;
-    }
-    return false;
-  };
 
-  const getNextCategory = (currentCat: string) => {
-    const idx = allCategories.indexOf(currentCat);
-    if (idx < allCategories.length - 1) {
-      return categoryToProductType[allCategories[idx + 1]];
-    }
-    return null;
-  };
 
   useEffect(() => {
     let isMounted = true;
@@ -218,90 +204,7 @@ const DealStoryScreen = () => {
     }
   };
 
-  const handleStoryPress = async () => {
-    clearStoryTimer();
-    if (current < deals.length - 1) {
-      setCurrent(current + 1);
-      setProgress(0);
-      return;
-    }
-    const nextCat = await getNextCategoryWithUnseen(category);
-    if (nextCat) {
-      setPreloading(true);
-      setPendingCategory(nextCat);
-      await fetchUnseenDeals(nextCat);
-      Animated.timing(slideAnim, {
-        toValue: -width,
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => {
-        slideAnim.setValue(0);
-        setProgress(0);
-        setPreloading(false);
-        setPendingCategory(null);
-        router.replace({ pathname: '/DealStoryScreen', params: { category: nextCat } });
-      });
-      return;
-    }
-    Animated.timing(slideAnim, {
-      toValue: -width,
-      duration: 300,
-      useNativeDriver: true,
-    }).start(async () => {
-      slideAnim.setValue(0);
-      setProgress(0);
-      await handleNext();
-    });
-  };
 
-  const getPrevCategory = (currentCat: string) => {
-    const idx = allCategories.indexOf(currentCat);
-    if (idx > 0) {
-      return categoryToProductType[allCategories[idx - 1]];
-    }
-    return null;
-  };
-
-  const handleNextCategory = async () => {
-    const nextCat = getNextCategory(category);
-    if (nextCat) {
-      await new Promise((resolve) =>
-        Animated.timing(dragAnim.x, {
-          toValue: -width,
-          duration: 250,
-          useNativeDriver: true,
-        }).start(() => {
-          dragAnim.setValue({ x: 0, y: 0 });
-          resolve(null);
-        })
-      );
-      router.replace({ pathname: '/DealStoryScreen', params: { category: nextCat } });
-    }
-  };
-
-  const handlePrevCategory = async () => {
-    const prevCat = getPrevCategory(category);
-    if (prevCat) {
-      await new Promise((resolve) =>
-        Animated.timing(dragAnim.x, {
-          toValue: width,
-          duration: 250,
-          useNativeDriver: true,
-        }).start(() => {
-          dragAnim.setValue({ x: 0, y: 0 });
-          resolve(null);
-        })
-      );
-      router.replace({ pathname: '/DealStoryScreen', params: { category: prevCat } });
-    }
-  };
-
-  const resetPosition = () => {
-    Animated.spring(dragAnim, {
-      toValue: { x: 0, y: 0 },
-      useNativeDriver: true,
-    }).start();
-  };
 
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: (_, gestureState) =>
@@ -323,10 +226,10 @@ const DealStoryScreen = () => {
         });
         return;
       }
-      if (dx < -20) {
-        // גרירה שמאלה → קטגוריה הבאה
+      if (dx > 20) {
+        // גרירה ימינה → קטגוריה הבאה
         Animated.timing(cubeAnim, {
-          toValue: -1,
+          toValue: 1,
           duration: 200,
           useNativeDriver: true,
         }).start(() => {
@@ -342,10 +245,10 @@ const DealStoryScreen = () => {
           dragAnim.setValue({ x: 0, y: 0 });
           cubeAnim.setValue(0);
         });
-      } else if (dx > 20) {
-        // גרירה ימינה → קטגוריה קודמת
+      } else if (dx < -20) {
+        // גרירה שמאלה → קטגוריה קודמת
         Animated.timing(cubeAnim, {
-          toValue: 1,
+          toValue: -1,
           duration: 200,
           useNativeDriver: true,
         }).start(() => {
@@ -377,7 +280,6 @@ const DealStoryScreen = () => {
 
   const restartStoryTimer = () => {
     clearStoryTimer();
-    setProgress(0);
     timerRef.current = setInterval(() => {
       setProgress((p) => {
         if (p >= 1) {
@@ -521,7 +423,7 @@ const DealStoryScreen = () => {
     return (
       <View style={styles.centered}>
         <Text>אין דילים להצגה בקטגוריה זו</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()}> 
+        <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={{ color: '#0E2657', marginTop: 20 }}>חזור</Text>
         </TouchableOpacity>
       </View>
@@ -567,33 +469,43 @@ const DealStoryScreen = () => {
       ]}
       {...panResponder.panHandlers}
     >
-    <SafeAreaView style={styles.container}>
-        {currentDeal && currentDeal.products && currentDeal.products.id && (
-        <TouchableOpacity
-          style={styles.productButton}
-            onPress={() => router.push(`/products/${currentDeal.products?.id}`)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.productButtonCircle}>
-            <Ionicons name="pricetag-outline" size={22} color="#0E2657" />
-          </View>
-          <Text style={styles.productButtonText}>לצפייה במוצר</Text>
-        </TouchableOpacity>
-      )}
-      <View style={styles.progressRow}>
+      <SafeAreaView style={styles.container}>
+        {currentDeal?.products?.id && (
+          <TouchableOpacity
+            style={styles.productButton}
+            onPress={() => router.push(`/products/${currentDeal.products.id}`)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.productButtonCircle}>
+              <Ionicons name="pricetag-outline" size={22} color="#0E2657" />
+            </View>
+            <Text style={styles.productButtonText}>לצפייה במוצר</Text>
+          </TouchableOpacity>
+        )}
+  
+        <View style={[styles.progressRow, { paddingTop: insets.top + 8 }]}>
           {currentDeals.map((_, idx) => (
-            <ProgressBar key={idx} progress={idx < currentStoryIndex ? 1 : idx === currentStoryIndex ? progress : 0} />
-        ))}
-      </View>
-        <TouchableOpacity
-          style={styles.leftZone}
-          onPress={handleLeftTap}
-        />
-        <TouchableOpacity
-          style={styles.rightZone}
-          onPress={handleRightTap}
-        />
-        <TouchableWithoutFeedback onLongPress={clearStoryTimer} onPressOut={restartStoryTimer} delayLongPress={200}>
+            <ProgressBar
+              key={idx}
+              progress={idx < currentStoryIndex ? 1 : idx === currentStoryIndex ? progress : 0}
+            />
+          ))}
+        </View>
+  
+        {/* אזור לחיצה ממושכת ולחיצה מהירה על כל המסך */}
+        <TouchableWithoutFeedback
+          onPress={event => {
+            const { locationX } = event.nativeEvent;
+            if (locationX < width / 3) {
+              handleLeftTap();
+            } else {
+              handleRightTap();
+            }
+          }}
+          onLongPress={clearStoryTimer}
+          onPressOut={restartStoryTimer}
+          delayLongPress={200}
+        >
           <View style={styles.storyWrapper}>
             {currentDeal?.image_url ? (
               <Animated.Image
@@ -602,51 +514,62 @@ const DealStoryScreen = () => {
                 resizeMode="cover"
                 onLoadEnd={() => setImageLoaded(true)}
               />
-        ) : (
+            ) : (
               <View style={[styles.fullImage, { backgroundColor: '#eee' }]} />
-        )}
-        <LinearGradient
-          colors={["transparent", "rgba(0,0,0,0.7)"]}
-          style={styles.gradientOverlay}
-        />
-        <View style={styles.overlayContent}>
-              <Text style={styles.price}>{currentDeal?.products?.price ? `₪${currentDeal.products.price}` : ''}</Text>
-              {currentDeal?.message && <Text style={styles.storyMessage}>{currentDeal.message}</Text>}
-              {currentDeal?.marketing_text && <Text style={styles.storyMessage}>{currentDeal.marketing_text}</Text>}
-        </View>
-        {Array.isArray(storyElements) && storyElements.map((el) => {
-          if (el.type === 'text') {
-            return (
-              <Text
-                key={el.id}
-                style={{
-                  position: 'absolute',
-                  left: el.x,
-                  top: el.y,
-                  color: el.color || '#fff',
-                  fontSize: el.fontSize || 24,
-                  transform: [
-                    { scale: el.scale || 1 },
-                    { rotateZ: `${el.rotation || 0}rad` }
-                  ],
-                  fontWeight: 'bold',
-                  textShadowColor: 'rgba(0,0,0,0.7)',
-                  textShadowOffset: { width: 0, height: 2 },
-                  textShadowRadius: 4,
-                  zIndex: 15,
-                }}
-              >
-                {el.text}
+            )}
+  
+            <LinearGradient
+              colors={["transparent", "rgba(0,0,0,0.7)"]}
+              style={styles.gradientOverlay}
+            />
+  
+            <View style={styles.overlayContent}>
+              <Text style={styles.price}>
+                {currentDeal?.products?.price ? `₪${currentDeal.products.price}` : ''}
               </Text>
-            );
-          }
-          return null;
-        })}
+              {currentDeal?.message && (
+                <Text style={styles.storyMessage}>{currentDeal.message}</Text>
+              )}
+              {currentDeal?.marketing_text && (
+                <Text style={styles.storyMessage}>{currentDeal.marketing_text}</Text>
+              )}
+            </View>
+  
+            {Array.isArray(storyElements) && storyElements.map((el) => {
+              if (el.type === 'text') {
+                return (
+                  <Text
+                    key={el.id}
+                    style={{
+                      position: 'absolute',
+                      left: el.x,
+                      top: el.y,
+                      color: el.color || '#fff',
+                      fontSize: el.fontSize || 24,
+                      transform: [
+                        { scale: el.scale || 1 },
+                        { rotateZ: `${el.rotation || 0}rad` }
+                      ],
+                      fontWeight: 'bold',
+                      textShadowColor: 'rgba(0,0,0,0.7)',
+                      textShadowOffset: { width: 0, height: 2 },
+                      textShadowRadius: 4,
+                      zIndex: 15,
+                    }}
+                  >
+                    {el.text}
+                  </Text>
+                );
+              }
+              return null;
+            })}
           </View>
         </TouchableWithoutFeedback>
       </SafeAreaView>
-      </Animated.View>
+    </Animated.View>
   );
+  
+    
 };
 
 const styles = StyleSheet.create({
@@ -662,7 +585,6 @@ const styles = StyleSheet.create({
   progressRow: {
     flexDirection: 'row',
     position: 'absolute',
-    top: 0,
     left: 0,
     right: 0,
     zIndex: 10,

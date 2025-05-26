@@ -17,18 +17,6 @@ import ShoppingCartImage from '@/assets/images/shopping-cart.png';
 import CrownImage from '@/assets/images/crown.png';
 import WatchImage from '@/assets/images/watch (1).png';
 
-// Mock data for demonstration (keys match _specs categories)
-const dealCountsByCategory: Record<string, number> = {
-  bracelet: 2,
-  earring: 1,
-  gem: 1,
-  loose_diamonds: 3,
-  necklace: 1,
-  ring: 2,
-  rough_diamond: 1,
-  specialpieces: 1,
-  watch: 2,
-};
 
 // Add this mapping at the top of the file
 export const categoryToProductType: Record<string, string> = {
@@ -200,14 +188,6 @@ const DealOfTheDayIconsRow: React.FC = () => {
     router.push('/SelectDealProductScreen');
   };
 
-  const handleYourDealPress = () => {
-    if (loadingDeal) return;
-    if (!userDeal) {
-      router.push('/SelectDealProductScreen');
-    } else {
-      router.push('/UserDealStoryScreen');
-    }
-  };
 
   // Prevent rendering until user is ready
   if (loading || !user || !accessToken) {
