@@ -367,6 +367,7 @@ export default function NotificationsScreen() {
           type: 'hold_request_approved',
           product_id: selectedHoldRequest.product_id,
           data: {
+            buyer_id: selectedHoldRequest.data.buyer_id,
             message: `Your hold request for "${selectedHoldRequest.data.product_title}" was approved.`,
             product_title: selectedHoldRequest.data.product_title,
             product_image_url: selectedHoldRequest.data.product_image_url,
@@ -424,6 +425,7 @@ export default function NotificationsScreen() {
           type: 'hold_request_rejected',
           product_id: selectedHoldRequest.product_id,
           data: {
+            buyer_id: selectedHoldRequest.data.buyer_id,
             message: `Your hold request for "${selectedHoldRequest.data.product_title}" was rejected.`,
             product_title: selectedHoldRequest.data.product_title,
             product_image_url: selectedHoldRequest.data.product_image_url,
@@ -589,7 +591,7 @@ export default function NotificationsScreen() {
         data={notifications}
         renderItem={renderNotification}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
+        contentContainerStyle={[styles.listContainer, { marginTop: 24 }]}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -721,7 +723,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 6,
-    paddingTop: 32,
+    paddingTop: 12,
     marginBottom: 6,
     backgroundColor: '#F5F8FC',
   },
@@ -738,6 +740,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 20,
+    marginTop: 24,
   },
   notificationWrapper: {
     flexDirection: 'row',
