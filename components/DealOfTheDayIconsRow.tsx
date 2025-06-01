@@ -22,13 +22,13 @@ import WatchImage from '@/assets/images/watch (1).png';
 export const categoryToProductType: Record<string, string> = {
   bracelet: 'bracelet',
   earring: 'earring',
-  gem: 'gems',
+  gems: 'gems',
   loosediamond: 'loosediamond',
   necklace: 'necklace',
   ring: 'ring',
   rough_diamond: 'rough_diamond',
   specialpieces: 'specialpieces',
-  watch: 'watches',
+  watches: 'watches',
 };
 
 type DealCategoryItem = { type: 'category'; category: string };
@@ -52,7 +52,7 @@ export function getIconByCategory(category: string): JSX.Element | null {
           style={{ width: 44, height: 44, resizeMode: 'contain' }}
         />
       );
-    case 'gem':
+    case 'gems':
       return (
         <Image
           source={GemImage}
@@ -94,7 +94,7 @@ export function getIconByCategory(category: string): JSX.Element | null {
           style={{ width: 44, height: 44, resizeMode: 'contain' }}
         />
       );
-    case 'watch':
+    case 'watches':
       return (
         <Image
           source={WatchImage}
@@ -122,7 +122,7 @@ export const UnseenDealsContext = createContext<{
   unseenCounts: Record<string, number>;
   refreshUnseenCounts: () => void;
   refreshKey: number;
-}>({ unseenCounts: {}, refreshUnseenCounts: () => {}, refreshKey: 0 });
+}>({ unseenCounts: {}, refreshUnseenCounts: () => { }, refreshKey: 0 });
 
 export const useUnseenDeals = () => useContext(UnseenDealsContext);
 
@@ -132,8 +132,7 @@ const DealOfTheDayIconsRow: React.FC = () => {
   const [checking, setChecking] = useState(false);
   const [unseenCounts, setUnseenCounts] = useState<Record<string, number>>({});
   const [refreshKey, setRefreshKey] = useState(0);
-  const [loadingDeal, setLoadingDeal] = useState(false);
-  const [userDeal, setUserDeal] = useState(false);
+
 
   // Refresh function
   const refreshUnseenCounts = useCallback(() => {
@@ -245,7 +244,15 @@ const DealOfTheDayIconsRow: React.FC = () => {
               return (
                 <TouchableOpacity
                   style={styles.iconWrapper}
-                  onPress={() => router.push(`/DealStoryScreen?category=${categoryToProductType[item.category]}`)}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/DealStoryScreen',
+                      params: {
+                        category: categoryToProductType[item.category],
+                        order: JSON.stringify(sortedCategories.map(c => c.name)),
+                      },
+                    })
+                  }
                   activeOpacity={0.7}
                 >
                   <View style={styles.iconCircle}>
