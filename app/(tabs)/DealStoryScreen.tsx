@@ -103,7 +103,6 @@ const DealStoryScreen = () => {
   const cubeAnim = useSharedValue(0);
   const dragX = useSharedValue(0);
 
-  // פאן ג׳סצ׳ר החדש:
   const panGesture = Gesture.Pan()
     .onUpdate((e) => {
       dragX.value = e.translationX;
@@ -115,7 +114,7 @@ const DealStoryScreen = () => {
       }
     })
     .onEnd(() => {
-      const threshold = width * 0.25;
+      const threshold = width * 0.15;
       // Vertical swipe to close
       if (Math.abs(exitAnimY.value) > height * 0.1) {
         exitAnimY.value = withTiming(exitAnimY.value > 0 ? height : -height, {}, () => {
@@ -126,45 +125,46 @@ const DealStoryScreen = () => {
       }
       // Cube effect between categories
       if (dragX.value < -threshold && currentCategoryIndex < categoryKeys.length - 1) {
-        cubeAnim.value = withTiming(1, {}, () => {
-          runOnJS(setSelectedCategory)(categoryKeys[currentCategoryIndex + 1]);
-          cubeAnim.value = 0;
-          dragX.value = 0;
-        });
+        const nextCategory = categoryKeys[currentCategoryIndex + 1];
+        const nextDeals = allDeals[nextCategory] || [];
+        if (nextDeals.length === 0) {
+          runOnJS(navigation.goBack)();
+        } else {
+          cubeAnim.value = withTiming(1, { duration: 600 }, () => {
+            runOnJS(setSelectedCategory)(nextCategory);
+            cubeAnim.value = 0;
+            dragX.value = 0;
+          });
+        }
       } else if (dragX.value > threshold && currentCategoryIndex > 0) {
-        cubeAnim.value = withTiming(-1, {}, () => {
-          runOnJS(setSelectedCategory)(categoryKeys[currentCategoryIndex - 1]);
-          cubeAnim.value = 0;
-          dragX.value = 0;
-        });
+        const prevCategory = categoryKeys[currentCategoryIndex - 1];
+        const prevDeals = allDeals[prevCategory] || [];
+        if (prevDeals.length === 0) {
+          runOnJS(navigation.goBack)();
+        } else {
+          cubeAnim.value = withTiming(-1, { duration: 600 }, () => {
+            runOnJS(setSelectedCategory)(prevCategory);
+            cubeAnim.value = 0;
+            dragX.value = 0;
+          });
+        }
       } else {
+        
         cubeAnim.value = withSpring(0);
         dragX.value = withSpring(0);
         exitAnimY.value = withSpring(0);
       }
     });
 
-  // useAnimatedStyle לאפקט קובייה
+  // אפקט מעבר: opacity במקום transform
   const animatedStyleCurrent = useAnimatedStyle(() => ({
-    transform: [
-      { perspective: 1000 },
-      { rotateY: `${interpolate(cubeAnim.value, [-1, 0, 1], [60, 0, -60])}deg` },
-      { translateX: interpolate(cubeAnim.value, [-1, 0, 1], [width, 0, -width]) },
-    ],
+    opacity: interpolate(cubeAnim.value, [-1, 0, 1], [0, 1, 0]),
   }));
   const animatedStyleNext = useAnimatedStyle(() => ({
-    transform: [
-      { perspective: 1000 },
-      { rotateY: `${interpolate(cubeAnim.value, [-1, 0, 1], [0, 60, 0])}deg` },
-      { translateX: interpolate(cubeAnim.value, [-1, 0, 1], [width, 2 * width, width]) },
-    ],
+    opacity: interpolate(cubeAnim.value, [-1, 0, 1], [1, 0, 0]),
   }));
   const animatedStylePrev = useAnimatedStyle(() => ({
-    transform: [
-      { perspective: 1000 },
-      { rotateY: `${interpolate(cubeAnim.value, [-1, 0, 1], [0, -60, 0])}deg` },
-      { translateX: interpolate(cubeAnim.value, [-1, 0, 1], [-width, -2 * width, -width]) },
-    ],
+    opacity: interpolate(cubeAnim.value, [-1, 0, 1], [0, 0, 1]),
   }));
 
   // קומפוננטת פס התקדמות
@@ -178,33 +178,38 @@ const DealStoryScreen = () => {
   const timerRef = useRef<number | null>(null);
     // סטייט לפס התקדמות
   const [progress, setProgress] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
     if (!currentDeal) return;
     setProgress(0);
+  }, [currentStoryIndex, currentDeal, currentCategoryIndex, sortedDeals.length]);
+
+  useEffect(() => {
+    if (!currentDeal || isPaused) return;
     clearInterval(timerRef.current!);
     timerRef.current = setInterval(() => {
       setProgress((p) => {
         if (p >= 1) {
           clearInterval(timerRef.current!);
+          // המשך רגיל
           const nextIndex = currentStoryIndex + 1;
-          console.log('currentStoryIndex:', currentStoryIndex, 'sortedDeals.length:', sortedDeals.length, 'currentCategoryIndex:', currentCategoryIndex, 'categoryKeys.length:', categoryKeys.length);
           if (nextIndex < sortedDeals.length) {
             setCurrentStoryIndex(nextIndex);
             updateLastViewedIndex(currentCategory, nextIndex);
           } else {
-            // סיום קטגוריה
+            // ✅ סוף הקטגוריה → עבור לקטגוריה הבאה עם בדיקת דילים
             if (currentCategoryIndex < categoryKeys.length - 1) {
               const nextCategory = categoryKeys[currentCategoryIndex + 1];
               const nextDeals = allDeals[nextCategory] || [];
-              if (!nextDeals.length) {
+              if (nextDeals.length === 0) {
                 navigation.goBack();
-                return 0;
+              } else {
+                cubeAnim.value = withTiming(1, { duration: 600 }, () => {
+                  runOnJS(setSelectedCategory)(nextCategory);
+                  cubeAnim.value = 0;
+                });
               }
-              cubeAnim.value = withTiming(1, {}, () => {
-                setSelectedCategory(nextCategory);
-                cubeAnim.value = 0;
-              });
             } else {
               navigation.goBack();
             }
@@ -215,7 +220,7 @@ const DealStoryScreen = () => {
       });
     }, 100);
     return () => clearInterval(timerRef.current!);
-  }, [currentStoryIndex, currentDeal, currentCategoryIndex, sortedDeals.length]);
+  }, [currentDeal, isPaused]);
 
   useEffect(() => {
     if (!isFocused) {
@@ -223,24 +228,7 @@ const DealStoryScreen = () => {
     }
   }, [isFocused]);
 
-  // פונקציה להפעלת הסטורי מחדש כאשר מושך ידי מהמסך
-  const restartStoryTimer = () => {
-    clearInterval(timerRef.current!);
-    timerRef.current = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 1) {
-          clearInterval(timerRef.current!);
-          const nextIndex = currentStoryIndex + 1;
-          if (nextIndex < sortedDeals.length) {
-            setCurrentStoryIndex(nextIndex);
-            updateLastViewedIndex(currentCategory, nextIndex);
-          }
-          return 0;
-        }
-        return p + 0.02;
-      });
-    }, 100);
-  };
+  
 
   // פונקציית עזר להצגת דיל (סטורי) בקטגוריה מסוימת
   const renderStoryContent = (categoryIndex: number, storyIndex: number) => {
@@ -264,80 +252,106 @@ const DealStoryScreen = () => {
   return (
     <GestureDetector gesture={panGesture}>
       <SafeAreaView style={{ flex: 1, backgroundColor: 'black' }}>
-        <TouchableWithoutFeedback
-          onPress={(event) => {
-            const { locationX } = event.nativeEvent;
-            if (locationX < width / 2) {
-              // Previous story
-              if (currentStoryIndex > 0) {
-                setCurrentStoryIndex(currentStoryIndex - 1);
-                updateLastViewedIndex(currentCategory, currentStoryIndex - 1);
-              }
-            } else {
-              // Next story
-              if (currentStoryIndex < sortedDeals.length - 1) {
-                setCurrentStoryIndex(currentStoryIndex + 1);
-                updateLastViewedIndex(currentCategory, currentStoryIndex + 1);
-              }
-            }
-          }}
+        <Animated.View
+          style={[
+            styles.fullScreenWrapper,
+            { transform: [{ translateY: exitAnimY }] },
+          ]}
         >
-          <Animated.View
-            style={[
-              styles.fullScreenWrapper,
-              { transform: [{ translateY: exitAnimY }] },
-            ]}
-          >
-            {/* פסי התקדמות */}
-            <View style={styles.progressRow} pointerEvents="box-none">
-              {sortedDeals.map((_, index) => (
-                <ProgressBar
-                  key={index}
-                  progress={
-                    index < currentStoryIndex
-                      ? 1
-                      : index === currentStoryIndex
-                      ? progress
-                      : 0
-                  }
-                />
-              ))}
-            </View>
-            {/* סטורי קודם */}
-            {currentCategoryIndex > 0 && (
-              <Animated.View
-                style={[
-                  { position: 'absolute', width, height },
-                  animatedStylePrev,
-                ]}
-                pointerEvents="none"
-              >
-                {renderStoryContent(currentCategoryIndex - 1, 0)}
-              </Animated.View>
-            )}
-            {/* סטורי נוכחי */}
+          {/* פסי התקדמות */}
+          <View style={styles.progressRow} pointerEvents="box-none">
+            {sortedDeals.map((_, index) => (
+              <ProgressBar
+                key={index}
+                progress={
+                  index < currentStoryIndex
+                    ? 1
+                    : index === currentStoryIndex
+                    ? progress
+                    : 0
+                }
+              />
+            ))}
+          </View>
+          {/* סטורי קודם */}
+          {currentCategoryIndex > 0 && (
             <Animated.View
               style={[
-                { position: 'absolute', width, height },
+                StyleSheet.absoluteFill,
+                animatedStylePrev,
+              ]}
+              pointerEvents="none"
+            >
+              {renderStoryContent(currentCategoryIndex - 1, 0)}
+            </Animated.View>
+          )}
+          {/* סטורי נוכחי */}
+          <TouchableWithoutFeedback
+            onPress={(event) => {
+              const { locationX } = event.nativeEvent;
+              if (locationX < width / 2) {
+                // 🔁 צד שמאל: חזור אחורה
+                if (currentStoryIndex > 0) {
+                  setCurrentStoryIndex(currentStoryIndex - 1);
+                  updateLastViewedIndex(currentCategory, currentStoryIndex - 1);
+                } else if (currentCategoryIndex > 0) {
+                  // ⬅ קטגוריה קודמת עם בדיקת דילים
+                  const prevCategory = categoryKeys[currentCategoryIndex - 1];
+                  const prevDeals = allDeals[prevCategory] || [];
+                  if (prevDeals.length === 0) {
+                    navigation.goBack();
+                  } else {
+                    cubeAnim.value = withTiming(-1, { duration: 600 }, () => {
+                      runOnJS(setSelectedCategory)(prevCategory);
+                      cubeAnim.value = 0;
+                    });
+                  }
+                }
+              } else {
+                // 🔁 צד ימין: עבור קדימה
+                if (currentStoryIndex < sortedDeals.length - 1) {
+                  setCurrentStoryIndex(currentStoryIndex + 1);
+                  updateLastViewedIndex(currentCategory, currentStoryIndex + 1);
+                } else if (currentCategoryIndex < categoryKeys.length - 1) {
+                  // ➡ קטגוריה הבאה עם בדיקת דילים
+                  const nextCategory = categoryKeys[currentCategoryIndex + 1];
+                  const nextDeals = allDeals[nextCategory] || [];
+                  if (nextDeals.length === 0) {
+                    navigation.goBack();
+                  } else {
+                    cubeAnim.value = withTiming(1, { duration: 600 }, () => {
+                      runOnJS(setSelectedCategory)(nextCategory);
+                      cubeAnim.value = 0;
+                    });
+                  }
+                }
+              }
+            }}
+            onPressIn={() => setIsPaused(true)}
+            onPressOut={() => setIsPaused(false)}
+          >
+            <Animated.View
+              style={[
+                StyleSheet.absoluteFill,
                 animatedStyleCurrent,
               ]}
             >
               {renderStoryContent(currentCategoryIndex, currentStoryIndex)}
             </Animated.View>
-            {/* סטורי הבא */}
-            {currentCategoryIndex < categoryKeys.length - 1 && (
-              <Animated.View
-                style={[
-                  { position: 'absolute', width, height },
-                  animatedStyleNext,
-                ]}
-                pointerEvents="none"
-              >
-                {renderStoryContent(currentCategoryIndex + 1, 0)}
-              </Animated.View>
-            )}
-          </Animated.View>
-        </TouchableWithoutFeedback>
+          </TouchableWithoutFeedback>
+          {/* סטורי הבא */}
+          {currentCategoryIndex < categoryKeys.length - 1 && (
+            <Animated.View
+              style={[
+                StyleSheet.absoluteFill,
+                animatedStyleNext,
+              ]}
+              pointerEvents="none"
+            >
+              {renderStoryContent(currentCategoryIndex + 1, 0)}
+            </Animated.View>
+          )}
+        </Animated.View>
       </SafeAreaView>
     </GestureDetector>
   );

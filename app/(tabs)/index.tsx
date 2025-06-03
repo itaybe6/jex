@@ -924,52 +924,48 @@ export default function HomeScreen() {
       <View style={styles.header}>
         {/* Notification icon can be added here if needed */}
       </View>
-      <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        style={styles.scrollView}
-      >
-        {/* Deal of the Day icons row */}
-        <DealOfTheDayIconsRow />
-        {/* Divider for separation */}
-        <View style={{ height: 8 }} />
-        {/* For You / Requests tab buttons */}
-        <View style={styles.headerButtons}>
-          <View style={styles.tabButtons}>
-            <TouchableOpacity 
-              style={[styles.tabButton, !showRequests && styles.tabButtonActive]}
-              onPress={() => setShowRequests(false)}
-            >
-              <Text style={[styles.tabButtonText, !showRequests && styles.tabButtonTextActive]}>For You</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tabButton, showRequests && styles.tabButtonActive]}
-              onPress={() => setShowRequests(true)}
-            >
-              <Text style={[styles.tabButtonText, showRequests && styles.tabButtonTextActive]}>Requests</Text>
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={() => setShowFilterModal(true)}
-          >
-            <Ionicons name="filter" size={24} color="#0E2657" />
-          </TouchableOpacity>
-        </View>
-        {/* Divider for separation */}
-        <View style={{ height: 8 }} />
-        {showRequests ? renderRequests() : (
-          <FlatList
-            data={getFilteredProducts()}
-            renderItem={renderProductItem}
-            keyExtractor={item => item.id}
-            numColumns={2}
-            columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 12 }}
-            contentContainerStyle={{ paddingVertical: 12 }}
-          />
-        )}
-      </ScrollView>
+      {showRequests ? (
+        renderRequests()
+      ) : (
+        <FlatList
+          data={getFilteredProducts()}
+          renderItem={renderProductItem}
+          keyExtractor={item => item.id}
+          numColumns={2}
+          columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 12 }}
+          contentContainerStyle={{ paddingVertical: 12 }}
+          ListHeaderComponent={
+            <>
+              <DealOfTheDayIconsRow />
+              <View style={{ height: 8 }} />
+              {/* For You / Requests tab buttons */}
+              <View style={styles.headerButtons}>
+                <View style={styles.tabButtons}>
+                  <TouchableOpacity 
+                    style={[styles.tabButton, !showRequests && styles.tabButtonActive]}
+                    onPress={() => setShowRequests(false)}
+                  >
+                    <Text style={[styles.tabButtonText, !showRequests && styles.tabButtonTextActive]}>For You</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.tabButton, showRequests && styles.tabButtonActive]}
+                    onPress={() => setShowRequests(true)}
+                  >
+                    <Text style={[styles.tabButtonText, showRequests && styles.tabButtonTextActive]}>Requests</Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  style={styles.filterButton}
+                  onPress={() => setShowFilterModal(true)}
+                >
+                  <Ionicons name="filter" size={24} color="#0E2657" />
+                </TouchableOpacity>
+              </View>
+              <View style={{ height: 8 }} />
+            </>
+          }
+        />
+      )}
       <FilterModal
         visible={showFilterModal}
         onClose={() => setShowFilterModal(false)}
