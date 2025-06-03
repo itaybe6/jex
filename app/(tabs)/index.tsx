@@ -924,8 +924,37 @@ export default function HomeScreen() {
       <View style={styles.header}>
         {/* Notification icon can be added here if needed */}
       </View>
+      {/* החלק העליון - תמיד מוצג */}
+      <View style={{ marginBottom: 20 }}>
+        <DealOfTheDayIconsRow />
+      </View>
+      <View style={styles.headerButtons}>
+        <View style={styles.tabButtons}>
+          <TouchableOpacity 
+            style={[styles.tabButton, !showRequests && styles.tabButtonActive]}
+            onPress={() => setShowRequests(false)}
+          >
+            <Text style={[styles.tabButtonText, !showRequests && styles.tabButtonTextActive]}>For You</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabButton, showRequests && styles.tabButtonActive]}
+            onPress={() => setShowRequests(true)}
+          >
+            <Text style={[styles.tabButtonText, showRequests && styles.tabButtonTextActive]}>Requests</Text>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity
+          style={styles.filterButton}
+          onPress={() => setShowFilterModal(true)}
+        >
+          <Ionicons name="filter" size={24} color="#0E2657" />
+        </TouchableOpacity>
+      </View>
+      {/* החלק שמתחלף וניתן לגלילה */}
       {showRequests ? (
-        renderRequests()
+        <ScrollView contentContainerStyle={{ padding: 16 }}>
+          {renderRequests()}
+        </ScrollView>
       ) : (
         <FlatList
           data={getFilteredProducts()}
@@ -934,36 +963,6 @@ export default function HomeScreen() {
           numColumns={2}
           columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 12 }}
           contentContainerStyle={{ paddingVertical: 12 }}
-          ListHeaderComponent={
-            <>
-              <DealOfTheDayIconsRow />
-              <View style={{ height: 8 }} />
-              {/* For You / Requests tab buttons */}
-              <View style={styles.headerButtons}>
-                <View style={styles.tabButtons}>
-                  <TouchableOpacity 
-                    style={[styles.tabButton, !showRequests && styles.tabButtonActive]}
-                    onPress={() => setShowRequests(false)}
-                  >
-                    <Text style={[styles.tabButtonText, !showRequests && styles.tabButtonTextActive]}>For You</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.tabButton, showRequests && styles.tabButtonActive]}
-                    onPress={() => setShowRequests(true)}
-                  >
-                    <Text style={[styles.tabButtonText, showRequests && styles.tabButtonTextActive]}>Requests</Text>
-                  </TouchableOpacity>
-                </View>
-                <TouchableOpacity
-                  style={styles.filterButton}
-                  onPress={() => setShowFilterModal(true)}
-                >
-                  <Ionicons name="filter" size={24} color="#0E2657" />
-                </TouchableOpacity>
-              </View>
-              <View style={{ height: 8 }} />
-            </>
-          }
         />
       )}
       <FilterModal
@@ -999,6 +998,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 10,
   },
   tabButtons: {
     flexDirection: 'row',
