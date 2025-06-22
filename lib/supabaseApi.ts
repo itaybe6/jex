@@ -1,3 +1,5 @@
+import { supabase } from './supabase'; // Assuming you have a supabase client export
+
 export const SUPABASE_URL = 'https://yjmppxihvkfcnptdvevi.supabase.co';
 export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqbXBweGlodmtmY25wdGR2ZXZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE3NjYzNTgsImV4cCI6MjA1NzM0MjM1OH0.6r_Io46qV2xhDX7Oy1MxEPhsxwqn_-AqEMUNSO6_Wbs';
 
@@ -143,4 +145,80 @@ export async function getUnseenDealsCountByCategory(userId, accessToken) {
     }
   });
   return categoriesWithUnseen;
+}
+
+/**
+ * Creates a new notification in the database and immediately triggers a push notification.
+ * This is the new, recommended way to send push notifications.
+ *
+ * @param notificationData The notification data to be inserted.
+ * @returns The created notification record.
+ */
+export async function createAndSendNotification(notificationData: {
+  user_id: string;
+  type: string;
+  data: Record<string, any>;
+  product_id?: string;
+}) {
+  // 1. Insert the notification into the database
+  const { data: newNotification, error: insertError } = await supabase
+    .from('notifications')
+    .insert({
+      ...notificationData,
+      read: false,
+      is_action_done: false,
+    })
+    .select()
+    .single();
+
+  if (insertError) {
+    console.error('Error creating notification:', insertError);
+    throw new Error('Failed to create notification in the database.');
+  }
+
+  if (!newNotification) {
+    throw new Error('Failed to get the created notification record back.');
+  }
+
+  console.log(`Notification ${newNotification.id} created successfully.`);
+
+  // 2. Call the RPC function to trigger the push notification for the newly created record.
+  try {
+    const { data: rpcData, error: rpcError } = await supabase.rpc('trigger_push_notification', {
+      notification_id: newNotification.id,
+    });
+
+    if (rpcError) {
+      // It's important to handle this error, but we don't re-throw it
+      // because the primary action (creating the notification) succeeded.
+      // The user will still see the notification in their app's notification center.
+      console.error(`Failed to trigger push notification for ${newNotification.id}:`, rpcError.message);
+    } else {
+      console.log('Push notification trigger successful:', rpcData);
+    }
+  } catch (e) {
+      console.error('An unexpected error occurred while calling the RPC:', e);
+  }
+
+
+  return newNotification;
+}
+
+/**
+ * Example of how to use the new function.
+ * You would call this from your application logic where you previously only inserted into the DB.
+ */
+async function exampleUsage(userId: string) {
+    try {
+        await createAndSendNotification({
+            user_id: userId,
+            type: 'test_notification',
+            data: {
+                message: 'This is a test notification sent via the new RPC method!',
+            },
+        });
+    } catch (error) {
+        // Handle any errors that occurred during the process
+        console.error('The notification process failed:', error);
+    }
 } 

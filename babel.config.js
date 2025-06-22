@@ -2,8 +2,9 @@ module.exports = function (api) {
   api.cache(true);
   return {
     presets: ['babel-preset-expo'],
+    // The 'expo-router/babel' plugin is deprecated and removed.
+    // 'babel-preset-expo' handles this automatically since SDK 50.
     plugins: [
-      'expo-router/babel',
       [
         'module-resolver',
         {

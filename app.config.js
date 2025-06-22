@@ -39,7 +39,15 @@ module.exports = {
     },
     plugins: [
       'expo-router',
-      'expo-secure-store'
+      'expo-secure-store',
+      [
+        'expo-notifications',
+        {
+          icon: './assets/notification-icon.png',
+          color: '#ffffff',
+          sounds: ['./assets/notification-sound.wav']
+        }
+      ]
     ],
     experiments: {
       typedRoutes: true

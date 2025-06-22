@@ -1,0 +1,13 @@
+{
+  "name": "send-push-notification",
+  "version": "1.0.0",
+  "description": "Supabase Edge Function for sending push notifications",
+  "main": "index.ts",
+  "scripts": {
+    "start": "deno run --allow-net --allow-env index.ts",
+    "deploy": "supabase functions deploy send-push-notification"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.0.0"
+  }
+} 
