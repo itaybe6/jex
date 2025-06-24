@@ -6,6 +6,7 @@ export interface PushNotificationService {
   registerForPushNotifications(): Promise<string | null>;
   saveTokenToServer(token: string, userId: string): Promise<void>;
   setupNotificationHandler(): void;
+  getCurrentToken(userId: string): Promise<string | null>;
 }
 
 class PushNotificationServiceImpl implements PushNotificationService {
@@ -92,6 +93,12 @@ class PushNotificationServiceImpl implements PushNotificationService {
         throw new Error('Missing Supabase configuration');
       }
 
+      console.log('🔑 Saving push token to server:');
+      console.log('   User ID:', userId);
+      console.log('   Token:', token.substring(0, 20) + '...');
+      console.log('   Token length:', token.length);
+      console.log('   App type:', __DEV__ ? 'Development' : 'Production');
+
       const response = await fetch(`${baseUrl}/rest/v1/profiles?id=eq.${userId}`, {
         method: 'PATCH',
         headers: {
@@ -109,7 +116,7 @@ class PushNotificationServiceImpl implements PushNotificationService {
         throw new Error('Failed to save push token to server');
       }
 
-      console.log('Push token saved successfully');
+      console.log('✅ Push token saved successfully to server');
     } catch (error) {
       console.error('Error saving push token:', error);
       throw error;
@@ -123,6 +130,8 @@ class PushNotificationServiceImpl implements PushNotificationService {
         shouldShowAlert: true,
         shouldPlaySound: true,
         shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
       }),
     });
 
@@ -144,6 +153,47 @@ class PushNotificationServiceImpl implements PushNotificationService {
         console.log('Navigate to product:', data.productId);
       }
     });
+  }
+
+  async getCurrentToken(userId: string): Promise<string | null> {
+    try {
+      const baseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+      if (!baseUrl || !anonKey) {
+        console.error('Missing Supabase environment variables');
+        return null;
+      }
+
+      const response = await fetch(`${baseUrl}/rest/v1/profiles?id=eq.${userId}&select=push_token`, {
+        headers: {
+          'apikey': anonKey,
+          'Authorization': `Bearer ${anonKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Failed to fetch current token');
+        return null;
+      }
+
+      const data = await response.json();
+      const token = data[0]?.push_token;
+      
+      if (token) {
+        console.log('📱 Current token in server:');
+        console.log('   Token:', token.substring(0, 20) + '...');
+        console.log('   Token length:', token.length);
+      } else {
+        console.log('❌ No token found in server');
+      }
+      
+      return token || null;
+    } catch (error) {
+      console.error('Error fetching current token:', error);
+      return null;
+    }
   }
 }
 

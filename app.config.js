@@ -6,10 +6,15 @@ module.exports = {
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
+    "notification": {
+      "icon": "./assets/notification-icon.png",
+    },
     ios: {
       bundleIdentifier: 'com.itaybenyair.brilliant' ,
-      supportsTablet: true
-
+      supportsTablet: true,
+      infoPlist: {
+        UIBackgroundModes: ['remote-notification']
+      }
     },
     extra: {
       eas: {
@@ -45,7 +50,7 @@ module.exports = {
         {
           icon: './assets/notification-icon.png',
           color: '#ffffff',
-          sounds: ['./assets/notification-sound.wav']
+          
         }
       ]
     ],
