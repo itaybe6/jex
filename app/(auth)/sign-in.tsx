@@ -90,18 +90,35 @@ export default function SignInOld() {
     try {
       setLoading(true);
       setError(null);
-      // דוגמה ל-Supabase (אם היית משתמש בו):
-      // const { data, error: signInError } = await supabase.auth.signInWithIdToken({
-      //   provider: 'google',
-      //   token: idToken,
-      // });
-      // if (signInError) throw signInError;
-      // if (data.session) {
-      //   router.replace('/(tabs)');
-      // }
-      // אם עברת ל-fetch, תצטרך לממש את זה מול ה-API שלך
-      // TODO: Implement Google sign-in with fetch if not using Supabase
-      alert('Google sign-in logic not implemented. Add your API call here.');
+
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error('Supabase URL or Anon Key is missing from environment variables.');
+      }
+
+      const res = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=id_token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({
+          provider: 'google',
+          id_token: idToken,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error_description || data.error?.message || 'Google sign-in failed');
+      }
+
+      // שמור את ה-access_token
+      await saveToken('access_token', data.access_token);
+
+      // נווט לאפליקציה
+      router.replace('/(tabs)');
     } catch (error: any) {
       setError({ message: error.message, type: 'general' });
     } finally {
