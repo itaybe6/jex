@@ -6,6 +6,12 @@ export default function ToolsScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Tools</Text>
+      <TouchableOpacity style={styles.button} onPress={() => router.push('/(tabs)/tools/ring-sizer')}>
+        <View style={styles.iconContainer}>
+          <Ionicons name="resize-outline" size={32} color="#6C5CE7" />
+        </View>
+        <Text style={styles.buttonText}>Ring Sizer</Text>
+      </TouchableOpacity>
       <TouchableOpacity style={styles.button} onPress={() => router.push('/(tabs)/tools/calculator')}>
         <Ionicons name="calculator-outline" size={24} color="#6C5CE7" style={{ marginRight: 8 }} />
         <Text style={styles.buttonText}>Calculator</Text>
@@ -48,5 +54,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#0E2657',
     fontWeight: '500',
+  },
+  iconContainer: {
+    marginRight: 8,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 }); 

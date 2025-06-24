@@ -90,18 +90,35 @@ export default function SignInOld() {
     try {
       setLoading(true);
       setError(null);
-      // דוגמה ל-Supabase (אם היית משתמש בו):
-      // const { data, error: signInError } = await supabase.auth.signInWithIdToken({
-      //   provider: 'google',
-      //   token: idToken,
-      // });
-      // if (signInError) throw signInError;
-      // if (data.session) {
-      //   router.replace('/(tabs)');
-      // }
-      // אם עברת ל-fetch, תצטרך לממש את זה מול ה-API שלך
-      // TODO: Implement Google sign-in with fetch if not using Supabase
-      alert('Google sign-in logic not implemented. Add your API call here.');
+
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error('Supabase URL or Anon Key is missing from environment variables.');
+      }
+
+      const res = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=id_token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({
+          provider: 'google',
+          id_token: idToken,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error_description || data.error?.message || 'Google sign-in failed');
+      }
+
+      // שמור את ה-access_token
+      await saveToken('access_token', data.access_token);
+
+      // נווט לאפליקציה
+      router.replace('/(tabs)');
     } catch (error: any) {
       setError({ message: error.message, type: 'general' });
     } finally {
@@ -262,12 +279,18 @@ export default function SignInOld() {
         <AuroraBackground>
           <View style={[styles.container, styles.confirmationContainer]}>
             <View style={styles.header}>
-              <Ionicons name="diamond" size={48} color="#007AFF" />
-              <CustomText style={styles.title}>JEX</CustomText>
+              <Ionicons name="mail" size={48} color="#0E2657" />
+              <CustomText style={styles.title}>Email Verification</CustomText>
             </View>
             <View style={styles.confirmationContent}>
-              <CustomText style={styles.confirmationTitle}>Email Verification</CustomText>
-              <CustomText style={styles.confirmationText}>{confirmationMessage}</CustomText>
+              <CustomText style={styles.confirmationTitle}>Check Your Email</CustomText>
+              <CustomText style={styles.confirmationText}>
+                We've sent a verification link to your email address. Please check your inbox and click the link to verify your account.
+              </CustomText>
+              <View style={styles.confirmationCard}>
+                <Ionicons name="mail-outline" size={32} color="#0E2657" style={styles.confirmationIcon} />
+                <CustomText style={styles.confirmationEmail}>{email}</CustomText>
+              </View>
               <TouchableOpacity
                 style={[styles.button, styles.primaryButton, styles.resendButton]}
                 onPress={handleResendConfirmation}
@@ -680,16 +703,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   switchModeButton: {
-    marginTop: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginTop: 16,
+    padding: 12,
   },
   switchModeText: {
-    color: '#0A1F44',
+    color: '#0E2657',
     fontFamily: 'Montserrat-Medium',
     fontSize: 15,
     textAlign: 'center',
     textDecorationLine: 'underline',
+    opacity: 0.8,
   },
   errorContainer: {
     backgroundColor: '#2a2a2a',
@@ -712,26 +735,52 @@ const styles = StyleSheet.create({
   confirmationContainer: {
     padding: 20,
     justifyContent: 'center',
+    backgroundColor: 'transparent',
   },
   confirmationContent: {
     alignItems: 'center',
-    gap: 16,
+    gap: 24,
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 24,
   },
   confirmationTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontFamily: 'Montserrat-Bold',
+    color: '#0E2657',
     marginBottom: 8,
+    textAlign: 'center',
   },
   confirmationText: {
     fontSize: 16,
     fontFamily: 'Montserrat-Regular',
     textAlign: 'center',
-    color: '#666',
-    marginBottom: 24,
+    color: '#081632',
+    marginBottom: 16,
+    lineHeight: 24,
+  },
+  confirmationCard: {
+    backgroundColor: '#F5F8FC',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E3EAF3',
+  },
+  confirmationIcon: {
+    marginBottom: 12,
+  },
+  confirmationEmail: {
+    fontSize: 16,
+    fontFamily: 'Montserrat-Medium',
+    color: '#0E2657',
+    textAlign: 'center',
   },
   resendButton: {
     width: '100%',
-    marginTop: 16,
+    marginTop: 8,
+    backgroundColor: '#0E2657',
   },
   topLogoContainer: {
     position: 'absolute',
