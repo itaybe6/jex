@@ -68,10 +68,14 @@ export const RingSizer: React.FC<RingSizerProps> = ({
   };
 
   const currentRing = RING_SIZES[currentIndex];
+  
   // חישוב קוטר פיקסלים אמיתי לפי הכיול
   let ringDiameter = 100;
+  let isCalibrated = false;
+  
   if (pixelsPerMM) {
     ringDiameter = currentRing.diameter * pixelsPerMM;
+    isCalibrated = true;
   } else {
     // fallback: יחס מסך
     const screenWidth = Dimensions.get('window').width;
@@ -88,9 +92,17 @@ export const RingSizer: React.FC<RingSizerProps> = ({
               width: ringDiameter,
               height: ringDiameter,
               borderRadius: ringDiameter / 2,
+              borderColor: isCalibrated ? '#007AFF' : '#FF9500',
             },
           ]}
         />
+        {!isCalibrated && (
+          <View style={styles.calibrationWarning}>
+            <Text style={styles.calibrationWarningText}>
+              ⚠️ Please calibrate for accurate measurements
+            </Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.controls}>
@@ -116,8 +128,13 @@ export const RingSizer: React.FC<RingSizerProps> = ({
       <View style={styles.sizeInfo}>
         <Text style={styles.sizeText}>US Size: {currentRing.size}</Text>
         <Text style={styles.dimensionsText}>
-          Diameter: {currentRing.diameter}mm | Circumference: {currentRing.circumference}mm
+          Diameter: {currentRing.diameter.toFixed(1)}mm | Circumference: {currentRing.circumference.toFixed(1)}mm
         </Text>
+        {isCalibrated && (
+          <Text style={styles.accuracyText}>
+            ✓ Calibrated measurement
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -137,9 +154,21 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   ring: {
-    borderWidth: 2,
-    borderColor: '#007AFF',
+    borderWidth: 3,
     backgroundColor: 'transparent',
+  },
+  calibrationWarning: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: '#FFF3CD',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FFEAA7',
+  },
+  calibrationWarningText: {
+    fontSize: 14,
+    color: '#856404',
+    textAlign: 'center',
   },
   controls: {
     flexDirection: 'row',
@@ -168,5 +197,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginTop: 8,
+  },
+  accuracyText: {
+    fontSize: 14,
+    color: '#34C759',
+    marginTop: 8,
+    fontWeight: '600',
   },
 }); 

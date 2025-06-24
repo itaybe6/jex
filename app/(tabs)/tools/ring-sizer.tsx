@@ -35,25 +35,51 @@ const STORAGE_KEYS = {
 };
 
 export default function RingSizerScreen() {
-  const [showCalibration, setShowCalibration] = useState(true);
+  const [showCalibration, setShowCalibration] = useState(false);
   const [calibrationStep, setCalibrationStep] = useState<'select' | 'adjust'>('select');
   const [selectedCoin, setSelectedCoin] = useState<string | null>(null);
   const [pixelsPerMM, setPixelsPerMM] = useState<number | null>(null);
   const [calibrationCirclePx, setCalibrationCirclePx] = useState(100);
   const [lastDiameter, setLastDiameter] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const screenWidth = Dimensions.get('window').width;
   const maxCirclePx = screenWidth * 0.8;
   const minCirclePx = 30;
 
-  // Always require calibration on entry
+  // Load saved calibration data on component mount
   useEffect(() => {
-    setShowCalibration(true);
-    setCalibrationStep('select');
-    setSelectedCoin(null);
-    setPixelsPerMM(null);
-    setCalibrationCirclePx(100);
+    loadCalibrationData();
   }, []);
+
+  const loadCalibrationData = async () => {
+    try {
+      const [isCalibrated, savedPixelsPerMM, savedLastDiameter, savedCoin] = await Promise.all([
+        AsyncStorage.getItem(STORAGE_KEYS.IS_CALIBRATED),
+        AsyncStorage.getItem(STORAGE_KEYS.PIXELS_PER_MM),
+        AsyncStorage.getItem(STORAGE_KEYS.LAST_DIAMETER),
+        AsyncStorage.getItem(STORAGE_KEYS.COIN),
+      ]);
+
+      if (isCalibrated === 'true' && savedPixelsPerMM) {
+        setPixelsPerMM(parseFloat(savedPixelsPerMM));
+        setSelectedCoin(savedCoin);
+        if (savedLastDiameter) {
+          setLastDiameter(parseFloat(savedLastDiameter));
+        }
+        setShowCalibration(false);
+      } else {
+        setShowCalibration(true);
+        setCalibrationStep('select');
+      }
+    } catch (error) {
+      console.error('Error loading calibration data:', error);
+      setShowCalibration(true);
+      setCalibrationStep('select');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // שלב 1: בחירת מטבע
   const handleCoinSelect = (coin: string) => {
@@ -63,19 +89,63 @@ export default function RingSizerScreen() {
   };
 
   // שלב 2: התאמת עיגול למטבע
-  const handleCalibrationConfirm = () => {
+  const handleCalibrationConfirm = async () => {
     if (!selectedCoin) return;
     const coinDiameterMM = COINS[selectedCoin].diameter;
     const ratio = calibrationCirclePx / coinDiameterMM;
     setPixelsPerMM(ratio);
+    
+    // Save calibration data
+    try {
+      await Promise.all([
+        AsyncStorage.setItem(STORAGE_KEYS.IS_CALIBRATED, 'true'),
+        AsyncStorage.setItem(STORAGE_KEYS.PIXELS_PER_MM, ratio.toString()),
+        AsyncStorage.setItem(STORAGE_KEYS.COIN, selectedCoin),
+      ]);
+    } catch (error) {
+      console.error('Error saving calibration data:', error);
+    }
+    
     setShowCalibration(false);
     setCalibrationStep('select');
   };
 
-  // שמירה של הקוטר האחרון (לא חובה, רק אם רוצים UX נוח)
+  // שמירה של הקוטר האחרון
   const handleDiameterChange = async (diameter: number) => {
     setLastDiameter(diameter);
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.LAST_DIAMETER, diameter.toString());
+    } catch (error) {
+      console.error('Error saving last diameter:', error);
+    }
   };
+
+  // Reset calibration
+  const resetCalibration = async () => {
+    try {
+      await Promise.all([
+        AsyncStorage.removeItem(STORAGE_KEYS.IS_CALIBRATED),
+        AsyncStorage.removeItem(STORAGE_KEYS.PIXELS_PER_MM),
+        AsyncStorage.removeItem(STORAGE_KEYS.COIN),
+        AsyncStorage.removeItem(STORAGE_KEYS.LAST_DIAMETER),
+      ]);
+      setPixelsPerMM(null);
+      setSelectedCoin(null);
+      setLastDiameter(null);
+      setShowCalibration(true);
+      setCalibrationStep('select');
+    } catch (error) {
+      console.error('Error resetting calibration:', error);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: '#F5F8FC', justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ fontSize: 18, color: '#666' }}>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: '#F5F8FC' }]}>
@@ -87,12 +157,20 @@ export default function RingSizerScreen() {
         options={{
           title: 'Ring Sizer',
           headerRight: () => (
-            <TouchableOpacity
-              onPress={() => { setShowCalibration(true); setCalibrationStep('select'); }}
-              style={styles.calibrateButton}
-            >
-              <Text style={styles.calibrateButtonText}>Calibrate</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row' }}>
+              <TouchableOpacity
+                onPress={() => { setShowCalibration(true); setCalibrationStep('select'); }}
+                style={styles.calibrateButton}
+              >
+                <Text style={styles.calibrateButtonText}>Calibrate</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={resetCalibration}
+                style={[styles.calibrateButton, { marginLeft: 10 }]}
+              >
+                <Text style={[styles.calibrateButtonText, { color: '#FF3B30' }]}>Reset</Text>
+              </TouchableOpacity>
+            </View>
           ),
         }}
       />
@@ -172,6 +250,14 @@ export default function RingSizerScreen() {
           </View>
         </View>
       </Modal>
+
+      {pixelsPerMM && (
+        <View style={styles.calibrationInfo}>
+          <Text style={styles.calibrationText}>
+            Calibrated with: {selectedCoin} ({pixelsPerMM.toFixed(2)} px/mm)
+          </Text>
+        </View>
+      )}
 
       <RingSizer
         pixelsPerMM={pixelsPerMM}
@@ -260,5 +346,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  calibrationInfo: {
+    padding: 10,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    alignItems: 'center',
+  },
+  calibrationText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
   },
 }); 

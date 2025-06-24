@@ -141,6 +141,11 @@ export default function NotificationsScreen() {
     }
   }, [user]);
 
+  // איפוס ה-badge של האפליקציה כשנכנסים לעמוד ההתראות
+  useEffect(() => {
+    Notifications.setBadgeCountAsync(0);
+  }, []);
+
   const fetchNotifications = async () => {
     try {
       const res = await supabaseFetch(`/rest/v1/notifications?user_id=eq.${user?.id}&select=*&order=created_at.desc`);

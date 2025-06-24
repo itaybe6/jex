@@ -994,7 +994,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F8FC',
   },
   headerButtons: {
-    flex: 1,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1005,6 +1004,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E3EAF3',
     borderRadius: 100,
     padding: 4,
+    alignSelf: 'center',
   },
   tabButton: {
     paddingHorizontal: 16,

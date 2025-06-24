@@ -7,7 +7,7 @@ module.exports = {
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
     "notification": {
-      "icon": "./assets/notification-icon.png",
+      "icon": "./assets/icon.png",
     },
     ios: {
       bundleIdentifier: 'com.itaybenyair.brilliant' ,
@@ -48,8 +48,7 @@ module.exports = {
       [
         'expo-notifications',
         {
-          icon: './assets/notification-icon.png',
-          color: '#ffffff',
+          icon: './assets/icon.png',
           
         }
       ]
