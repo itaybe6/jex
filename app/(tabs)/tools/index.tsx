@@ -12,13 +12,17 @@ export default function ToolsScreen() {
         </View>
         <Text style={styles.buttonText}>Ring Sizer</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.button} onPress={() => router.push('/(tabs)/tools/calculator')}>
-        <Ionicons name="calculator-outline" size={24} color="#6C5CE7" style={{ marginRight: 8 }} />
-        <Text style={styles.buttonText}>Calculator</Text>
+      <TouchableOpacity style={styles.button} onPress={() => router.push('/(tabs)/tools/custom-model-service')}>
+        <View style={styles.iconContainer}>
+          <Ionicons name="cube-outline" size={32} color="#6C5CE7" />
+        </View>
+        <Text style={styles.buttonText}>Custom Model Service</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.button} onPress={() => router.push('/(tabs)/tools/checklist')}>
-        <Ionicons name="checkbox-outline" size={24} color="#6C5CE7" style={{ marginRight: 8 }} />
-        <Text style={styles.buttonText}>Checklist</Text>
+      <TouchableOpacity style={styles.button} onPress={() => router.push('/(tabs)/tools/mm-to-carat-chart')}>
+        <View style={styles.iconContainer}>
+          <Ionicons name="resize" size={32} color="#6C5CE7" />
+        </View>
+        <Text style={styles.buttonText}>MM to Carat Conversion Chart</Text>
       </TouchableOpacity>
     </View>
   );
