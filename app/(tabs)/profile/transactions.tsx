@@ -52,7 +52,7 @@ export default function TransactionsScreen() {
     setLoading(true);
     setError(null);
     try {
-      const query = encodeURIComponent(`*,products(*),profiles:seller_id(full_name,avatar_url),buyer:buyer_id(full_name,avatar_url)`);
+      const query = encodeURIComponent(`*,products(*,product_images(*)),profiles:seller_id(full_name,avatar_url),buyer:buyer_id(full_name,avatar_url)`);
       const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/transactions?or=(seller_id.eq.${user.id},buyer_id.eq.${user.id})&select=${query}&order=created_at.desc`;
       const res = await fetch(url, {
         headers: {
@@ -163,10 +163,13 @@ export default function TransactionsScreen() {
     return (
       <View style={styles.card}>
         <View style={styles.row}>
-          <Image source={{ uri: product?.image_url || 'https://via.placeholder.com/60' }} style={styles.productImage} />
+          <Image
+            source={{ uri: product?.product_images?.[0]?.image_url || 'https://via.placeholder.com/60' }}
+            style={styles.productImage}
+          />
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={styles.productTitle}>{product?.title || 'Product'}</Text>
-            <Text style={styles.price}>${item.price}</Text>
+            <Text style={styles.price}>${product?.price}</Text>
             <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString()}</Text>
           </View>
         </View>
@@ -399,25 +402,25 @@ export default function TransactionsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#F5F8FC',
     paddingTop: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
   },
   backButton: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#23232b',
+    backgroundColor: '#E3EAF3',
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 0,
     marginBottom: 8,
-    marginLeft: 0,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
+    marginLeft: 16,
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.08,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    elevation: 2,
   },
   header: {
     fontSize: 24,
@@ -427,14 +430,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   card: {
-    backgroundColor: '#222',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 18,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
+    marginHorizontal: 12,
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.06,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
+    borderWidth: 1,
+    borderColor: '#E3EAF3',
   },
   row: {
     flexDirection: 'row',
@@ -444,58 +450,65 @@ const styles = StyleSheet.create({
   productImage: {
     width: 60,
     height: 60,
-    borderRadius: 8,
-    backgroundColor: '#333',
+    borderRadius: 12,
+    backgroundColor: '#E3EAF3',
   },
   productTitle: {
     fontSize: 16,
-    color: '#fff',
-    fontFamily: 'Heebo-Bold',
+    color: '#0E2657',
+    fontFamily: 'Montserrat-Bold',
+    marginBottom: 2,
   },
   price: {
     fontSize: 14,
-    color: '#6C5CE7',
-    fontFamily: 'Heebo-Medium',
+    color: '#0E2657',
+    fontFamily: 'Montserrat-Bold',
+    marginBottom: 2,
   },
   date: {
     fontSize: 12,
-    color: '#888',
-    fontFamily: 'Heebo-Regular',
+    color: '#7B8CA6',
+    fontFamily: 'Montserrat-Regular',
+    marginBottom: 2,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#333',
-    marginRight: 8,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#E3EAF3',
+    marginBottom: 4,
   },
   userName: {
     fontSize: 14,
-    color: '#fff',
-    fontFamily: 'Heebo-Medium',
-    marginRight: 8,
+    color: '#0E2657',
+    fontFamily: 'Montserrat-Medium',
+    textAlign: 'center',
   },
   role: {
     fontSize: 12,
-    color: '#888',
-    fontFamily: 'Heebo-Regular',
-    marginRight: 8,
+    color: '#7B8CA6',
+    fontFamily: 'Montserrat-Regular',
+    textAlign: 'center',
   },
   status: {
     fontSize: 14,
-    fontFamily: 'Heebo-Bold',
-    marginLeft: 'auto',
+    fontFamily: 'Montserrat-Bold',
+    color: '#4CAF50',
+    textAlign: 'right',
+    marginTop: 8,
   },
   error: {
-    color: 'red',
+    color: '#FF3B30',
     textAlign: 'center',
     marginTop: 40,
+    fontFamily: 'Montserrat-Bold',
   },
   empty: {
-    color: '#888',
+    color: '#7B8CA6',
     textAlign: 'center',
     marginTop: 40,
     fontSize: 16,
+    fontFamily: 'Montserrat-Regular',
   },
   filterRow: {
     flexDirection: 'row',
@@ -503,29 +516,29 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     marginTop: 8,
     gap: 6,
+    paddingHorizontal: 12,
   },
   filterButton: {
     flex: 1,
-    paddingVertical: 8,
-    backgroundColor: '#23232b',
-    borderRadius: 12,
+    paddingVertical: 10,
+    backgroundColor: '#E3EAF3',
+    borderRadius: 100,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#444',
+    borderWidth: 0,
     marginHorizontal: 2,
   },
   filterButtonActive: {
-    backgroundColor: '#6C5CE7',
-    borderColor: '#6C5CE7',
+    backgroundColor: '#0E2657',
   },
   filterButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontFamily: 'Heebo-Medium',
+    color: '#0E2657',
+    fontSize: 13,
+    fontFamily: 'Montserrat-Medium',
   },
   filterButtonTextActive: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 13,
   },
   partiesRow: {
     flexDirection: 'row',
@@ -544,7 +557,7 @@ const styles = StyleSheet.create({
   partyDivider: {
     width: 1,
     height: 40,
-    backgroundColor: '#333',
+    backgroundColor: '#E3EAF3',
     marginHorizontal: 8,
     borderRadius: 1,
   },
@@ -560,48 +573,52 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 2,
     gap: 8,
+    paddingHorizontal: 12,
   },
   searchInput: {
     flex: 1,
-    backgroundColor: '#23232b',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    color: '#fff',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    color: '#0E2657',
     fontSize: 15,
-    fontFamily: 'Heebo-Regular',
+    fontFamily: 'Montserrat-Regular',
     borderWidth: 1,
-    borderColor: '#444',
+    borderColor: '#E3EAF3',
+    marginRight: 8,
   },
   filterIconBtn: {
-    backgroundColor: '#6C5CE7',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginLeft: 6,
+    backgroundColor: '#0E2657',
+    borderRadius: 16,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    marginLeft: 0,
   },
   filterIconText: {
     color: '#fff',
     fontSize: 15,
-    fontFamily: 'Heebo-Bold',
+    fontFamily: 'Montserrat-Bold',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(14,38,87,0.18)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#23232b',
-    borderRadius: 18,
+    backgroundColor: '#fff',
+    borderRadius: 20,
     padding: 24,
     width: '85%',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E3EAF3',
   },
   modalTitle: {
-    color: '#fff',
+    color: '#0E2657',
     fontSize: 18,
-    fontFamily: 'Heebo-Bold',
+    fontFamily: 'Montserrat-Bold',
     marginBottom: 18,
   },
   datePickersRow: {
@@ -610,17 +627,17 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   datePickerBtn: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#F5F8FC',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: '#444',
+    borderColor: '#E3EAF3',
   },
   datePickerText: {
-    color: '#fff',
+    color: '#0E2657',
     fontSize: 15,
-    fontFamily: 'Heebo-Regular',
+    fontFamily: 'Montserrat-Regular',
   },
   modalActionsRow: {
     flexDirection: 'row',
@@ -631,7 +648,7 @@ const styles = StyleSheet.create({
   },
   modalActionBtn: {
     flex: 1,
-    backgroundColor: '#6C5CE7',
+    backgroundColor: '#0E2657',
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: 'center',
@@ -639,6 +656,6 @@ const styles = StyleSheet.create({
   modalActionText: {
     color: '#fff',
     fontSize: 15,
-    fontFamily: 'Heebo-Bold',
+    fontFamily: 'Montserrat-Bold',
   },
 }); 

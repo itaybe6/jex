@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Image, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-// import { supabase } from '@/lib/supabase'; // Removed, migrate to fetch-based API
 import { useAuth } from '@/hooks/useAuth';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
 
 export default function EditProfileScreen() {
   const { user } = useAuth();
@@ -28,26 +28,27 @@ export default function EditProfileScreen() {
   const fetchProfile = async () => {
     try {
       if (!user) return;
-      // TODO: Migrate to fetch-based API
-      // const { data, error } = await supabase
-      //   .from('profiles')
-      //   .select('*')
-      //   .eq('id', user.id)
-      //   .single();
-      // if (error) throw error;
-      // if (data) {
-      //   setProfile({
-      //     full_name: data.full_name || '',
-      //     title: data.title || '',
-      //     bio: data.bio || '',
-      //     website: data.website || '',
-      //     avatar_url: data.avatar_url || '',
-      //     phone: data.phone || '',
-      //   });
-      //   if (data.avatar_url) {
-      //     setImageUri(data.avatar_url);
-      //   }
-      // }
+      const url = `${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&select=*`;
+      const res = await fetch(url, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+        },
+      });
+      if (!res.ok) throw new Error('Failed to fetch profile');
+      const data = await res.json();
+      if (data && data[0]) {
+        setProfile({
+          full_name: data[0].full_name || '',
+          title: data[0].title || '',
+          bio: data[0].bio || '',
+          website: data[0].website || '',
+          avatar_url: data[0].avatar_url || '',
+          phone: data[0].phone || '',
+        });
+        if (data[0].avatar_url) {
+          setImageUri(data[0].avatar_url);
+        }
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
       Alert.alert('שגיאה', 'אירעה שגיאה בטעינת הפרופיל');
