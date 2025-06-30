@@ -214,6 +214,24 @@ export default function TabLayout() {
               href: null
             }}
           />
+          <Tabs.Screen
+            name="about"
+            options={{
+              href: null
+            }}
+          />
+          <Tabs.Screen
+            name="exchange-badge-verification"
+            options={{
+              href: null
+            }}
+          />  
+          <Tabs.Screen
+            name="id-verification"
+            options={{
+              href: null
+            }}
+          />  
         </Tabs>
       </SafeAreaView>
     </ProfileProvider>

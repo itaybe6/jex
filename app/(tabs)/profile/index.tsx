@@ -13,6 +13,9 @@ const NUM_COLUMNS = 3;
 const screenWidth = Dimensions.get('window').width;
 const ITEM_WIDTH = (screenWidth - 40 - (GRID_SPACING * (NUM_COLUMNS - 1))) / NUM_COLUMNS;
 
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
 type Profile = {
   id: string;
   full_name: string;
@@ -70,6 +73,35 @@ export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<'catalog' | 'requests'>('catalog');
   const [requests, setRequests] = useState<any[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
+  const [hasExchangeCertificate, setHasExchangeCertificate] = useState(false);
+
+  React.useEffect(() => {
+    if (user?.id) {
+      checkExchangeCertificate(user.id);
+    }
+  }, [user]);
+
+  const checkExchangeCertificate = async (profileId: string) => {
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/exchange_certificates?select=status&profile_id=eq.${profileId}`,
+        {
+          headers: {
+            apikey: SUPABASE_ANON_KEY!,
+            Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          } as HeadersInit,
+        }
+      );
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setHasExchangeCertificate(
+        Array.isArray(data) && data.some((row) => row.status === 'completed' || row.status === 'הושלם')
+      );
+    } catch (error) {
+      setHasExchangeCertificate(false);
+    }
+  };
 
   const fetchTrustMarks = async () => {
     try {
@@ -81,7 +113,8 @@ export default function ProfileScreen() {
         headers: {
           apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
-        },
+          'Content-Type': 'application/json',
+        } as HeadersInit,
       });
       if (!res.ok) throw new Error('Error fetching trust marks');
       const data = await res.json();
@@ -142,7 +175,8 @@ export default function ProfileScreen() {
       headers: {
         apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
-      },
+        'Content-Type': 'application/json',
+      } as HeadersInit,
     });
     if (!res.ok) {
       console.error('Error fetching products:', await res.text());
@@ -154,7 +188,8 @@ export default function ProfileScreen() {
       headers: {
         apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
-      },
+        'Content-Type': 'application/json',
+      } as HeadersInit,
     });
     const categoriesData = await catRes.json();
     if (categoriesData) {
@@ -328,7 +363,8 @@ export default function ProfileScreen() {
         headers: {
           apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
-        },
+          'Content-Type': 'application/json',
+        } as HeadersInit,
       });
       if (!res.ok) throw new Error('Error fetching requests');
       const data = await res.json();
@@ -373,6 +409,14 @@ export default function ProfileScreen() {
               }}
               style={styles.profileImage}
             />
+            {hasExchangeCertificate && (
+              <View style={styles.certificateBadge}>
+                <Image
+                  source={require('../../../assets/images/exchange.png')}
+                  style={styles.certificateBadgeImage}
+                />
+              </View>
+            )}
           </View>
           <TouchableOpacity
             style={styles.editButton}
@@ -525,9 +569,10 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: '#fff',
     backgroundColor: '#F5F8FC',
-    overflow: 'hidden',
+    overflow: 'visible',
     zIndex: 2,
     alignSelf: 'center',
+    position: 'relative',
   },
   profileImage: {
     width: 112,
@@ -854,5 +899,25 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
     overflow: 'hidden',
+  },
+  certificateBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+    zIndex: 10,
+  },
+  certificateBadgeImage: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    resizeMode: 'contain',
   },
 });

@@ -57,6 +57,9 @@ export default function SignInOld() {
   });
   const [checkingAuth, setCheckingAuth] = useState(true);
 
+  const ADMIN_MAIL = process.env.EXPO_PUBLIC_ADMIN_MAIL
+  const ADMIN_PASSWORD = process.env.EXPO_PUBLIC_ADMIN_PASSWORD 
+
   useEffect(() => {
     let isMounted = true;
     const checkAuth = async () => {
@@ -116,6 +119,9 @@ export default function SignInOld() {
 
       // שמור את ה-access_token
       await saveToken('access_token', data.access_token);
+      if (data.refresh_token) {
+        await saveToken('refresh_token', data.refresh_token);
+      }
 
       // נווט לאפליקציה
       router.replace('/(tabs)');
@@ -191,6 +197,13 @@ export default function SignInOld() {
         throw new Error(validationError.message);
       }
 
+      // בדיקה אם זה אדמין לפני פנייה ל-Supabase
+      if (email === ADMIN_MAIL && password === ADMIN_PASSWORD) {
+        router.replace('/(admin)/');
+        setLoading(false);
+        return;
+      }
+
       if (mode === 'signup') {
         const result = await signUp(email, password);
         if (result.error || result.msg) {
@@ -199,6 +212,9 @@ export default function SignInOld() {
         }
         if (result.access_token) {
           await saveToken('access_token', result.access_token);
+          if (result.refresh_token) {
+            await saveToken('refresh_token', result.refresh_token);
+          }
           // Fetch userId from Supabase
           const userRes = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/auth/v1/user`, {
             headers: {
@@ -209,7 +225,12 @@ export default function SignInOld() {
           const userData = await userRes.json();
           const userId = userData.id || userData.sub;
           if (userId) {
-            router.replace('/(tabs)');
+            // Check if user is admin
+            if (email === ADMIN_MAIL && password === ADMIN_PASSWORD) {
+              router.replace('/(admin)/index');
+            } else {
+              router.replace('/(tabs)');
+            }
           } else {
             setMode('confirmation');
             setConfirmationMessage('A verification email has been sent. Please verify your email to continue.');
@@ -228,6 +249,9 @@ export default function SignInOld() {
         }
         if (result.access_token) {
           await saveToken('access_token', result.access_token);
+          if (result.refresh_token) {
+            await saveToken('refresh_token', result.refresh_token);
+          }
           // Fetch userId from Supabase
           const userRes = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/auth/v1/user`, {
             headers: {
@@ -238,7 +262,12 @@ export default function SignInOld() {
           const userData = await userRes.json();
           const userId = userData.id || userData.sub;
           if (userId) {
-            router.replace('/(tabs)');
+            // Check if user is admin
+            if (email === ADMIN_MAIL && password === ADMIN_PASSWORD) {
+              router.replace('/(admin)/index');
+            } else {
+              router.replace('/(tabs)');
+            }
           }
         }
       }

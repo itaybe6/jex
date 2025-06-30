@@ -43,6 +43,11 @@ export default function RootLayout() {
     try {
       console.log('🔔 Registering for push notifications...');
       
+      if (!user) {
+        console.log('❌ No user logged in');
+        return;
+      }
+      
       // Check current token first
       const currentToken = await pushNotificationService.getCurrentToken(user.id);
       
@@ -86,7 +91,11 @@ export default function RootLayout() {
           screenOptions={{
             headerShown: false,
           }}
-        />
+        >
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(admin)" options={{ headerShown: false }} />
+        </Stack>
       </DealsProvider>
     </GestureHandlerRootView>
   );
