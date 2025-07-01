@@ -55,6 +55,7 @@ export default function UserProfileScreen() {
   const [requests, setRequests] = useState<any[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [soldCount, setSoldCount] = useState<number>(0);
+  const [hasExchangeCertificate, setHasExchangeCertificate] = useState(false);
 
   useEffect(() => {
     if (userId) {
@@ -66,6 +67,7 @@ export default function UserProfileScreen() {
         checkTrustStatus();
       }
       fetchSoldCount();
+      checkExchangeCertificate(userId);
     }
   }, [userId, user]);
 
@@ -363,6 +365,28 @@ export default function UserProfileScreen() {
     }
   };
 
+  const checkExchangeCertificate = async (profileId: string) => {
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/exchange_certificates?select=status&profile_id=eq.${profileId}`,
+        {
+          headers: {
+            apikey: SUPABASE_ANON_KEY!,
+            Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setHasExchangeCertificate(
+        Array.isArray(data) && data.some((row) => row.status === 'completed' || row.status === 'הושלם')
+      );
+    } catch (error) {
+      setHasExchangeCertificate(false);
+    }
+  };
+
   if (loading || !profile) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
@@ -380,17 +404,26 @@ export default function UserProfileScreen() {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.profileCard}>
-          {/* Avatar */}
-          {profile?.avatar_url ? (
-            <Image
-              source={{ uri: profile.avatar_url }}
-              style={styles.avatar}
-            />
-          ) : (
-            <View style={[styles.avatar, styles.defaultAvatar]}>
-              <Ionicons name="person" size={50} color="#666" />
-            </View>
-          )}
+          <View style={{ position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
+            {profile?.avatar_url ? (
+              <Image
+                source={{ uri: profile.avatar_url }}
+                style={styles.avatar}
+              />
+            ) : (
+              <View style={[styles.avatar, styles.defaultAvatar]}>
+                <Ionicons name="person" size={50} color="#666" />
+              </View>
+            )}
+            {hasExchangeCertificate && (
+              <View style={styles.certificateBadge}>
+                <Image
+                  source={require('../../../assets/images/exchange.png')}
+                  style={styles.certificateBadgeImage}
+                />
+              </View>
+            )}
+          </View>
           <Text style={styles.name}>{profile?.full_name}</Text>
           {profile?.title && <Text style={styles.title}>{profile.title}</Text>}
           {user?.id !== userId && (
@@ -1016,5 +1049,25 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Bold',
     fontSize: 12,
     marginLeft: 2,
+  },
+  certificateBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+    zIndex: 10,
+  },
+  certificateBadgeImage: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    resizeMode: 'contain',
   },
 });

@@ -15,8 +15,14 @@
     "@expo/metro-config": "^0.20.12",
     "@expo/vector-icons": "^14.1.0",
     "@react-native-async-storage/async-storage": "2.1.2",
+<<<<<<< HEAD
     "@react-native-community/datetimepicker": "8.4.1",
     "@react-native-community/slider": "4.5.6",
+=======
+    "@react-native-community/datetimepicker": "8.3.0",
+    "@react-native-community/slider": "^4.5.7",
+    "@react-native-picker/picker": "^2.11.1",
+>>>>>>> 91f4b4beca6f091f272d318dc8453c8ec5ebcb81
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",

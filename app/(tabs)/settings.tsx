@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useRouter } from 'expo-router';
 // import { useAuth } from '../../context/AuthContext';
-import { getToken } from '../../lib/secureStorage';
+import { getToken, saveToken } from '../../lib/secureStorage';
 
 type SettingItemProps = {
   icon: JSX.Element;
@@ -21,7 +21,8 @@ export default function SettingsScreen() {
   const handleSignOut = async () => {
     try {
       const token = await getToken('access_token');
-      if (!token) {
+      const refreshToken = await getToken('refresh_token');
+      if (!token || !refreshToken) {
         Alert.alert('Error', 'No active session found');
         return;
       }
@@ -31,14 +32,18 @@ export default function SettingsScreen() {
         headers: {
           'Authorization': `Bearer ${token}`,
           'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ refresh_token: refreshToken }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to sign out');
       }
 
-      await getToken('access_token');
+      // Clear tokens after logout
+      await saveToken('access_token', '');
+      await saveToken('refresh_token', '');
       router.replace('/(auth)/sign-in');
     } catch (error) {
       console.error('Error signing out:', error);
@@ -78,7 +83,7 @@ export default function SettingsScreen() {
         <Text style={styles.headerTitle}>Settings</Text>
       </View>
 
-      <View style={styles.section}>
+      {/* <View style={styles.section}>
         <Text style={styles.sectionTitle}>Notifications</Text>
         <SettingItem
           icon={<Ionicons name="notifications-outline" size={24} color="#888" />}
@@ -86,7 +91,7 @@ export default function SettingsScreen() {
           value={notificationsEnabled}
           onPress={() => setNotificationsEnabled(!notificationsEnabled)}
         />
-      </View>
+      </View> */}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Security</Text>
@@ -94,11 +99,6 @@ export default function SettingsScreen() {
           icon={<Ionicons name="lock-closed-outline" size={24} color="#888" />}
           title="Change Password"
           onPress={() => router.push('/settings/change-password')}
-        />
-        <SettingItem
-          icon={<Ionicons name="shield-checkmark-outline" size={24} color="#888" />}
-          title="Two-Factor Authentication"
-          onPress={() => {}}
         />
       </View>
 
@@ -112,7 +112,21 @@ export default function SettingsScreen() {
         <SettingItem
           icon={<Ionicons name="information-circle-outline" size={24} color="#888" />}
           title="About"
-          onPress={() => {}}
+          onPress={() => router.push('/about')}
+        />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Verifications</Text>
+        <SettingItem
+          icon={<Ionicons name="card-outline" size={24} color="#888" />}
+          title="ID Verification"
+          onPress={() => router.push('/id-verification')}
+        />
+        <SettingItem
+          icon={<Ionicons name="pricetag-outline" size={24} color="#888" />}
+          title="Exchange Badge Verification"
+          onPress={() => router.push('/exchange-badge-verification')}
         />
       </View>
 
