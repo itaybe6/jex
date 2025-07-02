@@ -83,6 +83,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setProfile({
         ...profileData,
         sold_count: transactionsCount.length,
+        trust_count: typeof profileData.trust_count === 'number' ? profileData.trust_count : 0,
       });
 
       // Fetch products

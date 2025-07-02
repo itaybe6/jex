@@ -925,9 +925,9 @@ export default function HomeScreen() {
         {/* Notification icon can be added here if needed */}
       </View>
       {/* החלק העליון - תמיד מוצג */}
-      <View style={{ marginBottom: 20 }}>
+      {/* <View style={{ marginBottom: 20 }}>
         <DealOfTheDayIconsRow />
-      </View>
+      </View> */}
       <View style={styles.headerButtons}>
         <View style={styles.tabButtons}>
           <TouchableOpacity 

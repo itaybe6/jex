@@ -10,7 +10,7 @@ module.exports = {
       "icon": "./assets/icon.png",
     },
     ios: {
-      bundleIdentifier: 'com.itaybenyair.brilliant' ,
+      bundleIdentifier: 'com.itaybenyair.brilliantv2', 
       supportsTablet: true,
       infoPlist: {
         UIBackgroundModes: ['remote-notification']

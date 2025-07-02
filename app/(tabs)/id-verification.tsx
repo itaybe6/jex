@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 export default function IDVerificationScreen() {
   const [image, setImage] = useState(null);
@@ -20,7 +21,12 @@ export default function IDVerificationScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>ID Verification</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', marginTop: 12, marginBottom: 12 }}>
+        <TouchableOpacity onPress={() => router.push('/settings')} style={{}}>
+          <Ionicons name="arrow-back" size={28} color="#0E2657" />
+        </TouchableOpacity>
+        <Text style={[styles.title, { marginLeft: 8, marginTop: 0 }]}>ID Verification</Text>
+      </View>
       <Text style={styles.description}>
         Please upload a clear photo of your official government-issued ID to complete the verification process.
       </Text>
@@ -50,7 +56,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontFamily: 'Montserrat-Bold',
     color: '#0E2657',
-    marginTop: 32,
     marginBottom: 12,
   },
   description: {

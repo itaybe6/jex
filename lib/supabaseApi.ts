@@ -36,7 +36,13 @@ export async function signUp(email, password) {
   const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ 
+      email, 
+      password,
+      data: {
+        email_confirm: false
+      }
+    }),
   });
   if (!res.ok) throw new Error('Failed to sign up');
   return res.json();

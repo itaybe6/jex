@@ -15,9 +15,6 @@ const NUM_COLUMNS = 3;
 const screenWidth = Dimensions.get('window').width;
 const ITEM_WIDTH = (screenWidth - 40 - (GRID_SPACING * (NUM_COLUMNS - 1))) / NUM_COLUMNS;
 
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-
 type Profile = {
   id: string;
   full_name: string;
@@ -102,41 +99,6 @@ export default function ProfileScreen() {
     }
   };
 
-<<<<<<< HEAD
-=======
-  const fetchTrustMarks = async () => {
-    try {
-      if (!user) return;
-      setLoadingTrustMarks(true);
-      const query = 'id,created_at,truster:profiles!trust_marks_truster_id_fkey(id,full_name,avatar_url,title)';
-      const url = `${SUPABASE_URL}/rest/v1/trust_marks?trusted_id=eq.${user.id}&select=${encodeURIComponent(query)}&order=created_at.desc`;
-      const res = await fetch(url, {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        } as HeadersInit,
-      });
-      if (!res.ok) throw new Error('Error fetching trust marks');
-      const data = await res.json();
-      setTrustMarks(data.map((trustMark: any) => ({
-        id: trustMark.id,
-        created_at: trustMark.created_at,
-        truster: trustMark.truster,
-      })) || []);
-    } catch (error) {
-      console.error('Error fetching trust marks:', error);
-    } finally {
-      setLoadingTrustMarks(false);
-    }
-  };
-
-  const handleShowTrustMarks = () => {
-    setShowTrustMarks(true);
-    fetchTrustMarks();
-  };
-
->>>>>>> 91f4b4beca6f091f272d318dc8453c8ec5ebcb81
   const handleUserPress = (userId: string) => {
     router.push(`/user/${userId}`);
   };
@@ -385,7 +347,7 @@ export default function ProfileScreen() {
               <Text style={styles.statLabel}>Products</Text>
             </View>
             <TouchableOpacity style={styles.statItem} onPress={() => router.push('/profile/trustmarks')}>
-              <Text style={styles.statNumber}>{profile.trust_count}</Text>
+              <Text style={styles.statNumber}>{profile.trust_count ?? 0}</Text>
               <Text style={styles.statLabel}>TrustMarks</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.statItem} onPress={() => router.push({ pathname: '/profile/transactions', params: { fromProfileType: 'self' } })}>
@@ -708,7 +670,26 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
   },
-<<<<<<< HEAD
+  certificateBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+    zIndex: 10,
+  },
+  certificateBadgeImage: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    resizeMode: 'contain',
+  },
   gridRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -785,26 +766,5 @@ const styles = StyleSheet.create({
     color: '#0E2657',
     fontFamily: 'Montserrat-Bold',
     fontSize: 15,
-=======
-  certificateBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
-    zIndex: 10,
-  },
-  certificateBadgeImage: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    resizeMode: 'contain',
->>>>>>> 91f4b4beca6f091f272d318dc8453c8ec5ebcb81
   },
 });

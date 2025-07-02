@@ -38,7 +38,15 @@ export default function SettingsScreen() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to sign out');
+        const errorText = await response.text();
+        console.error('Logout error:', response.status, errorText);
+        if (response.status === 403 || errorText.includes('bad_jwt')) {
+          await saveToken('access_token', '');
+          await saveToken('refresh_token', '');
+          router.replace('/(auth)/sign-in');
+          return;
+        }
+        throw new Error('Failed to sign out: ' + errorText);
       }
 
       // Clear tokens after logout

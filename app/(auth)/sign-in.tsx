@@ -56,6 +56,8 @@ export default function SignInOld() {
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
   });
   const [checkingAuth, setCheckingAuth] = useState(true);
+  // Multi-step signup wizard state
+  const [signupStep, setSignupStep] = useState(1);
 
   const ADMIN_MAIL = process.env.EXPO_PUBLIC_ADMIN_MAIL
   const ADMIN_PASSWORD = process.env.EXPO_PUBLIC_ADMIN_PASSWORD 
@@ -229,7 +231,7 @@ export default function SignInOld() {
             if (email === ADMIN_MAIL && password === ADMIN_PASSWORD) {
               router.replace('/(admin)/index');
             } else {
-              router.replace('/(tabs)');
+              router.replace('/profile/setup');
             }
           } else {
             setMode('confirmation');
@@ -266,7 +268,7 @@ export default function SignInOld() {
             if (email === ADMIN_MAIL && password === ADMIN_PASSWORD) {
               router.replace('/(admin)/index');
             } else {
-              router.replace('/(tabs)');
+              router.replace('/profile/setup');
             }
           }
         }
@@ -340,6 +342,396 @@ export default function SignInOld() {
             </View>
           </View>
         </AuroraBackground>
+      </View>
+    );
+  }
+
+  if (mode === 'forgot') {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#F5F8FC', justifyContent: 'center', alignItems: 'center' }}>
+        <View style={{ width: '90%', backgroundColor: '#fff', borderRadius: 20, padding: 24, alignItems: 'center', shadowColor: '#0E2657', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 2 }}>
+          <CustomText style={{ fontSize: 24, fontFamily: 'Montserrat-Bold', color: '#0E2657', marginBottom: 12, textAlign: 'center' }}>Reset Password</CustomText>
+          <CustomText style={{ fontSize: 15, color: '#4A5568', fontFamily: 'Montserrat-Regular', marginBottom: 24, textAlign: 'center' }}>
+            Enter your email address and we'll send you a link to reset your password.
+          </CustomText>
+          <TextInput
+            style={{
+              width: '100%',
+              backgroundColor: '#F5F8FC',
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: '#E3EAF3',
+              paddingVertical: 12,
+              paddingHorizontal: 16,
+              fontSize: 16,
+              fontFamily: 'Montserrat-Medium',
+              color: '#222',
+              marginBottom: 16,
+            }}
+            placeholder="Email Address"
+            placeholderTextColor="#7B8CA6"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          <TouchableOpacity
+            style={{
+              width: '100%',
+              backgroundColor: '#0E2657',
+              borderRadius: 12,
+              paddingVertical: 14,
+              alignItems: 'center',
+              marginBottom: 12,
+              shadowColor: '#0E2657',
+              shadowOpacity: 0.12,
+              shadowRadius: 6,
+              shadowOffset: { width: 0, height: 2 },
+              elevation: 2,
+            }}
+            onPress={async () => {
+              try {
+                setLoading(true);
+                setError(null);
+                const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+                const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+                const res = await fetch(`${supabaseUrl}/auth/v1/recover`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': supabaseAnonKey,
+                  },
+                  body: JSON.stringify({ email }),
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                  throw new Error(data.error_description || data.error?.message || 'Failed to send reset email');
+                }
+                setConfirmationMessage('A password reset link has been sent to your email.');
+              } catch (error: any) {
+                setError({ message: error.message, type: 'general' });
+              } finally {
+                setLoading(false);
+              }
+            }}
+            disabled={loading || !email}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <CustomText style={{ color: '#fff', fontSize: 16, fontFamily: 'Montserrat-Bold' }}>Send Reset Link</CustomText>
+            )}
+          </TouchableOpacity>
+          {confirmationMessage && (
+            <CustomText style={{ color: 'green', fontSize: 15, marginBottom: 8, textAlign: 'center' }}>{confirmationMessage}</CustomText>
+          )}
+          {error && (
+            <CustomText style={{ color: '#cc3333', fontSize: 15, marginBottom: 8, textAlign: 'center' }}>{error.message}</CustomText>
+          )}
+          <TouchableOpacity onPress={() => setMode('signin')} style={{ marginTop: 8 }}>
+            <CustomText style={{ color: '#0E2657', fontSize: 15, fontFamily: 'Montserrat-Medium' }}>Back to Sign In</CustomText>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  if (mode === 'signup') {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#F5F8FC', justifyContent: 'center', alignItems: 'center' }}>
+        <View style={{ width: '90%', backgroundColor: '#fff', borderRadius: 20, padding: 24, alignItems: 'center', shadowColor: '#0E2657', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 2 }}>
+          <CustomText style={{ fontSize: 24, fontFamily: 'Montserrat-Bold', color: '#0E2657', marginBottom: 12, textAlign: 'center' }}>Create Account</CustomText>
+          {signupStep === 1 && (
+            <>
+              <CustomText style={{ fontSize: 15, color: '#4A5568', fontFamily: 'Montserrat-Regular', marginBottom: 24, textAlign: 'center' }}>
+                Enter your full name and email address to get started.
+              </CustomText>
+              <TextInput
+                style={{
+                  width: '100%',
+                  backgroundColor: '#F5F8FC',
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: '#E3EAF3',
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  fontSize: 16,
+                  fontFamily: 'Montserrat-Medium',
+                  color: '#222',
+                  marginBottom: 16,
+                }}
+                placeholder="Full Name"
+                placeholderTextColor="#7B8CA6"
+                value={fullName}
+                onChangeText={setFullName}
+                autoCapitalize="words"
+              />
+              <TextInput
+                style={{
+                  width: '100%',
+                  backgroundColor: '#F5F8FC',
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: '#E3EAF3',
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  fontSize: 16,
+                  fontFamily: 'Montserrat-Medium',
+                  color: '#222',
+                  marginBottom: 16,
+                }}
+                placeholder="Email Address"
+                placeholderTextColor="#7B8CA6"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={{
+                  width: '100%',
+                  backgroundColor: '#0E2657',
+                  borderRadius: 12,
+                  paddingVertical: 14,
+                  alignItems: 'center',
+                  marginBottom: 8,
+                  shadowColor: '#0E2657',
+                  shadowOpacity: 0.12,
+                  shadowRadius: 6,
+                  shadowOffset: { width: 0, height: 2 },
+                  elevation: 2,
+                }}
+                onPress={() => {
+                  if (!fullName.trim() || !email.trim()) {
+                    setError({ message: 'Full name and email are required.', type: 'general' });
+                    return;
+                  }
+                  setError(null);
+                  setSignupStep(2);
+                }}
+              >
+                <CustomText style={{ color: '#fff', fontSize: 16, fontFamily: 'Montserrat-Bold' }}>Next</CustomText>
+              </TouchableOpacity>
+            </>
+          )}
+          {signupStep === 2 && (
+            <>
+              <CustomText style={{ fontSize: 15, color: '#4A5568', fontFamily: 'Montserrat-Regular', marginBottom: 24, textAlign: 'center' }}>
+                Enter your phone number.
+              </CustomText>
+              <TextInput
+                style={{
+                  width: '100%',
+                  backgroundColor: '#F5F8FC',
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: '#E3EAF3',
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  fontSize: 16,
+                  fontFamily: 'Montserrat-Medium',
+                  color: '#222',
+                  marginBottom: 16,
+                }}
+                placeholder="Phone Number"
+                placeholderTextColor="#7B8CA6"
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+                autoCapitalize="none"
+              />
+              <View style={{ flexDirection: 'row', width: '100%', justifyContent: 'space-between' }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#E3EAF3',
+                    borderRadius: 12,
+                    paddingVertical: 14,
+                    alignItems: 'center',
+                    marginRight: 8,
+                  }}
+                  onPress={() => setSignupStep(1)}
+                >
+                  <CustomText style={{ color: '#0E2657', fontSize: 16, fontFamily: 'Montserrat-Bold' }}>Back</CustomText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#0E2657',
+                    borderRadius: 12,
+                    paddingVertical: 14,
+                    alignItems: 'center',
+                    marginLeft: 8,
+                  }}
+                  onPress={() => {
+                    if (!phone.trim()) {
+                      setError({ message: 'Phone number is required.', type: 'general' });
+                      return;
+                    }
+                    setError(null);
+                    setSignupStep(3);
+                  }}
+                >
+                  <CustomText style={{ color: '#fff', fontSize: 16, fontFamily: 'Montserrat-Bold' }}>Next</CustomText>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+          {signupStep === 3 && (
+            <>
+              <CustomText style={{ fontSize: 15, color: '#4A5568', fontFamily: 'Montserrat-Regular', marginBottom: 24, textAlign: 'center' }}>
+                Set your password.
+              </CustomText>
+              <TextInput
+                style={{
+                  width: '100%',
+                  backgroundColor: '#F5F8FC',
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: '#E3EAF3',
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  fontSize: 16,
+                  fontFamily: 'Montserrat-Medium',
+                  color: '#222',
+                  marginBottom: 16,
+                }}
+                placeholder="Password"
+                placeholderTextColor="#7B8CA6"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoCapitalize="none"
+              />
+              <TextInput
+                style={{
+                  width: '100%',
+                  backgroundColor: '#F5F8FC',
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: '#E3EAF3',
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  fontSize: 16,
+                  fontFamily: 'Montserrat-Medium',
+                  color: '#222',
+                  marginBottom: 16,
+                }}
+                placeholder="Confirm Password"
+                placeholderTextColor="#7B8CA6"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+                autoCapitalize="none"
+              />
+              <View style={{ flexDirection: 'row', width: '100%', justifyContent: 'space-between' }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#E3EAF3',
+                    borderRadius: 12,
+                    paddingVertical: 14,
+                    alignItems: 'center',
+                    marginRight: 8,
+                  }}
+                  onPress={() => setSignupStep(2)}
+                >
+                  <CustomText style={{ color: '#0E2657', fontSize: 16, fontFamily: 'Montserrat-Bold' }}>Back</CustomText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#0E2657',
+                    borderRadius: 12,
+                    paddingVertical: 14,
+                    alignItems: 'center',
+                    marginLeft: 8,
+                  }}
+                  onPress={async () => {
+                    if (!password || !confirmPassword) {
+                      setError({ message: 'Password and confirmation are required.', type: 'general' });
+                      return;
+                    }
+                    if (password.length < 6) {
+                      setError({ message: 'Password must be at least 6 characters.', type: 'general' });
+                      return;
+                    }
+                    if (password !== confirmPassword) {
+                      setError({ message: 'Passwords do not match.', type: 'general' });
+                      return;
+                    }
+                                         setError(null);
+                     setLoading(true);
+                     try {
+                       // Try to sign up with email confirmation disabled
+                       const result = await signUp(email, password);
+                       if (result.error || result.msg) {
+                         // If signup fails, try to sign in directly (user might already exist)
+                         try {
+                           const signInResult = await signIn(email, password);
+                           if (signInResult.access_token) {
+                             await saveToken('access_token', signInResult.access_token);
+                             if (signInResult.refresh_token) {
+                               await saveToken('refresh_token', signInResult.refresh_token);
+                             }
+                             router.replace('/profile/setup');
+                             return;
+                           }
+                         } catch (signInError: any) {
+                           setError({ message: result.error?.message || result.msg || 'Account creation failed. Please try again.', type: 'general' });
+                           return;
+                         }
+                       }
+                       
+                       if (result.access_token) {
+                         await saveToken('access_token', result.access_token);
+                         if (result.refresh_token) {
+                           await saveToken('refresh_token', result.refresh_token);
+                         }
+                         router.replace('/profile/setup');
+                         return;
+                       } else {
+                         // If no access token, try to sign in immediately
+                         try {
+                           const signInResult = await signIn(email, password);
+                           if (signInResult.access_token) {
+                             await saveToken('access_token', signInResult.access_token);
+                             if (signInResult.refresh_token) {
+                               await saveToken('refresh_token', signInResult.refresh_token);
+                             }
+                             router.replace('/profile/setup');
+                             return;
+                           }
+                         } catch (signInError: any) {
+                           setMode('confirmation');
+                           setConfirmationMessage('Account created successfully! Please check your email for verification or try signing in.');
+                           return;
+                         }
+                       }
+                     } catch (error: any) {
+                       setError({ message: error.message, type: 'general' });
+                     } finally {
+                       setLoading(false);
+                     }
+                  }}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <CustomText style={{ color: '#fff', fontSize: 16, fontFamily: 'Montserrat-Bold' }}>Create Account</CustomText>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+          {error && (
+            <CustomText style={{ color: '#cc3333', fontSize: 15, marginTop: 12, textAlign: 'center' }}>{error.message}</CustomText>
+          )}
+          <TouchableOpacity onPress={() => { setMode('signin'); setSignupStep(1); }} style={{ marginTop: 16 }}>
+            <CustomText style={{ color: '#0E2657', fontSize: 15, fontFamily: 'Montserrat-Medium' }}>Back to Sign In</CustomText>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }

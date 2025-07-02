@@ -3,7 +3,7 @@ import { ScrollView, View, Text, TouchableOpacity, Linking, StyleSheet, Dimensio
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 export default function CustomModelServiceScreen() {
   // WhatsApp number - ניתן לשינוי
@@ -22,50 +22,50 @@ export default function CustomModelServiceScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={[styles.container, { flexGrow: 1, paddingBottom: 150 }]} keyboardShouldPersistTaps="handled">
-      {/* Header Section */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Ionicons name="arrow-back" size={28} color="#0E2657" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Custom Model Service</Text>
-      </View>
-      <Text style={styles.subtitle}>
-        We provide tailored 3D models and design services upon request. Whether you're looking for architecture, product models, or anything in between – we can help bring your vision to life.
-      </Text>
-      {/* Main Content */}
-      <View style={styles.content}>
-        {/* Service Features */}
-        <View style={styles.featuresContainer}>
-          <View style={styles.featureItem}>
-            <View style={styles.featureIcon}>
-              <Ionicons name="cube-outline" size={24} color="#6C5CE7" />
+    <View style={{ flex: 1, backgroundColor: '#F5F8FC' }}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        {/* Header Section */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <Ionicons name="arrow-back" size={28} color="#0E2657" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Custom Model Service</Text>
+        </View>
+        <Text style={styles.subtitle}>
+          We provide tailored 3D models and design services upon request. Whether you're looking for architecture, product models, or anything in between – we can help bring your vision to life.
+        </Text>
+        {/* Main Content */}
+        <View style={styles.content}>
+          {/* Service Features */}
+          <View style={styles.featuresContainer}>
+            <View style={styles.featureItem}>
+              <View style={styles.featureIcon}>
+                <Ionicons name="cube-outline" size={24} color="#6C5CE7" />
+              </View>
+              <Text style={styles.featureText}>3D Modeling</Text>
             </View>
-            <Text style={styles.featureText}>3D Modeling</Text>
-          </View>
-          
-          <View style={styles.featureItem}>
-            <View style={styles.featureIcon}>
-              <Ionicons name="brush-outline" size={24} color="#6C5CE7" />
+            
+            <View style={styles.featureItem}>
+              <View style={styles.featureIcon}>
+                <Ionicons name="brush-outline" size={24} color="#6C5CE7" />
+              </View>
+              <Text style={styles.featureText}>Custom Design</Text>
             </View>
-            <Text style={styles.featureText}>Custom Design</Text>
-          </View>
-          
-          <View style={styles.featureItem}>
-            <View style={styles.featureIcon}>
-              <Ionicons name="construct-outline" size={24} color="#6C5CE7" />
+            
+            <View style={styles.featureItem}>
+              <View style={styles.featureIcon}>
+                <Ionicons name="construct-outline" size={24} color="#6C5CE7" />
+              </View>
+              <Text style={styles.featureText}>Architecture</Text>
             </View>
-            <Text style={styles.featureText}>Architecture</Text>
           </View>
         </View>
-
-        {/* Contact Section */}
+        {/* Contact Section - עכשיו sibling */}
         <View style={styles.contactSection}>
           <Text style={styles.contactTitle}>Ready to get started?</Text>
           <Text style={styles.contactSubtitle}>
             Contact us via WhatsApp to discuss your custom model requirements
           </Text>
-          
           <TouchableOpacity style={styles.whatsappButton} onPress={handleWhatsAppPress}>
             <View style={styles.buttonContent}>
               <Ionicons name="logo-whatsapp" size={28} color="#fff" />
@@ -73,16 +73,14 @@ export default function CustomModelServiceScreen() {
             </View>
           </TouchableOpacity>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#F5F8FC',
-    paddingHorizontal: 20,
+    minHeight: height,
     paddingTop: 20,
   },
   header: {
@@ -96,11 +94,11 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   title: {
-    flex: 1,
     fontSize: 28,
     fontWeight: 'bold',
     color: '#0E2657',
     textAlign: 'center',
+    marginLeft: 4,
   },
   subtitle: {
     fontSize: 16,
@@ -111,11 +109,10 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   content: {
-    flex: 1,
-    justifyContent: 'space-between',
   },
   featuresContainer: {
-    marginBottom: 40,
+    marginBottom: 24,
+    marginHorizontal: 16,
   },
   featureItem: {
     flexDirection: 'row',
@@ -153,8 +150,8 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
     elevation: 4,
-    marginBottom: 150,
-    marginTop: -40,
+    alignSelf: 'stretch',
+    marginHorizontal: 16,
   },
   contactTitle: {
     fontSize: 22,
