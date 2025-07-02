@@ -37,6 +37,7 @@ export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [searchMode, setSearchMode] = useState<SearchMode>(SEARCH_MODES.USERS);
@@ -52,6 +53,7 @@ export default function SearchScreen() {
     if (!debouncedQuery) {
       setProfiles([]);
       setProducts([]);
+      setFilteredProducts([]);
       return;
     }
     if (searchMode === SEARCH_MODES.USERS) {
@@ -61,6 +63,21 @@ export default function SearchScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedQuery, searchMode]);
+
+  useEffect(() => {
+    if (searchMode === SEARCH_MODES.PRODUCTS && debouncedQuery) {
+      const q = debouncedQuery.toLowerCase();
+      setFilteredProducts(
+        products.filter(
+          (p) =>
+            (p.title && p.title.toLowerCase().includes(q)) ||
+            (p.category && p.category.toLowerCase().includes(q))
+        )
+      );
+    } else {
+      setFilteredProducts(products);
+    }
+  }, [products, debouncedQuery, searchMode]);
 
   const searchProfiles = async () => {
     try {
@@ -95,16 +112,8 @@ export default function SearchScreen() {
     try {
       setLoading(true);
       const query = encodeURIComponent(`or=(
-        category.ilike.*${debouncedQuery}*,
-        specs.subcategory.ilike.*${debouncedQuery}*,
-        ring_specs.subcategory.ilike.*${debouncedQuery}*,
-        necklace_specs.subcategory.ilike.*${debouncedQuery}*,
-        bracelet_specs.subcategory.ilike.*${debouncedQuery}*,
-        earring_specs.subcategory.ilike.*${debouncedQuery}*,
-        special_piece_specs.subcategory.ilike.*${debouncedQuery}*,
-        watch_specs.brand.ilike.*${debouncedQuery}*,
-        watch_specs.model.ilike.*${debouncedQuery}*,
-        gem_specs.type.ilike.*${debouncedQuery}*
+        title.ilike.*${debouncedQuery}*,
+        category.ilike.*${debouncedQuery}*
       )`);
       const url = `${SUPABASE_URL}/rest/v1/products?${query}&select=*,product_images(image_url),watch_specs(*),gem_specs(*),ring_specs(*),necklace_specs(*),bracelet_specs(*),earring_specs(*),special_piece_specs(*)&limit=20`;
       const res = await fetch(url, {
@@ -235,9 +244,9 @@ export default function SearchScreen() {
           </View>
         )
       ) : (
-        products.length > 0 ? (
+        filteredProducts.length > 0 ? (
           <FlatList
-            data={products}
+            data={filteredProducts}
             renderItem={renderProductItem}
             keyExtractor={item => item.id}
             contentContainerStyle={styles.listContent}

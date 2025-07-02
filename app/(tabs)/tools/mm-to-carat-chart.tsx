@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity, ActionSheetIOS, Platform, Modal, FlatList } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 const diamondData = [
   {
@@ -161,6 +163,10 @@ export default function MMToCaratChartScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const shapeData = diamondData.find((d) => d.shape === selectedShape);
 
+  const handleBack = () => {
+    router.push('/(tabs)/tools');
+  };
+
   const openPicker = () => {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
@@ -180,8 +186,13 @@ export default function MMToCaratChartScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={[styles.container, { flexGrow: 1, paddingBottom: 48 }]}>
-      <Text style={styles.title}>MM to Carat Conversion Chart</Text>
+    <ScrollView contentContainerStyle={[styles.container]}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+          <Ionicons name="arrow-back" size={28} color="#0E2657" />
+        </TouchableOpacity>
+        <Text style={styles.title}>MM to Carat</Text>
+      </View>
       <Text style={styles.subtitle}>
         Use this chart to estimate a diamond's carat weight based on its millimeter size. Note that approximate conversions may vary slightly depending on diamond shape and cut proportions.
       </Text>
@@ -247,12 +258,22 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     alignItems: 'stretch',
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingTop: 0,
+  },
+  backButton: {
+    marginRight: 8,
+    padding: 8,
+  },
   title: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#0E2657',
     textAlign: 'center',
-    marginBottom: 12,
+    marginLeft: 4,
   },
   subtitle: {
     fontSize: 15,

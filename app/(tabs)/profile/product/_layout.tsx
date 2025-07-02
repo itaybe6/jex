@@ -4,18 +4,18 @@ export default function ProductLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: {
-          backgroundColor: '#0E2657',
-        },
-        headerTintColor: '#fff',
-        headerTitleStyle: {
-          fontWeight: '600',
-        },
-        contentStyle: {
-          backgroundColor: '#fff'
-        },
-        animation: 'slide_from_right'
+        headerShown: true,
+        headerStyle: { backgroundColor: '#fff' },
+        headerTintColor: '#0E2657',
+        headerTitleStyle: { fontFamily: 'Montserrat-Bold', color: '#0E2657' },
       }}
-    />
+    >
+      <Stack.Screen
+        name="edit"
+        options={{
+          headerShown: false,
+        }}
+      />
+    </Stack>
   );
 } 

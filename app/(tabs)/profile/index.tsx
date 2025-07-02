@@ -1,5 +1,5 @@
 import React from 'react';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Modal, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -7,15 +7,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlatList } from 'react-native';
 import { useProfile } from '../../context/ProfileContext';
+<<<<<<< HEAD
 const userDefaultImage = require('../../../assets/images/user.jpg');
+=======
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
+import { useFocusEffect } from '@react-navigation/native';
+>>>>>>> c27dc2f45820f739c1a940e45ca57069b1c88881
 
 const GRID_SPACING = 8; // Increased spacing between items
 const NUM_COLUMNS = 3;
 const screenWidth = Dimensions.get('window').width;
 const ITEM_WIDTH = (screenWidth - 40 - (GRID_SPACING * (NUM_COLUMNS - 1))) / NUM_COLUMNS;
-
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 type Profile = {
   id: string;
@@ -65,9 +67,6 @@ type Category = {
 export default function ProfileScreen() {
   const { user, accessToken } = useAuth();
   const { profile, productsByCategory, loading } = useProfile();
-  const [showTrustMarks, setShowTrustMarks] = useState(false);
-  const [trustMarks, setTrustMarks] = useState<TrustMark[]>([]);
-  const [loadingTrustMarks, setLoadingTrustMarks] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState<Record<string, boolean>>({});
   const [categories, setCategories] = useState<Category[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
@@ -104,40 +103,7 @@ export default function ProfileScreen() {
     }
   };
 
-  const fetchTrustMarks = async () => {
-    try {
-      if (!user) return;
-      setLoadingTrustMarks(true);
-      const query = 'id,created_at,truster:profiles!trust_marks_truster_id_fkey(id,full_name,avatar_url,title)';
-      const url = `${SUPABASE_URL}/rest/v1/trust_marks?trusted_id=eq.${user.id}&select=${encodeURIComponent(query)}&order=created_at.desc`;
-      const res = await fetch(url, {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        } as HeadersInit,
-      });
-      if (!res.ok) throw new Error('Error fetching trust marks');
-      const data = await res.json();
-      setTrustMarks(data.map((trustMark: any) => ({
-        id: trustMark.id,
-        created_at: trustMark.created_at,
-        truster: trustMark.truster,
-      })) || []);
-    } catch (error) {
-      console.error('Error fetching trust marks:', error);
-    } finally {
-      setLoadingTrustMarks(false);
-    }
-  };
-
-  const handleShowTrustMarks = () => {
-    setShowTrustMarks(true);
-    fetchTrustMarks();
-  };
-
   const handleUserPress = (userId: string) => {
-    setShowTrustMarks(false);
     router.push(`/user/${userId}`);
   };
 
@@ -299,62 +265,6 @@ export default function ProfileScreen() {
     );
   };
 
-  const TrustMarksModal = () => (
-    <Modal
-      visible={showTrustMarks}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={() => setShowTrustMarks(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Trusted By</Text>
-            <TouchableOpacity
-              onPress={() => setShowTrustMarks(false)}
-              style={styles.modalCloseButton}
-            >
-              <Ionicons name="close" size={24} color="#fff" />
-            </TouchableOpacity>
-          </View>
-
-          {loadingTrustMarks ? (
-            <View style={styles.modalLoadingContainer}>
-              <Text style={styles.modalLoadingText}>Loading...</Text>
-            </View>
-          ) : trustMarks.length > 0 ? (
-            <ScrollView style={styles.modalBody}>
-              {trustMarks.map(mark => (
-                <TouchableOpacity
-                  key={mark.id}
-                  style={styles.trustMarkItem}
-                  onPress={() => handleUserPress(mark.truster.id)}
-                >
-                  <Image
-                    source={{
-                      uri: mark.truster.avatar_url || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=800&auto=format&fit=crop&q=60'
-                    }}
-                    style={styles.trustMarkAvatar}
-                  />
-                  <View style={styles.trustMarkInfo}>
-                    <Text style={styles.trustMarkName}>{mark.truster.full_name}</Text>
-                    {mark.truster.title && (
-                      <Text style={styles.trustMarkTitle}>{mark.truster.title}</Text>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          ) : (
-            <View style={styles.modalEmptyContainer}>
-              <Text style={styles.modalEmptyText}>No trust marks yet</Text>
-            </View>
-          )}
-        </View>
-      </View>
-    </Modal>
-  );
-
   const fetchUserRequests = async () => {
     if (!user) return;
     setLoadingRequests(true);
@@ -440,7 +350,11 @@ export default function ProfileScreen() {
               <Text style={styles.statNumber}>{totalProducts}</Text>
               <Text style={styles.statLabel}>Products</Text>
             </View>
+<<<<<<< HEAD
             <TouchableOpacity style={styles.statItem} onPress={handleShowTrustMarks}>
+=======
+            <TouchableOpacity style={styles.statItem} onPress={() => router.push('/profile/trustmarks')}>
+>>>>>>> c27dc2f45820f739c1a940e45ca57069b1c88881
               <Text style={styles.statNumber}>{profile.trust_count ?? 0}</Text>
               <Text style={styles.statLabel}>TrustMarks</Text>
             </TouchableOpacity>
@@ -449,17 +363,10 @@ export default function ProfileScreen() {
               <Text style={styles.statLabel}>Transactions</Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={{
-              backgroundColor: '#0E2657',
-              padding: 12,
-              borderRadius: 8,
-              marginVertical: 12,
-              alignItems: 'center',
-            }}
-            onPress={() => router.push('/profile/holds')}
-          >
-            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>View Holds</Text>
+          {/* New Holds Button - modern chip style */}
+          <TouchableOpacity style={styles.holdsButton} onPress={() => router.push('/profile/holds')}>
+            <Ionicons name="lock-closed-outline" size={18} color="#0E2657" style={{ marginRight: 6 }} />
+            <Text style={styles.holdsButtonText}>View Holds</Text>
           </TouchableOpacity>
         </View>
 
@@ -523,7 +430,6 @@ export default function ProfileScreen() {
             )}
           </View>
         )}
-        <TrustMarksModal />
       </ScrollView>
     </SafeAreaView>
   );
@@ -724,135 +630,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginTop: 12,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#1a1a1a',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2a2a2a',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontFamily: 'Montserrat-Bold',
-    color: '#fff',
-  },
-  modalCloseButton: {
-    padding: 4,
-  },
-  modalBody: {
-    padding: 20,
-  },
-  modalLoadingContainer: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  modalLoadingText: {
-    fontSize: 16,
-    color: '#888',
-    fontFamily: 'Montserrat-Regular',
-  },
-  modalEmptyContainer: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  modalEmptyText: {
-    fontSize: 16,
-    color: '#888',
-    fontFamily: 'Montserrat-Regular',
-  },
-  trustMarkItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2a2a2a',
-  },
-  trustMarkAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 12,
-  },
-  trustMarkInfo: {
-    flex: 1,
-  },
-  trustMarkName: {
-    fontSize: 16,
-    fontFamily: 'Montserrat-Medium',
-    marginBottom: 2,
-    color: '#fff',
-  },
-  trustMarkTitle: {
-    fontSize: 14,
-    color: '#888',
-    fontFamily: 'Montserrat-Regular',
-  },
-  showMoreButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  showMoreText: {
-    fontSize: 14,
-    fontFamily: 'Montserrat-Medium',
-    color: '#6C5CE7',
-  },
-  showMoreIcon: {
-    transform: [{ rotate: '0deg' }],
-  },
-  showMoreIconRotated: {
-    transform: [{ rotate: '90deg' }],
-  },
-  gridRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: GRID_SPACING,
-  },
-  gridContainer: {
-    width: '100%',
-  },
-  gridItem: {
-    width: ITEM_WIDTH,
-    height: ITEM_WIDTH,
-    marginBottom: GRID_SPACING,
-    backgroundColor: '#2a2a2a',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  gridImage: {
-    width: '100%',
-    height: '100%',
-  },
-  gridItemOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: 8,
-  },
-  gridItemTitle: {
-    fontSize: 14,
-    fontFamily: 'Montserrat-Bold',
-    color: '#fff',
-  },
-  gridItemPrice: {
-    fontSize: 12,
-    fontFamily: 'Montserrat-Regular',
-    color: '#fff',
-  },
   websiteRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -920,5 +697,82 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     resizeMode: 'contain',
+  },
+  gridRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: GRID_SPACING,
+  },
+  gridContainer: {
+    width: '100%',
+  },
+  gridItem: {
+    width: ITEM_WIDTH,
+    height: ITEM_WIDTH,
+    marginBottom: GRID_SPACING,
+    backgroundColor: '#2a2a2a',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  gridImage: {
+    width: '100%',
+    height: '100%',
+  },
+  gridItemOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 8,
+  },
+  gridItemTitle: {
+    fontSize: 14,
+    fontFamily: 'Montserrat-Bold',
+    color: '#fff',
+  },
+  gridItemPrice: {
+    fontSize: 12,
+    fontFamily: 'Montserrat-Regular',
+    color: '#fff',
+  },
+  showMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  showMoreText: {
+    fontSize: 14,
+    fontFamily: 'Montserrat-Medium',
+    color: '#6C5CE7',
+  },
+  showMoreIcon: {
+    transform: [{ rotate: '0deg' }],
+  },
+  showMoreIconRotated: {
+    transform: [{ rotate: '90deg' }],
+  },
+  holdsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: '#fff',
+    borderColor: '#0E2657',
+    borderWidth: 1,
+    borderRadius: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    marginTop: 18,
+    marginBottom: 8,
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  holdsButtonText: {
+    color: '#0E2657',
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 15,
   },
 });

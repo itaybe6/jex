@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Slider from '@react-native-community/slider';
 import { RingSizer } from '../../../components/RingSizer';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 console.log('RingSizer:', RingSizer);
 
 type CoinType = {
@@ -51,6 +52,13 @@ export default function RingSizerScreen() {
   useEffect(() => {
     loadCalibrationData();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      setShowCalibration(true);
+      setCalibrationStep('select');
+    }, [])
+  );
 
   const loadCalibrationData = async () => {
     try {
@@ -150,8 +158,8 @@ export default function RingSizerScreen() {
   return (
     <View style={[styles.container, { backgroundColor: '#F5F8FC' }]}>
       <TouchableOpacity onPress={() => router.back()} style={styles.fixedBackButton}>
-        <Ionicons name="chevron-back" size={28} color="#007AFF" />
-        <Text style={{ color: '#007AFF', fontSize: 18, marginLeft: 4 }}>Back</Text>
+        <Ionicons name="chevron-back" size={28} color="#0E2657" />
+        <Text style={{ color: '#0E2657', fontSize: 18, marginLeft: 4 }}>Back</Text>
       </TouchableOpacity>
       <Stack.Screen
         options={{

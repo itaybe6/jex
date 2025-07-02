@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { router } from 'expo-router';
 
 export default function ExchangeBadgeVerificationScreen() {
   const { user } = useAuth();
@@ -71,7 +72,12 @@ export default function ExchangeBadgeVerificationScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Exchange Badge Verification</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', marginTop: 12, marginBottom: 12 }}>
+        <TouchableOpacity onPress={() => router.push('/settings')} style={{}}>
+          <Ionicons name="arrow-back" size={28} color="#0E2657" />
+        </TouchableOpacity>
+        <Text style={[styles.title, { marginLeft: 8, marginTop: 0 }]}>Exchange Badge Verification</Text>
+      </View>
       <Text style={styles.description}>
         Upload a photo of your official exchange trader badge or relevant certification for verification.
       </Text>
@@ -107,7 +113,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontFamily: 'Montserrat-Bold',
     color: '#0E2657',
-    marginTop: 32,
     marginBottom: 12,
   },
   description: {

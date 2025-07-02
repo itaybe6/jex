@@ -92,7 +92,7 @@ export const RingSizer: React.FC<RingSizerProps> = ({
               width: ringDiameter,
               height: ringDiameter,
               borderRadius: ringDiameter / 2,
-              borderColor: isCalibrated ? '#007AFF' : '#FF9500',
+              borderColor: isCalibrated ? '#0E2657' : '#FF9500',
             },
           ]}
         />
@@ -107,7 +107,7 @@ export const RingSizer: React.FC<RingSizerProps> = ({
 
       <View style={styles.controls}>
         <TouchableOpacity onPress={decreaseSize} style={styles.button}>
-          <Ionicons name="remove-circle" size={32} color="#007AFF" />
+          <Ionicons name="remove-circle" size={32} color="#0E2657" />
         </TouchableOpacity>
 
         <Slider
@@ -116,12 +116,12 @@ export const RingSizer: React.FC<RingSizerProps> = ({
           maximumValue={RING_SIZES.length - 1}
           value={currentIndex}
           onValueChange={handleSizeChange}
-          minimumTrackTintColor="#007AFF"
+          minimumTrackTintColor="#0E2657"
           maximumTrackTintColor="#D3D3D3"
         />
 
         <TouchableOpacity onPress={increaseSize} style={styles.button}>
-          <Ionicons name="add-circle" size={32} color="#007AFF" />
+          <Ionicons name="add-circle" size={32} color="#0E2657" />
         </TouchableOpacity>
       </View>
 
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
   sizeText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#007AFF',
+    color: '#0E2657',
   },
   dimensionsText: {
     fontSize: 16,

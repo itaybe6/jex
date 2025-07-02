@@ -9,6 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { useAuth } from '@/hooks/useAuth';
 import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 const CATEGORY_OPTIONS = Object.keys(FILTER_FIELDS_BY_CATEGORY);
 
@@ -388,72 +389,110 @@ export default function EditProductScreen() {
   if (!product) return <Text>לא נמצא מוצר</Text>;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20 }}>
-      <View style={styles.fieldSection}>
-        <Text style={styles.label}>Product Name</Text>
-        <TextInput
-          style={styles.input}
-          value={title}
-          onChangeText={setTitle}
-          placeholder="Enter product name"
-        />
+    <View style={{ flex: 1, backgroundColor: '#F5F8FC' }}>
+      {/* Modern Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#0E2657" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Edit Product</Text>
       </View>
-      <View style={styles.fieldSection}>
-        <Text style={styles.label}>Description</Text>
-        <TextInput
-          style={[styles.input, { minHeight: 60 }]}
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Enter product description"
-          multiline
-        />
-      </View>
-      <View style={styles.fieldSection}>
-        <Text style={styles.label}>Price</Text>
-        <TextInput
-          style={styles.input}
-          value={price}
-          onChangeText={setPrice}
-          placeholder="0.00"
-          keyboardType="decimal-pad"
-        />
-      </View>
-      <View style={{ marginBottom: 20 }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-          {images.map((img, idx) => (
-            <View key={img.url + idx} style={{ position: 'relative', width: 120, height: 120, borderRadius: 12, overflow: 'hidden' }}>
-              <Image source={{ uri: img.url }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
-              <TouchableOpacity
-                style={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12, padding: 4 }}
-                onPress={() => handleRemoveImage(idx)}
-              >
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>✕</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+        <View style={styles.card}>
+          <View style={styles.fieldSection}>
+            <Text style={styles.label}>Product Name</Text>
+            <TextInput
+              style={styles.input}
+              value={title}
+              onChangeText={setTitle}
+              placeholder="Enter product name"
+              placeholderTextColor="#7B8CA6"
+            />
+          </View>
+          <View style={styles.fieldSection}>
+            <Text style={styles.label}>Description</Text>
+            <TextInput
+              style={[styles.input, { minHeight: 60 }]}
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Enter product description"
+              placeholderTextColor="#7B8CA6"
+              multiline
+            />
+          </View>
+          <View style={styles.fieldSection}>
+            <Text style={styles.label}>Price</Text>
+            <TextInput
+              style={styles.input}
+              value={price}
+              onChangeText={setPrice}
+              placeholder="0.00"
+              placeholderTextColor="#7B8CA6"
+              keyboardType="decimal-pad"
+            />
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, marginBottom: 12 }}>
+            {images.map((img, idx) => (
+              <View key={img.url + idx} style={styles.imagePreviewWrapper}>
+                <Image source={{ uri: img.url }} style={styles.imagePreview} />
+                <TouchableOpacity
+                  style={styles.removeImageButton}
+                  onPress={() => handleRemoveImage(idx)}
+                >
+                  <Text style={styles.removeImageText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+            <TouchableOpacity
+              style={styles.addPhotoButton}
+              onPress={handleAddPhoto}
+            >
+              <Ionicons name="add" size={32} color="#7B8CA6" />
+              <Text style={styles.addPhotoText}>Add Photo</Text>
+            </TouchableOpacity>
+          </ScrollView>
           <TouchableOpacity
-            style={{ width: 120, height: 120, backgroundColor: '#F5F8FC', borderRadius: 12, justifyContent: 'center', alignItems: 'center' }}
-            onPress={handleAddPhoto}
+            style={styles.saveButton}
+            onPress={updateProduct}
           >
-            <Text style={{ fontSize: 32, color: '#7B8CA6' }}>+</Text>
-            <Text style={{ color: '#7B8CA6', fontSize: 14, marginTop: 8 }}>Add Photo</Text>
+            <Text style={styles.saveButtonText}>Save</Text>
           </TouchableOpacity>
-        </ScrollView>
-      </View>
-      <TouchableOpacity
-        style={styles.saveButton}
-        onPress={updateProduct}
-      >
-        <Text style={styles.saveButtonText}>Save</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#fff',
+    paddingTop: 24,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E3EAF3',
+  },
+  backButton: {
+    marginRight: 12,
+    padding: 4,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: 'Montserrat-Bold',
+    color: '#0E2657',
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 20,
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
+    marginBottom: 24,
   },
   fieldSection: {
     marginBottom: 18,
@@ -462,16 +501,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#0E2657',
     marginBottom: 6,
-    fontWeight: '500',
+    fontFamily: 'Montserrat-Medium',
   },
   input: {
-    backgroundColor: '#F5F8FC',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: '#F6F7FA',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     fontSize: 16,
-    color: '#0E2657',
+    fontFamily: 'Montserrat-Medium',
+    color: '#111827',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E3EAF3',
   },
   chipContainer: {
     flexDirection: 'row',
@@ -518,16 +559,70 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: 'bold',
   },
+  imagePreviewWrapper: {
+    position: 'relative',
+    width: 110,
+    height: 110,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#F5F8FC',
+    marginRight: 8,
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+    borderRadius: 16,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 12,
+    padding: 4,
+    zIndex: 2,
+  },
+  removeImageText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  addPhotoButton: {
+    width: 110,
+    height: 110,
+    backgroundColor: '#F6F7FA',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E3EAF3',
+  },
+  addPhotoText: {
+    color: '#7B8CA6',
+    fontSize: 14,
+    marginTop: 8,
+    fontFamily: 'Montserrat-Medium',
+  },
   saveButton: {
     backgroundColor: '#0E2657',
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderRadius: 24,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
     marginTop: 24,
+    marginBottom: 0,
+    width: '100%',
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   saveButtonText: {
     color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 17,
+    fontFamily: 'Montserrat-Bold',
+    letterSpacing: 0.5,
   },
 }); 
