@@ -477,7 +477,11 @@ export default function NotificationsScreen() {
     // לוגיקה להצגת תמונה ושם בהתראות הולד
     let profileImage = '';
     let userName = '';
-    if (isHoldApproved) {
+    if (notification.type === 'trustmark') {
+      userName = notification.data?.from_user_name || 'Unknown User';
+      profileImage = notification.data?.from_user_avatar ||
+        'https://ui-avatars.com/api/?background=0E2657&color=fff&name=' + encodeURIComponent(userName);
+    } else if (isHoldApproved) {
       userName = notification.data?.buyer_name || notification.data?.seller_name || 'Unknown User';
       profileImage = notification.data?.buyer_avatar_url || notification.data?.seller_avatar_url ||
         'https://ui-avatars.com/api/?background=0E2657&color=fff&name=' + encodeURIComponent(userName);
@@ -493,6 +497,34 @@ export default function NotificationsScreen() {
       userName = notification.data?.seller_name || notification.data?.sender_full_name || 'Unknown User';
       profileImage = notification.data?.seller_avatar_url || notification.data?.sender_avatar_url ||
         'https://ui-avatars.com/api/?background=0E2657&color=fff&name=' + encodeURIComponent(userName);
+    }
+
+    // קביעת כותרת מתאימה לפי סוג ההתראה
+    let notificationTitle = 'Notification';
+    switch (notification.type) {
+      case 'trustmark':
+        notificationTitle = 'Trust Mark';
+        break;
+      case 'deal_completed':
+        notificationTitle = 'Deal Completed';
+        break;
+      case 'deal_rejected':
+        notificationTitle = 'Deal Rejected';
+        break;
+      case 'hold_request':
+        notificationTitle = 'Hold Request';
+        break;
+      case 'hold_request_approved':
+        notificationTitle = 'Hold Approved';
+        break;
+      case 'hold_request_rejected':
+        notificationTitle = 'Hold Rejected';
+        break;
+      case 'waiting_seller_approval':
+        notificationTitle = 'Waiting Seller Approval';
+        break;
+      default:
+        notificationTitle = 'Notification';
     }
 
     const senderId =
@@ -544,24 +576,10 @@ export default function NotificationsScreen() {
         >
           <View style={styles.row}>
             <View style={styles.textContainer}>
-              {notification.type === 'hold_request_approved' ? (
-                <>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-                    <Ionicons name="checkmark-circle" size={18} color="green" style={{ marginRight: 4, marginBottom: -2 }} />
-                    <Text style={[styles.statusText, { fontSize: 16, color: '#0E2657', fontWeight: 'bold' }]}>Approved</Text>
-                  </View>
-                  <Text style={styles.userName}>{userName}</Text>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.statusText}>
-                    {notification.type === 'waiting_seller_approval' ? 'Waiting Seller Approval'
-                      : notification.type === 'deal_completed' ? 'Deal Completed'
-                      : 'New Notification'}
-                  </Text>
-                  <Text style={styles.userName}>{userName}</Text>
-                </>
-              )}
+              <>
+                <Text style={styles.statusText}>{notificationTitle}</Text>
+                <Text style={styles.userName}>{userName}</Text>
+              </>
               <Text style={styles.messageText} numberOfLines={2}>
                 {notification.data?.message || 'No message available'}
               </Text>

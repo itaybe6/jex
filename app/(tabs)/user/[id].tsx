@@ -163,6 +163,50 @@ export default function UserProfileScreen() {
         });
         if (!res.ok) throw new Error(await res.text());
         setHasTrusted(true);
+
+        // הוספת התראה למשתמש שקיבל את ה-Trusted (כולל שם ותמונה של השולח)
+        let fromUserName = user?.user_metadata?.full_name || user?.email || null;
+        let fromUserAvatar = user?.avatar_url || user?.user_metadata?.avatar_url || null;
+        if (!fromUserAvatar && profile && user.id === profile.id && profile.avatar_url) {
+          fromUserAvatar = profile.avatar_url;
+        }
+        if (!fromUserAvatar) {
+          fromUserAvatar = 'https://ui-avatars.com/api/?background=0E2657&color=fff&name=' + encodeURIComponent(fromUserName || 'User');
+        }
+        // debug
+        console.log('DEBUG TRUSTMARK NOTIFICATION:');
+        console.log('user:', user);
+        console.log('user.user_metadata:', user?.user_metadata);
+        console.log('user.avatar_url:', user?.avatar_url);
+        console.log('profile:', profile);
+        console.log('fromUserName:', fromUserName);
+        console.log('fromUserAvatar:', fromUserAvatar);
+        try {
+          await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_ANON_KEY!,
+              Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              Prefer: 'return=representation',
+            },
+            body: JSON.stringify({
+              user_id: userId,
+              type: 'trustmark',
+              read: false,
+              is_action_done: false,
+              data: {
+                message: `${fromUserName || 'Someone'} marked you as Trusted!`,
+                from_user_id: user.id,
+                from_user_name: fromUserName,
+                from_user_avatar: fromUserAvatar
+              },
+              product_id: null
+            })
+          });
+        } catch (e) {
+          // אפשר להוסיף טיפול בשגיאה אם תרצה
+        }
       }
     } catch (error) {
       console.error('Error updating trust mark:', error);

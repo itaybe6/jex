@@ -52,9 +52,10 @@ export default function ExchangeBadgeVerificationScreen() {
       const { error: insertError } = await supabase
         .from('exchange_certificates')
         .insert({
-          profile_id: user.id,
+          profile_id: user?.id,
           file_url,
           status: 'pending',
+          created_at: new Date().toISOString(),
         });
       if (insertError) throw insertError;
       setSuccess(true);
@@ -74,6 +75,7 @@ export default function ExchangeBadgeVerificationScreen() {
       <Text style={styles.description}>
         Upload a photo of your official exchange trader badge or relevant certification for verification.
       </Text>
+  
       <TouchableOpacity style={styles.uploadBox} onPress={pickImage} disabled={uploading}>
         {image ? (
           <Image source={{ uri: image }} style={styles.imagePreview} />

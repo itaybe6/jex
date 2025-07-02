@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useRouter } from 'expo-router';
 // import { useAuth } from '../../context/AuthContext';
-import { getToken, saveToken } from '../../lib/secureStorage';
+import { getToken, saveToken } from '../../../lib/secureStorage';
 
 type SettingItemProps = {
   icon: JSX.Element;
@@ -112,7 +112,7 @@ export default function SettingsScreen() {
         <SettingItem
           icon={<Ionicons name="information-circle-outline" size={24} color="#888" />}
           title="About"
-          onPress={() => router.push('/about')}
+          onPress={() => router.push('/settings/about')}
         />
       </View>
 
@@ -121,12 +121,12 @@ export default function SettingsScreen() {
         <SettingItem
           icon={<Ionicons name="card-outline" size={24} color="#888" />}
           title="ID Verification"
-          onPress={() => router.push('/id-verification')}
+          onPress={() => router.push('/settings/id-verification')}
         />
         <SettingItem
           icon={<Ionicons name="pricetag-outline" size={24} color="#888" />}
           title="Exchange Badge Verification"
-          onPress={() => router.push('/exchange-badge-verification')}
+          onPress={() => router.push('/settings/exchange-badge-verification')}
         />
       </View>
 

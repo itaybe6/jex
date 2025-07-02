@@ -163,7 +163,7 @@ export default function ProfileScreen() {
   };
 
   const handleSettingsPress = () => {
-    router.push('/(tabs)/settings');
+    router.push('../settings');
   };
 
   const fetchUserProducts = async () => {
