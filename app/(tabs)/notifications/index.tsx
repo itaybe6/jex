@@ -576,10 +576,10 @@ export default function NotificationsScreen() {
         >
           <View style={styles.row}>
             <View style={styles.textContainer}>
-              <>
+                <>
                 <Text style={styles.statusText}>{notificationTitle}</Text>
-                <Text style={styles.userName}>{userName}</Text>
-              </>
+                  <Text style={styles.userName}>{userName}</Text>
+                </>
               <Text style={styles.messageText} numberOfLines={2}>
                 {notification.data?.message || 'No message available'}
               </Text>

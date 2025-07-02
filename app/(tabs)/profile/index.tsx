@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlatList } from 'react-native';
 import { useProfile } from '../../context/ProfileContext';
+const userDefaultImage = require('../../../assets/images/user.jpg');
 
 const GRID_SPACING = 8; // Increased spacing between items
 const NUM_COLUMNS = 3;
@@ -402,11 +403,11 @@ export default function ProfileScreen() {
           </TouchableOpacity>
           <View style={styles.profileImageWrapper}>
             <Image
-              source={{
-                uri: profile.avatar_url
-                  ? profile.avatar_url + `?t=${new Date().getTime()}`
-                  : 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=800&auto=format&fit=crop&q=60'
-              }}
+              source={
+                profile.avatar_url
+                  ? { uri: profile.avatar_url + `?t=${new Date().getTime()}` }
+                  : userDefaultImage
+              }
               style={styles.profileImage}
             />
             {hasExchangeCertificate && (
@@ -440,7 +441,7 @@ export default function ProfileScreen() {
               <Text style={styles.statLabel}>Products</Text>
             </View>
             <TouchableOpacity style={styles.statItem} onPress={handleShowTrustMarks}>
-              <Text style={styles.statNumber}>{profile.trust_count}</Text>
+              <Text style={styles.statNumber}>{profile.trust_count ?? 0}</Text>
               <Text style={styles.statLabel}>TrustMarks</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.statItem} onPress={() => router.push({ pathname: '/profile/transactions', params: { fromProfileType: 'self' } })}>
