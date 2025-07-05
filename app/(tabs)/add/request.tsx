@@ -1,13 +1,33 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Platform, Modal } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Platform, Modal, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
 import { useAuth } from '@/hooks/useAuth';
 import { TopHeader } from '../../../components/TopHeader';
-import { WATCH_BRANDS_MODELS, GEM_TYPES, FILTER_FIELDS_BY_CATEGORY } from '@/constants/filters';
+import { WATCH_BRANDS_MODELS, GEM_TYPES, FILTER_FIELDS_BY_CATEGORY, CATEGORY_LABELS } from '@/constants/filters';
+import RingIcon from '@/assets/images/ring.png';
+import NecklaceIcon from '@/assets/images/necklace-02.png';
+import JewelryIcon from '@/assets/images/jewelry.png';
+import BraceletIcon from '@/assets/images/bracelet.png';
+import CrownIcon from '@/assets/images/crown.png';
+import DiamondIcon from '@/assets/images/diamond.png';
+import ShoppingCartIcon from '@/assets/images/shopping-cart.png';
+import GemIcon from '@/assets/images/gem.png';
+import WatchIcon from '@/assets/images/watch (1).png';
 
-const CATEGORY_OPTIONS = ['Jewelry', 'Watch', 'Gem', 'Loose Diamond', 'Rough Diamond'];
+const CATEGORY_ICONS = {
+  'Rings': () => <Image source={RingIcon} style={{ width: 40, height: 40, resizeMode: 'contain' }} />,
+  'Necklaces': () => <Image source={NecklaceIcon} style={{ width: 40, height: 40, resizeMode: 'contain' }} />,
+  'Earrings': () => <Image source={JewelryIcon} style={{ width: 40, height: 40, resizeMode: 'contain' }} />,
+  'Bracelets': () => <Image source={BraceletIcon} style={{ width: 40, height: 40, resizeMode: 'contain' }} />,
+  'Special Pieces': () => <Image source={CrownIcon} style={{ width: 40, height: 40, resizeMode: 'contain' }} />,
+  'Loose Diamonds': () => <Image source={DiamondIcon} style={{ width: 40, height: 40, resizeMode: 'contain' }} />,
+  'Rough Diamonds': () => <Image source={ShoppingCartIcon} style={{ width: 40, height: 40, resizeMode: 'contain' }} />,
+  'Gems': () => <Image source={GemIcon} style={{ width: 40, height: 40, resizeMode: 'contain' }} />,
+  'Watches': () => <Image source={WatchIcon} style={{ width: 40, height: 40, resizeMode: 'contain' }} />,
+};
+
 const JEWELRY_TYPES = ['Ring', 'Necklace', 'Earrings', 'Bracelet'];
 const MATERIALS = ['GOLD', 'PLATINUM', 'SILVER'];
 const DIAMOND_SHAPES = ['Round', 'Princess', 'Oval', 'Marquise', 'Pear', 'Emerald', 'Radiant', 'Heart', 'Cushion', 'Asscher'];
@@ -56,6 +76,9 @@ export default function AddRequestScreen() {
   const [showDiamondShapeModal, setShowDiamondShapeModal] = useState(false);
   const [showDiamondWeightModal, setShowDiamondWeightModal] = useState(false);
   const [diamondShapes, setDiamondShapes] = useState<string[]>([]);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedFields, setSelectedFields] = useState<Record<string, any>>({});
 
   const maxWeightOptions = useMemo(() => {
     if (!weightFrom) return ALL_WEIGHT_OPTIONS;
@@ -79,52 +102,11 @@ export default function AddRequestScreen() {
         Alert.alert('Error', 'You must be logged in to add a request');
         return;
       }
-      let details: any = {};
-      if (category === 'Jewelry') {
-        details = {
-          type: jewelryType,
-          subcategory: jewelrySubcategory,
-          material,
-          weight_from: weightFrom,
-          weight_to: weightTo,
-          color: diamondColors,
-          clarity: diamondClarities,
-          cut: diamondCuts,
-          has_side_stones: hasSideStones,
-        };
-      } else if (category === 'Watch') {
-        details = {
-          brand: watchBrand,
-          model: watchModel,
-        };
-      } else if (category === 'Gem') {
-        details = {
-          type: gemType,
-          origin: gemOrigin,
-          weight_from: gemWeightFrom,
-          weight_to: gemWeightTo,
-          shape: gemShapes,
-          clarity: gemClarities,
-        };
-      } else if (category === 'Loose Diamond') {
-        details = {
-          weight_from: diamondWeightFrom,
-          weight_to: diamondWeightTo,
-          color: diamondColors,
-          clarity: diamondClarities,
-          cut: diamondCuts,
-          shape: diamondShapes,
-        };
-      } else if (category === 'Rough Diamond') {
-        details = {
-          weight_from: diamondWeightFrom,
-          weight_to: diamondWeightTo,
-          color: diamondColors,
-          clarity: diamondClarities,
-          shape: diamondShapes,
-        };
-      }
+      let details: any = { ...selectedFields };
       setLoading(true);
+      const localTime = new Date();
+      const israelTime = new Date(localTime.getTime() + (3 * 60 * 60 * 1000));
+      const formatted = israelTime.toISOString();
       const res = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
         method: 'POST',
         headers: {
@@ -134,9 +116,12 @@ export default function AddRequestScreen() {
           Prefer: 'return=representation',
         },
         body: JSON.stringify({
-        user_id: user?.id,
-        category,
-        details,
+          user_id: user?.id,
+          category,
+          title,
+          description,
+          details,
+          created_at: formatted,
         })
       });
       if (!res.ok) {
@@ -162,12 +147,27 @@ export default function AddRequestScreen() {
       <TopHeader />
       <TouchableOpacity
         onPress={() => router.back()}
-        style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16, marginTop: 8, marginBottom: 8, backgroundColor: '#fff', borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8 }}
+        style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16, marginTop: 8, marginBottom: 8, paddingVertical: 4, paddingHorizontal: 8 }}
       >
         <Ionicons name="arrow-back" size={24} color="#0E2657" style={{ marginRight: 6 }} />
         <Text style={{ color: '#0E2657', fontSize: 16, fontWeight: 'bold' }}>Back</Text>
       </TouchableOpacity>
       <ScrollView style={styles.form}>
+        <Text style={styles.label}>Title</Text>
+        <TextInput
+          style={styles.input}
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Enter request title"
+        />
+        <Text style={styles.label}>Description</Text>
+        <TextInput
+          style={[styles.input, { height: 80 }]}
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Enter request description"
+          multiline
+        />
         <Text style={styles.label}>Category</Text>
         <TouchableOpacity style={styles.selectButton} onPress={() => setShowCategoryModal(true)}>
           <Text style={styles.selectButtonText}>{category || 'Select category'}</Text>
@@ -175,24 +175,37 @@ export default function AddRequestScreen() {
         </TouchableOpacity>
         {showCategoryModal && (
           <Modal visible transparent animationType="slide" onRequestClose={() => setShowCategoryModal(false)}>
-      <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Select Category</Text>
                   <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
-              <Ionicons name="chevron-down" size={24} color="#fff" />
-            </TouchableOpacity>
-          </View>
-          <ScrollView style={styles.modalOptions}>
-                  {CATEGORY_OPTIONS.map(option => (
-                    <TouchableOpacity key={option} style={styles.modalOption} onPress={() => { setCategory(option); setShowCategoryModal(false); }}>
-                      <Text style={styles.modalOptionText}>{option}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
+                    <Ionicons name="close" size={24} color="#0E2657" />
+                  </TouchableOpacity>
+                </View>
+                <ScrollView style={{ flexGrow: 0 }} contentContainerStyle={{ paddingBottom: 16 }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                    {Object.keys(FILTER_FIELDS_BY_CATEGORY).map((category) => (
+                      <TouchableOpacity
+                        key={category}
+                        style={{ width: '47%', marginBottom: 18, alignItems: 'center', backgroundColor: '#F5F8FC', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: '#E5E7EB' }}
+                        onPress={() => { setCategory(category); setShowCategoryModal(false); }}
+                        activeOpacity={0.85}
+                      >
+                        {(CATEGORY_ICONS[(CATEGORY_LABELS[category] || category) as keyof typeof CATEGORY_ICONS]
+                          ? CATEGORY_ICONS[(CATEGORY_LABELS[category] || category) as keyof typeof CATEGORY_ICONS]()
+                          : <Ionicons name="apps" size={32} color="#0E2657" />)
+                        }
+                        <Text style={{ marginTop: 8, color: '#0E2657', fontFamily: 'Montserrat-Medium', fontSize: 15, textAlign: 'center' }}>
+                          {CATEGORY_LABELS[category] || category}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+            </View>
+          </Modal>
         )}
         {category === 'Jewelry' && (
           <>
@@ -244,7 +257,7 @@ export default function AddRequestScreen() {
                 </TouchableOpacity>
               ))}
             </ScrollView>
-        <Text style={styles.label}>Cut</Text>
+            <Text style={styles.label}>Cut</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
               {DIAMOND_CUTS.map(option => (
                 <TouchableOpacity
@@ -345,13 +358,13 @@ export default function AddRequestScreen() {
             <Text style={styles.label}>Clarity</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
               {CLARITY_GRADES.map(option => (
-        <TouchableOpacity
+                <TouchableOpacity
                   key={option}
                   style={[styles.filterOption, gemClarities.includes(option) && styles.filterOptionSelected]}
                   onPress={() => setGemClarities(prev => prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option])}
-        >
+                >
                   <Text style={[styles.filterOptionText, gemClarities.includes(option) && styles.filterOptionTextSelected]}>{option}</Text>
-        </TouchableOpacity>
+                </TouchableOpacity>
               ))}
             </ScrollView>
           </>
@@ -361,13 +374,13 @@ export default function AddRequestScreen() {
             <Text style={styles.label}>Shape</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
               {DIAMOND_SHAPES.map(option => (
-        <TouchableOpacity
+                <TouchableOpacity
                   key={option}
                   style={[styles.filterOption, diamondShapes.includes(option) && styles.filterOptionSelected]}
                   onPress={() => setDiamondShapes(prev => prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option])}
-        >
+                >
                   <Text style={[styles.filterOptionText, diamondShapes.includes(option) && styles.filterOptionTextSelected]}>{option}</Text>
-        </TouchableOpacity>
+                </TouchableOpacity>
               ))}
             </ScrollView>
             <Text style={styles.label}>Weight (From - To)</Text>
@@ -378,16 +391,16 @@ export default function AddRequestScreen() {
             <Text style={styles.label}>Color</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
               {COLOR_GRADES.map(option => (
-        <TouchableOpacity
+                <TouchableOpacity
                   key={option}
                   style={[styles.filterOption, diamondColors.includes(option) && styles.filterOptionSelected]}
                   onPress={() => setDiamondColors(prev => prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option])}
-        >
+                >
                   <Text style={[styles.filterOptionText, diamondColors.includes(option) && styles.filterOptionTextSelected]}>{option}</Text>
-        </TouchableOpacity>
+                </TouchableOpacity>
               ))}
             </ScrollView>
-        <Text style={styles.label}>Clarity</Text>
+            <Text style={styles.label}>Clarity</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
               {CLARITY_GRADES.map(option => (
                 <TouchableOpacity
@@ -418,13 +431,13 @@ export default function AddRequestScreen() {
             <Text style={styles.label}>Shape</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
               {DIAMOND_SHAPES.map(option => (
-        <TouchableOpacity
+                <TouchableOpacity
                   key={option}
                   style={[styles.filterOption, diamondShapes.includes(option) && styles.filterOptionSelected]}
                   onPress={() => setDiamondShapes(prev => prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option])}
-        >
+                >
                   <Text style={[styles.filterOptionText, diamondShapes.includes(option) && styles.filterOptionTextSelected]}>{option}</Text>
-        </TouchableOpacity>
+                </TouchableOpacity>
               ))}
             </ScrollView>
             <Text style={styles.label}>Weight (From - To)</Text>
@@ -432,7 +445,7 @@ export default function AddRequestScreen() {
               <TextInput style={[styles.input, { flex: 1 }]} value={diamondWeightFrom} onChangeText={setDiamondWeightFrom} placeholder="From" keyboardType="numeric" />
               <TextInput style={[styles.input, { flex: 1 }]} value={diamondWeightTo} onChangeText={setDiamondWeightTo} placeholder="To" keyboardType="numeric" />
             </View>
-        <Text style={styles.label}>Color</Text>
+            <Text style={styles.label}>Color</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
               {COLOR_GRADES.map(option => (
                 <TouchableOpacity
@@ -447,15 +460,100 @@ export default function AddRequestScreen() {
             <Text style={styles.label}>Clarity</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
               {CLARITY_GRADES.map(option => (
-        <TouchableOpacity
+                <TouchableOpacity
                   key={option}
                   style={[styles.filterOption, diamondClarities.includes(option) && styles.filterOptionSelected]}
                   onPress={() => setDiamondClarities(prev => prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option])}
-        >
+                >
                   <Text style={[styles.filterOptionText, diamondClarities.includes(option) && styles.filterOptionTextSelected]}>{option}</Text>
-        </TouchableOpacity>
+                </TouchableOpacity>
               ))}
             </ScrollView>
+          </>
+        )}
+        {category && FILTER_FIELDS_BY_CATEGORY[category] && (
+          <>
+            {FILTER_FIELDS_BY_CATEGORY[category].map(field => {
+              if (field.type === 'multi-select' && Array.isArray(field.options)) {
+                return (
+                  <View key={field.key} style={{ marginBottom: 12 }}>
+                    <Text style={styles.label}>{field.label}</Text>
+                    <ScrollView horizontal>
+                      {field.options.map(option => (
+                        <TouchableOpacity
+                          key={option}
+                          style={[
+                            styles.filterOption,
+                            (selectedFields[field.key] || []).includes(option) && styles.filterOptionSelected
+                          ]}
+                          onPress={() => {
+                            setSelectedFields(prev => {
+                              const current: any[] = prev[field.key] || [];
+                              return {
+                                ...prev,
+                                [field.key]: current.includes(option)
+                                  ? current.filter((o: any) => o !== option)
+                                  : [...current, option]
+                              };
+                            });
+                          }}
+                        >
+                          <Text style={[
+                            styles.filterOptionText,
+                            (selectedFields[field.key] || []).includes(option) && styles.filterOptionTextSelected
+                          ]}>{option}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                );
+              }
+              if (field.type === 'boolean') {
+                return (
+                  <View key={field.key} style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={[styles.label, { flex: 1 }]}>{field.label}</Text>
+                    <TouchableOpacity
+                      style={[styles.selectButton, { flex: 1, backgroundColor: selectedFields[field.key] ? '#6C5CE7' : '#111' }]}
+                      onPress={() => setSelectedFields(prev => ({ ...prev, [field.key]: !prev[field.key] }))}
+                    >
+                      <Text style={styles.selectButtonText}>{selectedFields[field.key] ? 'Yes' : 'No'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              }
+              if (field.type === 'range') {
+                return (
+                  <View key={field.key} style={{ marginBottom: 12, flexDirection: 'row', gap: 8 }}>
+                    <TextInput
+                      style={[styles.input, { flex: 1 }]}
+                      value={selectedFields[`${field.key}_from`] || ''}
+                      onChangeText={val => setSelectedFields(prev => ({ ...prev, [`${field.key}_from`]: val }))}
+                      placeholder="From"
+                      keyboardType="numeric"
+                    />
+                    <TextInput
+                      style={[styles.input, { flex: 1 }]}
+                      value={selectedFields[`${field.key}_to`] || ''}
+                      onChangeText={val => setSelectedFields(prev => ({ ...prev, [`${field.key}_to`]: val }))}
+                      placeholder="To"
+                      keyboardType="numeric"
+                    />
+                  </View>
+                );
+              }
+              // ברירת מחדל: שדה טקסט
+              return (
+                <View key={field.key} style={{ marginBottom: 12 }}>
+                  <Text style={styles.label}>{field.label}</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={selectedFields[field.key] || ''}
+                    onChangeText={val => setSelectedFields(prev => ({ ...prev, [field.key]: val }))}
+                    placeholder={`Enter ${field.label}`}
+                  />
+                </View>
+              );
+            })}
           </>
         )}
         <TouchableOpacity

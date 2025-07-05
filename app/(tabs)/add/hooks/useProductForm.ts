@@ -129,8 +129,6 @@ export default function useProductForm() {
   };
   const handleImageChange = async () => {
     try {
-      if (typeof window === 'undefined') return;
-      
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         alert('We need access to your gallery to upload images');

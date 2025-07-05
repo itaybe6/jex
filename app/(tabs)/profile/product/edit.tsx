@@ -385,6 +385,38 @@ export default function EditProductScreen() {
     }
   };
 
+  const deleteProduct = async () => {
+    if (!product) return;
+    Alert.alert(
+      'מחיקת מוצר',
+      'האם אתה בטוח שברצונך למחוק את המוצר? פעולה זו אינה הפיכה.',
+      [
+        { text: 'ביטול', style: 'cancel' },
+        {
+          text: 'מחק', style: 'destructive', onPress: async () => {
+            try {
+              const res = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${product.id}`, {
+                method: 'DELETE',
+                headers: {
+                  apikey: SUPABASE_ANON_KEY,
+                  Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+                },
+              });
+              if (!res.ok) {
+                const err = await res.text();
+                throw new Error(err);
+              }
+              Alert.alert('המוצר נמחק בהצלחה');
+              router.replace('/(tabs)/profile');
+            } catch (error: any) {
+              Alert.alert('שגיאה', error.message || 'מחיקת מוצר נכשלה');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   if (loading) return <ActivityIndicator style={{ marginTop: 40 }} />;
   if (!product) return <Text>לא נמצא מוצר</Text>;
 
@@ -396,6 +428,9 @@ export default function EditProductScreen() {
           <Ionicons name="arrow-back" size={24} color="#0E2657" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Product</Text>
+        <TouchableOpacity onPress={deleteProduct} style={{ marginLeft: 'auto', padding: 8 }}>
+          <Ionicons name="trash" size={24} color="#ff4444" />
+        </TouchableOpacity>
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
         <View style={styles.card}>

@@ -13,6 +13,7 @@ import CrownIcon from '@/assets/images/crown.png';
 import ShoppingCartIcon from '@/assets/images/shopping-cart.png';
 import GemIcon from '@/assets/images/gem.png';
 import WatchIcon from '@/assets/images/watch (1).png';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CATEGORY_ICONS = {
   'Rings': () => <Image source={RingIcon} style={{ width: 40, height: 40, resizeMode: 'contain' }} />,
@@ -60,6 +61,8 @@ export default function FilterModal({
 
   // Add state for expanded filter details
   const [expandedFilterIdx, setExpandedFilterIdx] = useState<number | null>(null);
+
+  const insets = useSafeAreaInsets();
 
   // Watches: get models for selected brands
   const getAvailableWatchModels = () => {
@@ -672,12 +675,22 @@ export default function FilterModal({
           </View>
           {/* Show Results button only if there are filters */}
           {filters.length > 0 && (
-            <View style={{paddingHorizontal: 20, paddingBottom: 20}}>
+            <View style={{paddingHorizontal: 20, paddingBottom: 40 + (insets.bottom || 0), marginTop: 2}}>
               <TouchableOpacity
-                style={[styles.footerButton, styles.applyButton]}
+                style={[
+                  styles.footerButton,
+                  styles.applyButton,
+                  { minHeight: 48, alignItems: 'center', justifyContent: 'center', flexDirection: 'row' }
+                ]}
                 onPress={() => { onApplyFilters(filters); onClose(); }}
               >
-                <Text style={[styles.footerButtonText, styles.applyButtonText]}>Show Results</Text>
+                <Text style={{
+                  fontSize: 18,
+                  lineHeight: 24,
+                  textAlign: 'center',
+                  fontFamily: 'Montserrat-Medium',
+                  color: '#fff'
+                }}>Show Results</Text>
               </TouchableOpacity>
             </View>
           )}

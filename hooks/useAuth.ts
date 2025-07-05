@@ -44,18 +44,6 @@ export function useAuth() {
   useEffect(() => {
     if (user && accessToken) {
       // Fetch profile after login
-      fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&select=full_name,phone`, {
-        headers: {
-          apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
-          Authorization: `Bearer ${accessToken}`,
-        },
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data && data[0] && (!data[0].full_name || !data[0].phone)) {
-            router.replace('/profile/setup');
-          }
-        });
     }
   }, [user, accessToken]);
 

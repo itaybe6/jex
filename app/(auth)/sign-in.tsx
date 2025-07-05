@@ -201,7 +201,7 @@ export default function SignInOld() {
 
       // בדיקה אם זה אדמין לפני פנייה ל-Supabase
       if (email === ADMIN_MAIL && password === ADMIN_PASSWORD) {
-        router.replace('/(admin)/');
+        router.replace('/(admin)');
         setLoading(false);
         return;
       }
@@ -229,9 +229,9 @@ export default function SignInOld() {
           if (userId) {
             // Check if user is admin
             if (email === ADMIN_MAIL && password === ADMIN_PASSWORD) {
-              router.replace('/(admin)/index');
+              router.replace('/(admin)');
             } else {
-              router.replace('/profile/setup');
+              router.replace('/');
             }
           } else {
             setMode('confirmation');
@@ -266,9 +266,9 @@ export default function SignInOld() {
           if (userId) {
             // Check if user is admin
             if (email === ADMIN_MAIL && password === ADMIN_PASSWORD) {
-              router.replace('/(admin)/index');
+              router.replace('/(admin)');
             } else {
-              router.replace('/profile/setup');
+              router.replace('/');
             }
           }
         }
@@ -674,7 +674,7 @@ export default function SignInOld() {
                              if (signInResult.refresh_token) {
                                await saveToken('refresh_token', signInResult.refresh_token);
                              }
-                             router.replace('/profile/setup');
+                             router.replace('/');
                              return;
                            }
                          } catch (signInError: any) {
@@ -688,7 +688,7 @@ export default function SignInOld() {
                          if (result.refresh_token) {
                            await saveToken('refresh_token', result.refresh_token);
                          }
-                         router.replace('/profile/setup');
+                         router.replace('/');
                          return;
                        } else {
                          // If no access token, try to sign in immediately
@@ -699,7 +699,7 @@ export default function SignInOld() {
                              if (signInResult.refresh_token) {
                                await saveToken('refresh_token', signInResult.refresh_token);
                              }
-                             router.replace('/profile/setup');
+                             router.replace('/');
                              return;
                            }
                          } catch (signInError: any) {

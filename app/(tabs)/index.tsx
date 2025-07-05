@@ -17,6 +17,7 @@ import { FilterParams } from '@/types/filter';
 import { Product as ProductType } from '@/types/product';
 import { useAuth } from '@/hooks/useAuth';
 import DealOfTheDayIconsRow from '../../components/DealOfTheDayIconsRow';
+import { CategorySpecsDisplay } from '../../components/CategorySpecsDisplay';
 import { FILTER_FIELDS_BY_CATEGORY, FilterField } from '../../constants/filters';
 import { registerForPushNotificationsAsync } from '@/lib/notificationService';
 
@@ -260,37 +261,11 @@ function mapRequestDetails(details: any): any {
   return mapped;
 }
 
-function CategorySpecsDisplay({ category, details }: { category: string; details: any }) {
-  const fields: FilterField[] | undefined = FILTER_FIELDS_BY_CATEGORY[category];
-  if (!fields) {
-    return (
-      <View style={{ paddingVertical: 8 }}>
-        <Text style={{ color: '#7B8CA6', fontFamily: 'Montserrat-Regular', fontSize: 16 }}>Unknown category</Text>
-      </View>
-    );
-  }
-  return (
-    <View>
-      {fields.map(({ key, label }) => {
-        // Hide price field if not present in details (for requests)
-        if ((key === 'price' || label === 'Price ($)') && (details?.[key] == null || details?.[key] === '')) {
-          return null;
-        }
-        return (
-          <View style={styles.detailRow} key={key}>
-            <Text style={styles.detailLabel}>{label}:</Text>
-            <Text style={styles.detailValue}>
-              {details?.[key] != null && details?.[key] !== '' ? String(details[key]) : 'Not specified'}
-            </Text>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
+
 
 // Helper to generate a dynamic request title based on category/type and details
 function getRequestTitle(request: any): string {
+  if (request.title) return request.title;
   const details = request.details || {};
   const category = normalizeCategory(request.category || details.category);
   if (category === 'Loose Diamonds') {
@@ -557,13 +532,13 @@ export default function HomeScreen() {
     return filtered;
   };
 
-  const renderProductItem = ({ item: product }) => {
-    const imageUrl = product.product_images?.[0]?.image_url || product.image_url || 'https://via.placeholder.com/150';
+  const renderProductItem = ({ item }: { item: ProductType }) => {
+    const imageUrl = item.product_images?.[0]?.image_url || item.image_url || 'https://via.placeholder.com/150';
     return (
       <TouchableOpacity
-        key={product.id}
+        key={item.id}
         style={styles.gridProductItem}
-        onPress={() => router.push(`/products/${product.id}`)}
+        onPress={() => router.push(`/products/${item.id}`)}
         activeOpacity={0.85}
       >
         <View style={{ width: '100%', position: 'relative' }}>
@@ -573,17 +548,17 @@ export default function HomeScreen() {
             resizeMode="contain"
           />
           <View style={styles.priceBanner}>
-            <Text style={styles.priceBannerText}>${product.price}</Text>
+            <Text style={styles.priceBannerText}>${item.price}</Text>
           </View>
         </View>
-        <Text style={styles.gridProductTitle} numberOfLines={1}>{product.title}</Text>
+        <Text style={styles.gridProductTitle} numberOfLines={1}>{item.title}</Text>
         <View style={styles.gridSellerInfoRow}>
           <Image
-            source={{ uri: product.profiles?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }}
+            source={{ uri: item.profiles?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }}
             style={styles.gridSellerAvatar}
           />
-          {product.profiles?.full_name && (
-            <Text style={styles.gridSellerName}>{product.profiles.full_name}</Text>
+          {item.profiles?.full_name && (
+            <Text style={styles.gridSellerName}>{item.profiles.full_name}</Text>
           )}
         </View>
       </TouchableOpacity>
@@ -620,23 +595,19 @@ export default function HomeScreen() {
     return (
       <Modal
         visible={showDetailsModal}
-        transparent
         animationType="slide"
+        transparent
         onRequestClose={handleClose}
       >
-        <TouchableOpacity
-          style={styles.modalContainer}
-          activeOpacity={1}
-          onPressOut={handleClose}
-        >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Request Details</Text>
-              <TouchableOpacity onPress={handleClose} hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}>
-                <Ionicons name="close" size={24} color="#0E2657" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 32 }}>
+        <View style={styles.detailsModalOverlay}>
+          <View style={styles.detailsModalContent}>
+            <ScrollView style={{ maxHeight: 500 }} contentContainerStyle={{ paddingBottom: 24, paddingHorizontal: 18 }}>
+              <View style={styles.detailsModalHeader}>
+                <Text style={styles.modalTitle}>Request Details</Text>
+                <TouchableOpacity onPress={handleClose} hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}>
+                  <Ionicons name="close" size={24} color="#0E2657" />
+                </TouchableOpacity>
+              </View>
               <TouchableOpacity style={styles.userInfoModal} onPress={handleUserPress} activeOpacity={0.7}>
                 <Image
                   source={{
@@ -650,12 +621,22 @@ export default function HomeScreen() {
                 </View>
               </TouchableOpacity>
               <View style={styles.detailSection}>
+                <Text style={[styles.detailTitle, {marginBottom: 2}]}>
+                  {getRequestTitle(selectedRequest)}
+                </Text>
+                {(selectedRequest.details?.description || selectedRequest.details?.text) && (
+                  <Text style={[styles.detailValue, {marginBottom: 12, fontWeight: '400', color: '#4A5568'}]}>
+                    {selectedRequest.details?.description || selectedRequest.details?.text}
+                  </Text>
+                )}
+              </View>
+              <View style={styles.detailSection}>
                 <Text style={styles.detailTitle}>Specifications</Text>
                 <CategorySpecsDisplay category={category} details={mappedDetails} />
               </View>
             </ScrollView>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
     );
   };
@@ -680,37 +661,45 @@ export default function HomeScreen() {
     }
 
     return (
-      <View style={styles.requestsContainer}>
-        {filteredRequests.map((request) => (
-          <View key={request.id} style={styles.requestCard}>
-            <View style={styles.requestHeader}>
-              <View style={styles.userInfo}>
-                <Image 
-                  source={{ 
-                    uri: request.profiles.avatar_url || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'
-                  }} 
-                  style={styles.avatar} 
-                />
-                <View>
-                  <Text style={styles.sellerName}>{request.profiles.full_name}</Text>
-                  <Text style={styles.timeAgo}>{formatTimeAgo(request.created_at)}</Text>
-                </View>
-              </View>
-            </View>
-            
-            <Text style={styles.requestTitle}>
-              {getRequestTitle(request)}
-            </Text>
-            
-            <TouchableOpacity 
-              style={styles.respondButton}
+      <FlatList
+        data={filteredRequests}
+        keyExtractor={item => item.id}
+        numColumns={2}
+        renderItem={({ item: request }) => {
+          return (
+            <TouchableOpacity
+              key={request.id}
+              style={styles.gridProductItem}
               onPress={() => handleRequestPress(request.id)}
+              activeOpacity={0.85}
             >
-              <Text style={styles.respondButtonText}>Details</Text>
+              <View style={styles.gridRequestTopRow}>
+                <Text style={styles.gridProductCategory} numberOfLines={1}>{normalizeCategory(request.category || request.details?.category)}</Text>
+                <Text style={styles.gridRequestTime}>{formatTimeAgo(request.created_at)}</Text>
+              </View>
+              <Text style={styles.gridProductTitle} numberOfLines={2}>{getRequestTitle(request)}</Text>
+              <View style={styles.gridSellerInfoRow}>
+                <Image
+                  source={{ uri: request.profiles?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }}
+                  style={styles.gridSellerAvatar}
+                />
+                {request.profiles?.full_name && (
+                  <Text style={styles.gridSellerName}>{request.profiles.full_name}</Text>
+                )}
+              </View>
+              <TouchableOpacity
+                style={styles.gridRequestButton}
+                onPress={() => handleRequestPress(request.id)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.gridRequestButtonText}>Details</Text>
+              </TouchableOpacity>
             </TouchableOpacity>
-          </View>
-        ))}
-      </View>
+          );
+        }}
+        columnWrapperStyle={{ justifyContent: 'space-between', marginBottom: 12 }}
+        contentContainerStyle={{ paddingHorizontal: 8, paddingTop: 8 }}
+      />
     );
   };
 
@@ -952,9 +941,7 @@ export default function HomeScreen() {
       </View>
       {/* החלק שמתחלף וניתן לגלילה */}
       {showRequests ? (
-        <ScrollView contentContainerStyle={{ padding: 16 }}>
-          {renderRequests()}
-        </ScrollView>
+        renderRequests()
       ) : (
         <FlatList
           data={getFilteredProducts()}
@@ -1415,12 +1402,14 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     marginBottom: 18,
     width: '48%',
-    alignItems: 'center',
     padding: 14,
     shadowColor: '#000',
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 2,
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    alignItems: 'stretch',
   },
   gridProductImage: {
     width: '100%',
@@ -1454,6 +1443,7 @@ const styles = StyleSheet.create({
   gridSellerInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
   },
   gridSellerAvatar: {
@@ -1497,5 +1487,67 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     textAlign: 'center',
     letterSpacing: 0.2,
+  },
+  gridProductCategory: {
+    fontSize: 13,
+    color: '#0E2657',
+    fontFamily: 'Montserrat-Medium',
+    textAlign: 'left',
+    fontWeight: '500',
+  },
+  gridRequestTime: {
+    fontSize: 11,
+    color: '#888',
+    fontFamily: 'Montserrat-Regular',
+    marginLeft: 6,
+    textAlign: 'right',
+  },
+  gridRequestTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 4,
+  },
+  gridRequestButton: {
+    backgroundColor: '#0E2657',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    alignSelf: 'center',
+    shadowColor: '#0E2657',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+    minHeight: 40,
+    marginBottom: 4,
+  },
+  gridRequestButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontFamily: 'Montserrat-Bold',
+    letterSpacing: 0.5,
+  },
+  detailsModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  detailsModalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: '80%',
+  },
+  detailsModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E3EAF3',
   },
 });

@@ -1,18 +1,16 @@
-import React from 'react';
-import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Modal, Linking } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Modal, Linking, Alert, Animated, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlatList } from 'react-native';
 import { useProfile } from '../../context/ProfileContext';
-<<<<<<< HEAD
-const userDefaultImage = require('../../../assets/images/user.jpg');
-=======
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
 import { useFocusEffect } from '@react-navigation/native';
->>>>>>> c27dc2f45820f739c1a940e45ca57069b1c88881
+import { CategorySpecsDisplay } from '../../../components/CategorySpecsDisplay';
+import { CATEGORY_ICONS } from '../../../components/CategoryIcons';
+const userDefaultImage = require('../../../assets/images/user.jpg');
 
 const GRID_SPACING = 8; // Increased spacing between items
 const NUM_COLUMNS = 3;
@@ -74,6 +72,8 @@ export default function ProfileScreen() {
   const [requests, setRequests] = useState<any[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [hasExchangeCertificate, setHasExchangeCertificate] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   React.useEffect(() => {
     if (user?.id) {
@@ -244,7 +244,9 @@ export default function ProfileScreen() {
                 .slice(rowIndex * NUM_COLUMNS, (rowIndex + 1) * NUM_COLUMNS)
                 .map((product, colIndex) => (
                   <View key={colIndex} style={styles.gridItem}>
-                    {product.id ? renderProductItem(product) : null}
+                    {product.id ? renderProductItem(product) : (
+                      <AddProductButton onPress={() => router.push('/add')} />
+                    )}
                   </View>
                 ))}
             </View>
@@ -284,6 +286,60 @@ export default function ProfileScreen() {
       setRequests([]);
     } finally {
       setLoadingRequests(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'requests' && user) {
+      fetchUserRequests();
+    }
+  }, [activeTab, user]);
+
+  const handleRequestPress = (req: any) => {
+    setSelectedRequest(req);
+    setShowDetailsModal(true);
+  };
+
+  const handleDeleteRequest = async (requestId: string) => {
+    Alert.alert(
+      'Delete Request',
+      'Are you sure you want to delete this request?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            await fetch(`${SUPABASE_URL}/rest/v1/requests?id=eq.${requestId}`, {
+              method: 'DELETE',
+              headers: {
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+              },
+            });
+            fetchUserRequests();
+          },
+        },
+      ]
+    );
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) {
+      return 'Just now';
+    } else if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60);
+      return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
+    } else if (diffInSeconds < 86400) {
+      const hours = Math.floor(diffInSeconds / 3600);
+      return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+    } else {
+      const days = Math.floor(diffInSeconds / 86400);
+      return `${days} ${days === 1 ? 'day' : 'days'} ago`;
     }
   };
 
@@ -350,11 +406,7 @@ export default function ProfileScreen() {
               <Text style={styles.statNumber}>{totalProducts}</Text>
               <Text style={styles.statLabel}>Products</Text>
             </View>
-<<<<<<< HEAD
-            <TouchableOpacity style={styles.statItem} onPress={handleShowTrustMarks}>
-=======
             <TouchableOpacity style={styles.statItem} onPress={() => router.push('/profile/trustmarks')}>
->>>>>>> c27dc2f45820f739c1a940e45ca57069b1c88881
               <Text style={styles.statNumber}>{profile.trust_count ?? 0}</Text>
               <Text style={styles.statLabel}>TrustMarks</Text>
             </TouchableOpacity>
@@ -409,24 +461,66 @@ export default function ProfileScreen() {
               <Text style={{ fontFamily: 'Montserrat-Bold', fontSize: 18, color: '#0E2657', marginTop: 32, textAlign: 'center' }}>No requests found</Text>
             ) : (
               requests.map((req) => (
-                <View key={req.id} style={[styles.productCard, { flexDirection: 'column', alignItems: 'flex-start', marginBottom: 16, minWidth: '100%', maxWidth: '100%' }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                    <Ionicons name="list" size={22} color="#6C5CE7" style={{ marginRight: 10 }} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontFamily: 'Montserrat-Bold', color: '#0E2657', fontSize: 15, marginBottom: 2 }}>{req.details.weight_from}-{req.details.weight_to || req.details.weight_from}ct, {req.details.clarity}, Color {req.details.color}</Text>
-                      {req.details.price && (
-                        <Text style={{ fontFamily: 'Montserrat-Medium', color: '#6C5CE7', fontSize: 14, marginBottom: 2 }}>Budget: {req.details.price} ₪</Text>
-                      )}
-                    </View>
-                    <View style={{ borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4, alignSelf: 'flex-start', marginLeft: 8, minWidth: 60, alignItems: 'center', backgroundColor: req.details.status === 'active' ? '#4CAF50' : '#888' }}>
-                      <Text style={{ color: '#fff', fontFamily: 'Montserrat-Bold', fontSize: 13 }}>{req.details.status === 'active' ? 'Active' : req.details.status}</Text>
-                    </View>
+                <View key={req.id} style={[styles.productCard, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, minWidth: '100%', maxWidth: '100%' }]}> 
+                  <View style={{ marginRight: 12 }}>
+                    {CATEGORY_ICONS[req.category] ? CATEGORY_ICONS[req.category]() : null}
                   </View>
-                  <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 6, width: '100%' }}>
-                    <Text style={{ color: '#7B8CA6', fontFamily: 'Montserrat-Regular', fontSize: 13 }}>{new Date(req.created_at).toLocaleDateString()}</Text>
-                  </View>
+                  <TouchableOpacity style={{ flex: 1 }} onPress={() => handleRequestPress(req)}>
+                    <Text style={{ color: '#7B8CA6', fontFamily: 'Montserrat-Bold', fontSize: 14, marginBottom: 4 }}>
+                      {req.category}
+                    </Text>
+                    <Text style={{ fontFamily: 'Montserrat-Bold', color: '#0E2657', fontSize: 15, marginBottom: 2 }}>
+                      {req.title || 'No Title'}
+                    </Text>
+                    {req.description && (
+                      <Text style={{ fontFamily: 'Montserrat-Regular', color: '#4A5568', fontSize: 14, marginBottom: 2 }}>
+                        {req.description}
+                      </Text>
+                    )}
+                    <Text style={{ color: '#7B8CA6', fontFamily: 'Montserrat-Regular', fontSize: 13 }}>
+                      {formatTimeAgo(req.created_at)}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDeleteRequest(req.id)} style={{ marginLeft: 12 }}>
+                    <Ionicons name="trash" size={20} color="#FF3B30" />
+                  </TouchableOpacity>
                 </View>
               ))
+            )}
+            {/* מודל פרטי בקשה */}
+            {showDetailsModal && selectedRequest && (
+              <Modal
+                visible={showDetailsModal}
+                animationType="slide"
+                transparent
+                onRequestClose={() => setShowDetailsModal(false)}
+              >
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+                  <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 0, width: '95%', maxHeight: '90%' }}>
+                    <TouchableOpacity onPress={() => setShowDetailsModal(false)} style={{ position: 'absolute', top: 12, right: 12, zIndex: 2 }}>
+                      <Ionicons name="close" size={24} color="#0E2657" />
+                    </TouchableOpacity>
+                    <ScrollView style={{ marginTop: 24 }} contentContainerStyle={{ paddingBottom: 24, paddingHorizontal: 18 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                        <Image
+                          source={{ uri: profile.avatar_url || 'https://www.gravatar.com/avatar/?d=mp' }}
+                          style={{ width: 44, height: 44, borderRadius: 22, marginRight: 12 }}
+                        />
+                        <View>
+                          <Text style={{ fontFamily: 'Montserrat-Bold', fontSize: 16, color: '#0E2657' }}>{profile.full_name}</Text>
+                          <Text style={{ fontFamily: 'Montserrat-Regular', fontSize: 13, color: '#7B8CA6' }}>{formatTimeAgo(selectedRequest.created_at)}</Text>
+                        </View>
+                      </View>
+                      <Text style={{ fontFamily: 'Montserrat-Bold', fontSize: 18, color: '#0E2657', marginBottom: 4 }}>{selectedRequest.title || 'No Title'}</Text>
+                      {selectedRequest.description && (
+                        <Text style={{ fontFamily: 'Montserrat-Regular', color: '#4A5568', fontSize: 15, marginBottom: 12 }}>{selectedRequest.description}</Text>
+                      )}
+                      <Text style={{ fontFamily: 'Montserrat-Bold', fontSize: 16, color: '#0E2657', marginBottom: 8 }}>Specifications</Text>
+                      <CategorySpecsDisplay category={selectedRequest.category} details={selectedRequest.details} />
+                    </ScrollView>
+                  </View>
+                </View>
+              </Modal>
             )}
           </View>
         )}
@@ -710,7 +804,7 @@ const styles = StyleSheet.create({
     width: ITEM_WIDTH,
     height: ITEM_WIDTH,
     marginBottom: GRID_SPACING,
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#F5F8FC',
     borderRadius: 8,
     overflow: 'hidden',
   },
@@ -776,3 +870,68 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 });
+
+const AddProductButton = ({ onPress }: { onPress: () => void }) => {
+  const scale = React.useRef(new Animated.Value(1)).current;
+  const [pressed, setPressed] = React.useState(false);
+
+  const handlePressIn = () => {
+    setPressed(true);
+    Animated.spring(scale, {
+      toValue: 0.93,
+      useNativeDriver: true,
+      speed: 30,
+      bounciness: 6,
+    }).start();
+  };
+  const handlePressOut = () => {
+    setPressed(false);
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 30,
+      bounciness: 6,
+    }).start();
+  };
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={{flex:1, justifyContent:'center', alignItems:'center', width:'100%', height:'100%'}}
+    >
+      <Animated.View style={{
+        backgroundColor: pressed ? '#E3EAF3' : '#F5F8FC',
+        borderRadius: 12,
+        width: '90%',
+        height: '90%',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#E3EAF3',
+        shadowColor: '#0E2657',
+        shadowOpacity: 0.04,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 2 },
+        elevation: 2,
+        transform: [{ scale }],
+      }}>
+        <View style={{
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          backgroundColor: '#fff',
+          borderWidth: 1.5,
+          borderColor: '#E3EAF3',
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginBottom: 6,
+        }}>
+          <Ionicons name="add" size={28} color="#B0B8C9" />
+        </View>
+        <Text style={{fontFamily:'Montserrat-Medium', color:'#B0B8C9', fontSize:13}}>Add Product</Text>
+      </Animated.View>
+    </Pressable>
+  );
+};
