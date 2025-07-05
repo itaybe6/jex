@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Alert, Platform, Linking } from 'react-native';
 import { createProduct, SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseApi';
 import { useAuth } from '@/hooks/useAuth';
 import { decode } from 'base64-arraybuffer';
@@ -129,35 +130,155 @@ export default function useProductForm() {
   };
   const handleImageChange = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        alert('We need access to your gallery to upload images');
+      // Check current image count first
+      if (images.length >= 5) {
+        Alert.alert(
+          'Image Limit',
+          'You can upload up to 5 images only. Please remove an existing image before adding a new one.',
+          [{ text: 'OK' }]
+        );
         return;
       }
 
-      let result = await ImagePicker.launchImageLibraryAsync({
+      // Show options to user
+      Alert.alert(
+        'Select Image Source',
+        'Where would you like to pick an image from?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Gallery', onPress: () => setTimeout(() => pickFromGallery(), 100) },
+          { text: 'Camera', onPress: () => setTimeout(() => pickFromCamera(), 100) }
+        ]
+      );
+    } catch (error) {
+      console.error('Error in handleImageChange:', error);
+      Alert.alert('Error', 'An error occurred while picking images. Please try again.', [{ text: 'OK' }]);
+    }
+  };
+
+  const pickFromGallery = async () => {
+    try {
+      // Request gallery permissions
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'We need access to your gallery to upload images. Please enable the permission in your device settings.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Settings', onPress: () => Linking.openSettings() }
+          ]
+        );
+        return;
+      }
+
+      // Configure ImagePicker options based on platform
+      const pickerOptions: any = {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
+        // allowsEditing: true, // Disabled due to iOS bug: base64 is not always returned when editing is enabled
         aspect: [4, 3],
         quality: 0.8,
         base64: true,
-        allowsMultipleSelection: true,
-        selectionLimit: 5,
-      });
+        selectionLimit: 5 - images.length, // Limit based on remaining slots
+      };
 
-      if (!result.canceled && result.assets) {
+      // Add allowsMultipleSelection only for supported platforms
+      if (Platform.OS === 'android' || (Platform.OS === 'ios' && parseInt(Platform.Version as string, 10) >= 14)) {
+        pickerOptions.allowsMultipleSelection = true;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
         const newImages = result.assets
-          .filter(asset => asset.base64)
+          .filter(asset => asset.base64 && asset.uri)
           .map(asset => ({
             uri: asset.uri,
             base64: asset.base64!
           }));
         
-        setImages(prev => [...prev, ...newImages]);
+        if (newImages.length > 0) {
+          setImages(prev => [...prev, ...newImages]);
+        } else {
+          Alert.alert(
+            'Error',
+            'Could not process the selected images. Please try again.',
+            [{ text: 'OK' }]
+          );
+        }
       }
     } catch (error) {
-      alert('An error occurred while selecting images. Please try again.');
+      console.error('Error in pickFromGallery:', error);
+      handleImageError(error);
     }
+  };
+
+  const pickFromCamera = async () => {
+    try {
+      // Request camera permissions
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'We need access to your camera to take a photo. Please enable the permission in your device settings.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Settings', onPress: () => Linking.openSettings() }
+          ]
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        // allowsEditing: true, // Disabled due to iOS bug: base64 is not always returned when editing is enabled
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        if (asset.base64 && asset.uri) {
+          const newImage = {
+            uri: asset.uri,
+            base64: asset.base64
+          };
+          setImages(prev => [...prev, newImage]);
+        } else {
+          Alert.alert(
+            'Error',
+            'Could not process the captured image. Please try again.',
+            [{ text: 'OK' }]
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error in pickFromCamera:', error);
+      handleImageError(error);
+    }
+  };
+
+  const handleImageError = (error: any) => {
+    // Provide specific error messages based on error type
+    let errorMessage = 'An error occurred while picking images. Please try again.';
+    
+    if (error instanceof Error) {
+      if (error.message.includes('permission')) {
+        errorMessage = 'No permission to access camera/gallery. Please enable permissions in your device settings.';
+      } else if (error.message.includes('cancelled')) {
+        // User cancelled, no need to show error
+        return;
+      } else if (error.message.includes('storage')) {
+        errorMessage = 'Not enough storage space on device. Please free up space and try again.';
+      } else if (error.message.includes('camera')) {
+        errorMessage = 'No access to camera. Please check that the camera is available and try again.';
+      }
+    }
+    
+    Alert.alert('Error', errorMessage, [{ text: 'OK' }]);
   };
 
   const removeImage = (index: number) => {
@@ -255,7 +376,24 @@ export default function useProductForm() {
     const isValid = validate();
     console.log('Validation result:', isValid);
     console.log('Errors:', errors, dynamicErrors);
-    if (!isValid) return;
+    if (!isValid) {
+      Alert.alert(
+        'Error in Data',
+        'Please check that all required fields are filled and try again.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
+    if (!user?.id) {
+      Alert.alert(
+        'Error in Authorization',
+        'You do not have permission to perform this action. Please log in again.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
     try {
       setLoading(true);
       
@@ -275,16 +413,22 @@ export default function useProductForm() {
       console.log('accessToken:', accessToken);
       console.log('productInsertObj:', productInsertObj);
 
-      console.log('--- יצירת מוצר חדש ---');
+      console.log('--- Creating New Product ---');
       const productArr = await createProduct(productInsertObj, accessToken);
       const product = Array.isArray(productArr) ? productArr[0] : productArr;
       if (!product) throw new Error('Product insert failed');
 
       // Upload all images first
       const uploadedImages = [];
-      for (const image of images) {
+      let imageUploadErrors = 0;
+      
+      for (let i = 0; i < images.length; i++) {
+        const image = images[i];
         try {
+          console.log(`Uploading image ${i + 1}/${images.length}`);
+          
           const imagePath = `${user?.id}/${product.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
+          
           // Upload image to storage via Supabase Storage REST API
           const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${imagePath}`, {
             method: 'POST',
@@ -295,14 +439,18 @@ export default function useProductForm() {
             },
             body: decode(image.base64)
           });
+          
           if (!uploadRes.ok) {
             const err = await uploadRes.text();
-            console.error('Error uploading image:', err);
+            console.error(`Error uploading image ${i + 1}:`, err);
+            imageUploadErrors++;
             continue;
           }
+          
           // Get public URL (Supabase public URL is predictable)
           const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/product-images/${imagePath}`;
           uploadedImages.push(publicUrl);
+          
           // Create product_images record
           const imageRecordRes = await fetch(`${SUPABASE_URL}/rest/v1/product_images`, {
             method: 'POST',
@@ -317,13 +465,25 @@ export default function useProductForm() {
               image_url: publicUrl
             })
           });
+          
           if (!imageRecordRes.ok) {
             const err = await imageRecordRes.text();
-            console.error('Error creating image record:', err);
+            console.error(`Error creating image record for image ${i + 1}:`, err);
+            imageUploadErrors++;
           }
         } catch (imageError) {
-          console.error('Error processing image:', imageError);
+          console.error(`Error processing image ${i + 1}:`, imageError);
+          imageUploadErrors++;
         }
+      }
+      
+      // Show warning if some images failed to upload
+      if (imageUploadErrors > 0) {
+        Alert.alert(
+          'Warning',
+          `${imageUploadErrors} images failed to upload. The product will be saved with the uploaded images.`,
+          [{ text: 'Continue' }]
+        );
       }
 
       // Insert specs data
@@ -493,8 +653,23 @@ export default function useProductForm() {
       resetForm();
       router.replace('/');
     } catch (error) {
-      console.error('שגיאה ביצירת מוצר:', error);
-      alert('An error occurred while creating the product. Please try again.');
+      console.error('Error in Creating Product:', error);
+      
+      let errorMessage = 'An error occurred while creating the product. Please try again.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMessage = 'Network connection error. Please check your connection and try again.';
+        } else if (error.message.includes('permission') || error.message.includes('unauthorized')) {
+          errorMessage = 'No permission to perform this action. Please log in again.';
+        } else if (error.message.includes('storage') || error.message.includes('quota')) {
+          errorMessage = 'Data storage error. Please try again later.';
+        } else if (error.message.includes('validation')) {
+          errorMessage = 'The entered data is invalid. Please check the details and try again.';
+        }
+      }
+      
+      Alert.alert('Error', errorMessage, [{ text: 'OK' }]);
     } finally {
       setLoading(false);
     }

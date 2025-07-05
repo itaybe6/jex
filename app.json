@@ -17,21 +17,34 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "נדרש אישור גישה לגלריה כדי להעלות תמונות"
+        "NSPhotoLibraryUsageDescription": "נדרש אישור גישה לגלריה כדי להעלות תמונות",
+        "NSCameraUsageDescription": "נדרש אישור גישה למצלמה כדי לצלם תמונות"
       }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "scheme": "jex-mobile-new",
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "נדרש אישור גישה לגלריה כדי להעלות תמונות",
+          "cameraPermission": "נדרש אישור גישה למצלמה כדי לצלם תמונות"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
