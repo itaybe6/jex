@@ -57,10 +57,23 @@ const AddProductForm = () => {
       await handleSubmit();
     } catch (error) {
       console.error('Error submitting product:', error);
+      
+      let errorMessage = 'שגיאה בשליחת המוצר. אנא בדוק שכל השדות הנדרשים מלאים ונסה שוב.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('network')) {
+          errorMessage = 'בעיית חיבור לאינטרנט. אנא בדוק את החיבור ונסה שוב.';
+        } else if (error.message.includes('permission')) {
+          errorMessage = 'אין הרשאה לבצע פעולה זו. אנא בדוק את ההרשאות.';
+        } else if (error.message.includes('storage')) {
+          errorMessage = 'בעיה באחסון התמונות. אנא נסה שוב.';
+        }
+      }
+      
       Alert.alert(
-        'Error',
-        'Failed to submit the product. Please check all required fields and try again.',
-        [{ text: 'OK' }]
+        'שגיאה',
+        errorMessage,
+        [{ text: 'אישור' }]
       );
     }
   };

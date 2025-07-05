@@ -186,8 +186,6 @@ export async function createAndSendNotification(notificationData: {
     throw new Error('Failed to get the created notification record back.');
   }
 
-  console.log(`Notification ${newNotification.id} created successfully.`);
-
   // 2. Call the RPC function to trigger the push notification for the newly created record.
   try {
     const { data: rpcData, error: rpcError } = await supabase.rpc('trigger_push_notification', {

@@ -12,7 +12,6 @@ export interface PushNotificationService {
 class PushNotificationServiceImpl implements PushNotificationService {
   async registerForPushNotifications(): Promise<string | null> {
     if (Platform.OS === 'web') {
-      console.log('Push notifications not supported on web');
       return null;
     }
 
@@ -28,7 +27,6 @@ class PushNotificationServiceImpl implements PushNotificationService {
       }
 
       if (finalStatus !== 'granted') {
-        console.log('Failed to get push token for push notification!');
         return null;
       }
 
@@ -45,12 +43,9 @@ class PushNotificationServiceImpl implements PushNotificationService {
           token = await Notifications.getExpoPushTokenAsync();
         }
       } catch (error) {
-        console.log('Error getting push token with projectId, trying without:', error);
         // Final fallback
         token = await Notifications.getExpoPushTokenAsync();
       }
-
-      console.log('Expo Push Token:', token.data);
 
       // Set up notification channel for Android
       if (Platform.OS === 'android') {
@@ -64,17 +59,12 @@ class PushNotificationServiceImpl implements PushNotificationService {
 
       return token.data;
     } catch (error) {
-      console.error('Error registering for push notifications:', error);
-      
       // Provide more specific error messages
       if (error instanceof Error) {
         if (error.message.includes('aps-environment')) {
-          console.log('iOS Push Notification Certificate not configured. This is normal in development.');
-          console.log('For production, you need to configure push notifications in Apple Developer Console.');
           return null;
         }
         if (error.message.includes('projectId')) {
-          console.log('Project ID not found. This is normal in development.');
           return null;
         }
       }
@@ -89,15 +79,8 @@ class PushNotificationServiceImpl implements PushNotificationService {
       const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
       if (!baseUrl || !anonKey) {
-        console.error('Missing Supabase environment variables');
         throw new Error('Missing Supabase configuration');
       }
-
-      console.log('🔑 Saving push token to server:');
-      console.log('   User ID:', userId);
-      console.log('   Token:', token.substring(0, 20) + '...');
-      console.log('   Token length:', token.length);
-      console.log('   App type:', __DEV__ ? 'Development' : 'Production');
 
       const response = await fetch(`${baseUrl}/rest/v1/profiles?id=eq.${userId}`, {
         method: 'PATCH',
@@ -111,14 +94,10 @@ class PushNotificationServiceImpl implements PushNotificationService {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Failed to save push token:', errorText);
         throw new Error('Failed to save push token to server');
       }
 
-      console.log('✅ Push token saved successfully to server');
     } catch (error) {
-      console.error('Error saving push token:', error);
       throw error;
     }
   }
@@ -137,12 +116,10 @@ class PushNotificationServiceImpl implements PushNotificationService {
 
     // Handle notification received
     Notifications.addNotificationReceivedListener((notification) => {
-      console.log('Notification received:', notification);
     });
 
     // Handle notification response (when user taps on notification)
     Notifications.addNotificationResponseReceivedListener((response) => {
-      console.log('Notification response:', response);
       
       const data = response.notification.request.content.data;
       
@@ -150,7 +127,6 @@ class PushNotificationServiceImpl implements PushNotificationService {
       if (data?.productId) {
         // Navigate to product page
         // You'll need to implement navigation logic here
-        console.log('Navigate to product:', data.productId);
       }
     });
   }
@@ -161,7 +137,6 @@ class PushNotificationServiceImpl implements PushNotificationService {
       const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
       if (!baseUrl || !anonKey) {
-        console.error('Missing Supabase environment variables');
         return null;
       }
 
@@ -174,24 +149,14 @@ class PushNotificationServiceImpl implements PushNotificationService {
       });
 
       if (!response.ok) {
-        console.error('Failed to fetch current token');
         return null;
       }
 
       const data = await response.json();
       const token = data[0]?.push_token;
       
-      if (token) {
-        console.log('📱 Current token in server:');
-        console.log('   Token:', token.substring(0, 20) + '...');
-        console.log('   Token length:', token.length);
-      } else {
-        console.log('❌ No token found in server');
-      }
-      
       return token || null;
     } catch (error) {
-      console.error('Error fetching current token:', error);
       return null;
     }
   }

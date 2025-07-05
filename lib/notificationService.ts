@@ -22,7 +22,6 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   }
 
   const token = (await Notifications.getExpoPushTokenAsync()).data;
-  console.log('Expo Push Token:', token);
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
