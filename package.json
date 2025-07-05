@@ -15,11 +15,9 @@
     "@expo/metro-config": "^0.20.12",
     "@expo/vector-icons": "^14.1.0",
     "@react-native-async-storage/async-storage": "2.1.2",
-
     "@react-native-community/datetimepicker": "8.3.0",
     "@react-native-community/slider": "^4.5.7",
     "@react-native-picker/picker": "^2.11.1",
-
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",
@@ -40,6 +38,7 @@
     "expo-splash-screen": "~0.30.8",
     "expo-status-bar": "~2.2.3",
     "expo-web-browser": "~14.2.0",
+    "framer-motion": "^12.23.0",
     "lottie-react-native": "7.2.2",
     "metro": "^0.82.2",
     "metro-core": "^0.82.2",
