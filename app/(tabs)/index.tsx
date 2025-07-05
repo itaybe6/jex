@@ -20,6 +20,8 @@ import DealOfTheDayIconsRow from '../../components/DealOfTheDayIconsRow';
 import { CategorySpecsDisplay } from '../../components/CategorySpecsDisplay';
 import { FILTER_FIELDS_BY_CATEGORY, FilterField } from '../../constants/filters';
 import { registerForPushNotificationsAsync } from '@/lib/notificationService';
+import TabToggle from '@/components/TabToggle';
+import { CATEGORY_ICONS } from '@/components/CategoryIcons';
 
 const GRID_SPACING = 2;
 const NUM_COLUMNS = 3;
@@ -218,16 +220,26 @@ const ROUTES = {
 // Helper to normalize category names for mapping
 function normalizeCategory(rawCategory: string | undefined): string {
   if (!rawCategory) return 'Loose Diamonds';
-  if (rawCategory === 'Loose Diamond') return 'Loose Diamonds';
-  if (rawCategory === 'Gem') return 'Gems';
-  if (rawCategory === 'Ring') return 'Ring';
-  if (rawCategory === 'Necklace') return 'Necklace';
-  if (rawCategory === 'Earring' || rawCategory === 'Earrings') return 'Earrings';
-  if (rawCategory === 'Bracelet') return 'Bracelet';
-  if (rawCategory === 'Special Piece' || rawCategory === 'Special Pieces') return 'Special Pieces';
-  if (rawCategory === 'Watch' || rawCategory === 'Watches') return 'Watches';
-  // Add more rules as needed
-  return rawCategory;
+  const map: Record<string, string> = {
+    'ring': 'Rings',
+    'rings': 'Rings',
+    'bracelet': 'Bracelets',
+    'bracelets': 'Bracelets',
+    'necklace': 'Necklaces',
+    'necklaces': 'Necklaces',
+    'earring': 'Earrings',
+    'earrings': 'Earrings',
+    'special piece': 'Special Pieces',
+    'special pieces': 'Special Pieces',
+    'loose diamond': 'Loose Diamonds',
+    'loose diamonds': 'Loose Diamonds',
+    'gem': 'Gems',
+    'gems': 'Gems',
+    'watch': 'Watches',
+    'watches': 'Watches',
+  };
+  const key = rawCategory.trim().toLowerCase();
+  return map[key] || rawCategory;
 }
 
 // Map request.details fields to the mapped keys for display
@@ -328,6 +340,7 @@ export default function HomeScreen() {
 
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [filters, setFilters] = useState<FilterParams[]>([]);
+  const [activeTab, setActiveTab] = React.useState<string>('forYou');
 
   useEffect(() => {
     fetchProducts();
@@ -621,14 +634,12 @@ export default function HomeScreen() {
                 </View>
               </TouchableOpacity>
               <View style={styles.detailSection}>
-                <Text style={[styles.detailTitle, {marginBottom: 2}]}>
+                <Text style={[styles.detailTitle, {marginBottom: 2}]}> 
                   {getRequestTitle(selectedRequest)}
                 </Text>
-                {(selectedRequest.details?.description || selectedRequest.details?.text) && (
-                  <Text style={[styles.detailValue, {marginBottom: 12, fontWeight: '400', color: '#4A5568'}]}>
-                    {selectedRequest.details?.description || selectedRequest.details?.text}
-                  </Text>
-                )}
+                <Text style={[styles.detailValue, {marginBottom: 12, fontWeight: '400', color: '#4A5568'}]}>
+                  {selectedRequest.details?.description || selectedRequest.details?.text || 'No description'}
+                </Text>
               </View>
               <View style={styles.detailSection}>
                 <Text style={styles.detailTitle}>Specifications</Text>
@@ -669,12 +680,20 @@ export default function HomeScreen() {
           return (
             <TouchableOpacity
               key={request.id}
-              style={styles.gridProductItem}
+              style={[styles.gridProductItem, { position: 'relative' }]}
               onPress={() => handleRequestPress(request.id)}
               activeOpacity={0.85}
             >
-              <View style={styles.gridRequestTopRow}>
-                <Text style={styles.gridProductCategory} numberOfLines={1}>{normalizeCategory(request.category || request.details?.category)}</Text>
+              <View style={[styles.gridRequestTopRow, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}> 
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text
+                    style={[styles.gridProductCategory, { fontSize: 13, maxWidth: 90 }]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {normalizeCategory(request.category || request.details?.category)}
+                  </Text>
+                </View>
                 <Text style={styles.gridRequestTime}>{formatTimeAgo(request.created_at)}</Text>
               </View>
               <Text style={styles.gridProductTitle} numberOfLines={2}>{getRequestTitle(request)}</Text>
@@ -687,13 +706,19 @@ export default function HomeScreen() {
                   <Text style={styles.gridSellerName}>{request.profiles.full_name}</Text>
                 )}
               </View>
-              <TouchableOpacity
-                style={styles.gridRequestButton}
-                onPress={() => handleRequestPress(request.id)}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.gridRequestButtonText}>Details</Text>
-              </TouchableOpacity>
+              {/* Button and category icon row */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 8 }}>
+                <TouchableOpacity
+                  style={styles.gridRequestButton}
+                  onPress={() => handleRequestPress(request.id)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.gridRequestButtonText}>Details</Text>
+                </TouchableOpacity>
+                <View style={{ marginLeft: 8, backgroundColor: '#E3EAF3', borderRadius: 16, width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}>
+                  {CATEGORY_ICONS[normalizeCategory(request.category || request.details?.category)]?.({ size: 20, color: '#0E2657' } as any)}
+                </View>
+              </View>
             </TouchableOpacity>
           );
         }}
@@ -910,37 +935,25 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      <View style={styles.header}>
-        {/* Notification icon can be added here if needed */}
-      </View>
-      {/* החלק העליון - תמיד מוצג */}
-      {/* <View style={{ marginBottom: 20 }}>
-        <DealOfTheDayIconsRow />
-      </View> */}
-      <View style={styles.headerButtons}>
-        <View style={styles.tabButtons}>
-          <TouchableOpacity 
-            style={[styles.tabButton, !showRequests && styles.tabButtonActive]}
-            onPress={() => setShowRequests(false)}
-          >
-            <Text style={[styles.tabButtonText, !showRequests && styles.tabButtonTextActive]}>For You</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tabButton, showRequests && styles.tabButtonActive]}
-            onPress={() => setShowRequests(true)}
-          >
-            <Text style={[styles.tabButtonText, showRequests && styles.tabButtonTextActive]}>Requests</Text>
-          </TouchableOpacity>
+      <View style={{ position: 'relative', marginBottom: 0, paddingHorizontal: 8 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+          <TabToggle
+            tabs={[
+              { key: 'forYou', label: 'For You' },
+              { key: 'requests', label: 'Requests' },
+            ]}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
         </View>
         <TouchableOpacity
-          style={styles.filterButton}
+          style={[styles.filterButton, { position: 'absolute', right: 8, top: '50%', transform: [{ translateY: -20 }] }]}
           onPress={() => setShowFilterModal(true)}
         >
           <Ionicons name="filter" size={24} color="#0E2657" />
         </TouchableOpacity>
       </View>
-      {/* החלק שמתחלף וניתן לגלילה */}
-      {showRequests ? (
+      {activeTab === 'requests' ? (
         renderRequests()
       ) : (
         <FlatList

@@ -103,6 +103,7 @@ export default function AddRequestScreen() {
         return;
       }
       let details: any = { ...selectedFields };
+      details.description = description;
       setLoading(true);
       const localTime = new Date();
       const israelTime = new Date(localTime.getTime() + (3 * 60 * 60 * 1000));

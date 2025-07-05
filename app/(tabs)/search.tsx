@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, FlatList, Image, TouchableOpacity, A
 import { Ionicons } from '@expo/vector-icons';
 // import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
+import TabToggle from '@/components/TabToggle';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -40,7 +41,7 @@ export default function SearchScreen() {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [searchMode, setSearchMode] = useState<SearchMode>(SEARCH_MODES.USERS);
+  const [activeTab, setActiveTab] = useState<SearchMode>(SEARCH_MODES.USERS);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -56,16 +57,16 @@ export default function SearchScreen() {
       setFilteredProducts([]);
       return;
     }
-    if (searchMode === SEARCH_MODES.USERS) {
+    if (activeTab === SEARCH_MODES.USERS) {
       searchProfiles();
     } else {
       searchProducts();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedQuery, searchMode]);
+  }, [debouncedQuery, activeTab]);
 
   useEffect(() => {
-    if (searchMode === SEARCH_MODES.PRODUCTS && debouncedQuery) {
+    if (activeTab === SEARCH_MODES.PRODUCTS && debouncedQuery) {
       const q = debouncedQuery.toLowerCase();
       setFilteredProducts(
         products.filter(
@@ -77,7 +78,7 @@ export default function SearchScreen() {
     } else {
       setFilteredProducts(products);
     }
-  }, [products, debouncedQuery, searchMode]);
+  }, [products, debouncedQuery, activeTab]);
 
   const searchProfiles = async () => {
     try {
@@ -182,26 +183,19 @@ export default function SearchScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        
-        <View style={styles.switcherContainer}>
-          <TouchableOpacity
-            style={[styles.switcherButton, searchMode === SEARCH_MODES.USERS && styles.switcherButtonActive]}
-            onPress={() => setSearchMode(SEARCH_MODES.USERS)}
-          >
-            <Text style={[styles.switcherText, searchMode === SEARCH_MODES.USERS && styles.switcherTextActive]}>Users</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.switcherButton, searchMode === SEARCH_MODES.PRODUCTS && styles.switcherButtonActive]}
-            onPress={() => setSearchMode(SEARCH_MODES.PRODUCTS)}
-          >
-            <Text style={[styles.switcherText, searchMode === SEARCH_MODES.PRODUCTS && styles.switcherTextActive]}>Products</Text>
-          </TouchableOpacity>
-        </View>
+        <TabToggle
+          tabs={[
+            { key: SEARCH_MODES.USERS, label: 'Users' },
+            { key: SEARCH_MODES.PRODUCTS, label: 'Products' },
+          ]}
+          activeTab={activeTab}
+          onTabChange={tab => setActiveTab(tab as SearchMode)}
+        />
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder={searchMode === SEARCH_MODES.USERS ? "Search users by name..." : "Search products by keyword..."}
+            placeholder={activeTab === SEARCH_MODES.USERS ? "Search users by name..." : "Search products by keyword..."}
             value={searchQuery}
             onChangeText={setSearchQuery}
             textAlign="left"
@@ -217,54 +211,24 @@ export default function SearchScreen() {
         </View>
       </View>
 
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-        </View>
-      ) : searchMode === SEARCH_MODES.USERS ? (
-        profiles.length > 0 ? (
-          <FlatList
-            data={profiles}
-            renderItem={renderProfileItem}
-            keyExtractor={item => item.id}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-          />
-        ) : searchQuery.length > 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="person" size={48} color="#ccc" />
-            <Text style={styles.emptyText}>No users found</Text>
-            <Text style={styles.emptySubtext}>Try searching for something else</Text>
-          </View>
-        ) : (
-          <View style={styles.initialContainer}>
-            <Ionicons name="search" size={48} color="#ccc" />
-            <Text style={styles.initialText}>Find Users</Text>
-            <Text style={styles.initialSubtext}>Enter a name to start searching</Text>
-          </View>
-        )
+      {activeTab === SEARCH_MODES.USERS ? (
+        <FlatList
+          data={profiles}
+          renderItem={renderProfileItem}
+          keyExtractor={item => item.id}
+          ListEmptyComponent={!loading && debouncedQuery ? <Text style={styles.emptyText}>No users found</Text> : null}
+          ListFooterComponent={loading ? <ActivityIndicator style={{ marginTop: 16 }} /> : null}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+        />
       ) : (
-        filteredProducts.length > 0 ? (
-          <FlatList
-            data={filteredProducts}
-            renderItem={renderProductItem}
-            keyExtractor={item => item.id}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-          />
-        ) : searchQuery.length > 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="cube" size={48} color="#ccc" />
-            <Text style={styles.emptyText}>No products found</Text>
-            <Text style={styles.emptySubtext}>Try searching for something else</Text>
-          </View>
-        ) : (
-          <View style={styles.initialContainer}>
-            <Ionicons name="search" size={48} color="#ccc" />
-            <Text style={styles.initialText}>Find Products</Text>
-            <Text style={styles.initialSubtext}>Enter a keyword to start searching</Text>
-          </View>
-        )
+        <FlatList
+          data={filteredProducts}
+          renderItem={renderProductItem}
+          keyExtractor={item => item.id}
+          ListEmptyComponent={!loading && debouncedQuery ? <Text style={styles.emptyText}>No products found</Text> : null}
+          ListFooterComponent={loading ? <ActivityIndicator style={{ marginTop: 16 }} /> : null}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+        />
       )}
     </View>
   );
@@ -286,31 +250,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Bold',
     marginBottom: 16,
     color: '#0E2657',
-  },
-  switcherContainer: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 12,
-    alignSelf: 'center',
-    padding: 4,
-  },
-  switcherButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  switcherButtonActive: {
-    backgroundColor: '#0E2657',
-  },
-  switcherText: {
-    color: '#7B8CA6',
-    fontFamily: 'Montserrat-Medium',
-    fontSize: 16,
-  },
-  switcherTextActive: {
-    color: '#fff',
-    fontFamily: 'Montserrat-Medium',
   },
   searchContainer: {
     flexDirection: 'row',

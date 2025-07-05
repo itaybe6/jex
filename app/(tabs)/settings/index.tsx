@@ -88,7 +88,10 @@ export default function SettingsScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Settings</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ position: 'absolute', left: 16, top: 20, zIndex: 10 }}>
+          <Ionicons name="arrow-back" size={26} color="#0E2657" />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { textAlign: 'center' }]}>Settings</Text>
       </View>
 
       {/* <View style={styles.section}>
@@ -136,6 +139,27 @@ export default function SettingsScreen() {
           title="Exchange Badge Verification"
           onPress={() => router.push('/settings/exchange-badge-verification')}
         />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Billing</Text>
+        <SettingItem
+          icon={<Ionicons name="card-outline" size={24} color="#888" />}
+          title="Payment"
+          value={"**** 1234 | ₪99/חודש"}
+          onPress={() => {}}
+          showArrow={true}
+        />
+        <SettingItem
+          icon={<Ionicons name="pricetag-outline" size={24} color="#888" />}
+          title="Subscription"
+          value={"Premium | ₪99/חודש"}
+          onPress={() => {}}
+          showArrow={false}
+        />
+        <TouchableOpacity style={styles.cancelButton} onPress={() => Alert.alert('Cancel Subscription', 'Are you sure you want to cancel your subscription?') }>
+          <Text style={styles.cancelButtonText}>Cancel Subscription</Text>
+        </TouchableOpacity>
       </View>
 
       <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
@@ -234,5 +258,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Montserrat-Medium',
     color: '#FF3B30',
+  },
+  cancelButton: {
+    backgroundColor: '#ff6b6b',
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 16,
   },
 });

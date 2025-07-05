@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 export default function IDVerificationScreen() {
-  const [image, setImage] = useState(null);
+  const [image, setImage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -16,6 +17,45 @@ export default function IDVerificationScreen() {
     });
     if (!result.canceled) {
       setImage(result.assets[0].uri);
+    }
+  };
+
+  const submitImage = async () => {
+    if (!image) {
+      Alert.alert('שגיאה', 'אנא העלה תמונה לפני השליחה');
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      // כאן תוכל להוסיף את הלוגיקה לשליחת התמונה לשרת
+      // לדוגמה:
+      // const formData = new FormData();
+      // formData.append('idImage', {
+      //   uri: image,
+      //   type: 'image/jpeg',
+      //   name: 'id_verification.jpg'
+      // });
+      // await uploadToServer(formData);
+      
+      // בינתיים נדמה את התהליך
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      Alert.alert(
+        'הצלחה!', 
+        'התמונה נשלחה בהצלחה. נבדוק אותה ונעדכן אותך בקרוב.',
+        [
+          {
+            text: 'אישור',
+            onPress: () => router.push('/settings')
+          }
+        ]
+      );
+    } catch (error) {
+      Alert.alert('שגיאה', 'אירעה שגיאה בשליחת התמונה. אנא נסה שוב.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -38,8 +78,16 @@ export default function IDVerificationScreen() {
         )}
         <Text style={styles.uploadText}>Upload</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.submitButton}>
-        <Text style={styles.submitText}>Submit</Text>
+      <TouchableOpacity 
+        style={[styles.submitButton, !image && styles.submitButtonDisabled]} 
+        onPress={submitImage}
+        disabled={!image || isLoading}
+      >
+        {isLoading ? (
+          <ActivityIndicator color="#fff" size="small" />
+        ) : (
+          <Text style={styles.submitText}>Submit</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -105,6 +153,10 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#B8B5C7',
+    shadowOpacity: 0,
   },
   submitText: {
     color: '#fff',
